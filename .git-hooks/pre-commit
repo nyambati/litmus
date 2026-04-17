@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Exit on any error
+set -e
+
+echo "Running pre-commit checks..."
+
+# Run go fmt
+echo "Checking code format..."
+if ! go fmt ./...; then
+    echo "✗ Code formatting check failed. Run 'go fmt ./...'"
+    exit 1
+fi
+
+# Run go vet
+echo "Running go vet..."
+if ! go vet ./...; then
+    echo "✗ go vet failed"
+    exit 1
+fi
+
+# Run tests
+echo "Running tests..."
+if ! go test ./... -short; then
+    echo "✗ Tests failed"
+    exit 1
+fi
+
+echo "✓ All pre-commit checks passed"
+exit 0
+
