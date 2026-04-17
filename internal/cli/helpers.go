@@ -1,4 +1,4 @@
-package cmd
+package cli
 
 import (
 	"os"
@@ -7,14 +7,13 @@ import (
 	"github.com/nyambati/litmus/internal/types"
 )
 
-func loadBaseline(path string) ([]*types.RegressionTest, error) {
+// LoadBaseline reads a msgpack regression baseline from disk.
+func LoadBaseline(path string) ([]*types.RegressionTest, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		_ = file.Close()
-	}()
+	defer func() { _ = file.Close() }()
 
 	var tests []*types.RegressionTest
 	if err := codec.DecodeMsgPack(file, &tests); err != nil {
