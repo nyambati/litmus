@@ -6,6 +6,8 @@
 *.dylib
 *.test
 *.out
+bin/
+dist/
 
 # Go workspace file
 go.work
@@ -24,17 +26,15 @@ vendor/
 .DS_Store
 Thumbs.db
 
-# Build output
-/bin/
-/dist/
-config/
 # Test coverage
 coverage.out
 coverage.html
 graphify-out
 *.local.json
-alertmanager.*
-regressions.litmus*
-docs/superpowers
-tests
 .gemini
+
+# Project specific
+docs/superpowers/
+/*.mpk
+/*.litmus.yml
+/*.mpk.yml
