@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 
+	"github.com/nyambati/litmus/internal/config"
 	"github.com/nyambati/litmus/internal/engine/behavioral"
 	"github.com/nyambati/litmus/internal/engine/sanity"
-	"github.com/prometheus/alertmanager/config"
+	amconfig "github.com/prometheus/alertmanager/config"
 	"github.com/spf13/cobra"
 )
 
@@ -59,12 +61,13 @@ func newCheckCmd() *cobra.Command {
 
 func runCheck(format string) error {
 	// Load configs
-	litmusConfig, err := loadLitmusConfig(".litmus.yaml")
+	litmusConfig, err := config.LoadConfig()
 	if err != nil {
-		return fmt.Errorf("loading litmus.yaml: %w", err)
+		return fmt.Errorf("loading litmus config: %w", err)
 	}
 
-	alertConfig, err := loadAlertmanagerConfig(litmusConfig.ConfigFile)
+	alertConfigPath := filepath.Join(litmusConfig.Config.Directory, litmusConfig.Config.File)
+	alertConfig, err := config.LoadAlertmanagerConfig(alertConfigPath)
 	if err != nil {
 		return fmt.Errorf("loading alertmanager config: %w", err)
 	}
@@ -105,7 +108,7 @@ func runCheck(format string) error {
 	return nil
 }
 
-func runSanityChecks(alertConfig *config.Config) SanityResult {
+func runSanityChecks(alertConfig *amconfig.Config) SanityResult {
 	result := SanityResult{Passed: true}
 
 	// Shadowed routes
@@ -113,7 +116,7 @@ func runSanityChecks(alertConfig *config.Config) SanityResult {
 	result.Issues = append(result.Issues, shadowed.Detect()...)
 
 	// Orphan receivers - convert slice to map
-	receiversMap := make(map[string]*config.Receiver)
+	receiversMap := make(map[string]*amconfig.Receiver)
 	for i := range alertConfig.Receivers {
 		receiversMap[alertConfig.Receivers[i].Name] = &alertConfig.Receivers[i]
 	}
@@ -121,7 +124,7 @@ func runSanityChecks(alertConfig *config.Config) SanityResult {
 	result.Issues = append(result.Issues, orphan.DetectOrphans()...)
 
 	// Inhibition cycles - convert slice to pointers
-	var rules []*config.InhibitRule
+	var rules []*amconfig.InhibitRule
 	for i := range alertConfig.InhibitRules {
 		rules = append(rules, &alertConfig.InhibitRules[i])
 	}
@@ -135,11 +138,12 @@ func runSanityChecks(alertConfig *config.Config) SanityResult {
 	return result
 }
 
-func runRegressionTests(litmusConfig *LitmusConfig) RegressionResult {
+func runRegressionTests(litmusConfig *config.LitmusConfig) RegressionResult {
 	result := RegressionResult{Passed: true}
 
+	baselinePath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.mpk")
 	// For now, just report no tests run if baseline doesn't exist
-	baseline, err := loadBaseline(litmusConfig.Regression.BaselinePath)
+	baseline, err := loadBaseline(baselinePath)
 	if err != nil {
 		result.Tests = 0
 		return result
@@ -150,7 +154,7 @@ func runRegressionTests(litmusConfig *LitmusConfig) RegressionResult {
 	return result
 }
 
-func runBehavioralTests(litmusConfig *LitmusConfig) BehavioralResult {
+func runBehavioralTests(litmusConfig *config.LitmusConfig) BehavioralResult {
 	result := BehavioralResult{Passed: true}
 
 	// Load test files

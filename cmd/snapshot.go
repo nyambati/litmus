@@ -3,34 +3,16 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/nyambati/litmus/internal/codec"
+	"github.com/nyambati/litmus/internal/config"
 	"github.com/nyambati/litmus/internal/engine/snapshot"
 	"github.com/nyambati/litmus/internal/types"
-	"github.com/prometheus/alertmanager/config"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
-
-// LitmusConfig represents the litmus.yaml configuration.
-type LitmusConfig struct {
-	ConfigFile   string            `yaml:"config_file"`
-	GlobalLabels map[string]string `yaml:"global_labels"`
-	Regression   RegressionConfig  `yaml:"regression"`
-	Tests        TestsConfig       `yaml:"tests"`
-}
-
-// RegressionConfig represents regression settings.
-type RegressionConfig struct {
-	MaxSamples   int    `yaml:"max_samples"`
-	BaselinePath string `yaml:"baseline_path"`
-}
-
-// TestsConfig represents test settings.
-type TestsConfig struct {
-	Directory string `yaml:"directory"`
-}
 
 // newSnapshotCmd creates the snapshot command.
 func newSnapshotCmd() *cobra.Command {
@@ -50,14 +32,14 @@ func newSnapshotCmd() *cobra.Command {
 }
 
 func runSnapshot(update bool) error {
-	// Load litmus.yaml
-	litmusConfig, err := loadLitmusConfig(".litmus.yaml")
+	// Load configs
+	litmusConfig, err := config.LoadConfig()
 	if err != nil {
-		return fmt.Errorf("loading litmus.yaml: %w", err)
+		return fmt.Errorf("loading litmus config: %w", err)
 	}
 
-	// Load alertmanager config
-	alertConfig, err := loadAlertmanagerConfig(litmusConfig.ConfigFile)
+	alertConfigPath := filepath.Join(litmusConfig.Config.Directory, litmusConfig.Config.File)
+	alertConfig, err := config.LoadAlertmanagerConfig(alertConfigPath)
 	if err != nil {
 		return fmt.Errorf("loading alertmanager config: %w", err)
 	}
@@ -82,9 +64,11 @@ func runSnapshot(update bool) error {
 		})
 	}
 
+	baselinePath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.mpk")
+
 	// Check for drift if baseline exists and not updating
 	if !update {
-		existing, err := loadBaseline(litmusConfig.Regression.BaselinePath)
+		existing, err := loadBaseline(baselinePath)
 		if err == nil && existing != nil {
 			if hasChanges(existing, regTests) {
 				return fmt.Errorf("drift detected in routing behavior: use --update to accept changes")
@@ -92,8 +76,13 @@ func runSnapshot(update bool) error {
 		}
 	}
 
+	// Ensure regression directory exists
+	if err := os.MkdirAll(litmusConfig.Regression.Directory, 0755); err != nil {
+		return fmt.Errorf("creating regression directory: %w", err)
+	}
+
 	// Write baseline files
-	mpkFile, err := os.Create(litmusConfig.Regression.BaselinePath)
+	mpkFile, err := os.Create(baselinePath)
 	if err != nil {
 		return fmt.Errorf("creating baseline file: %w", err)
 	}
@@ -104,57 +93,15 @@ func runSnapshot(update bool) error {
 	}
 
 	// Write YAML mirror
-	ymlPath := strings.Replace(litmusConfig.Regression.BaselinePath, "mpk", "yml", 1)
+	ymlPath := strings.Replace(baselinePath, "mpk", "yml", 1)
 	ymlData, _ := yaml.Marshal(regTests)
 	if err := os.WriteFile(ymlPath, ymlData, 0644); err != nil {
 		return fmt.Errorf("writing YAML mirror: %w", err)
 	}
 
-	fmt.Printf("✓ Generated baseline: %s\n", litmusConfig.Regression.BaselinePath)
+	fmt.Printf("✓ Generated baseline: %s\n", baselinePath)
 	fmt.Printf("✓ YAML mirror: %s\n", ymlPath)
 	return nil
-}
-
-func loadLitmusConfig(path string) (*LitmusConfig, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var cfg LitmusConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, err
-	}
-
-	return &cfg, nil
-}
-
-func loadAlertmanagerConfig(path string) (*config.Config, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var cfg config.Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, err
-	}
-
-	return &cfg, nil
-}
-
-func loadBaseline(path string) ([]*types.RegressionTest, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	var tests []*types.RegressionTest
-	if err := codec.DecodeMsgPack(file, &tests); err != nil {
-		return nil, err
-	}
-	return tests, nil
 }
 
 func hasChanges(existing, current []*types.RegressionTest) bool {

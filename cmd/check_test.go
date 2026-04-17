@@ -15,18 +15,21 @@ func TestCheckCommand_Success(t *testing.T) {
 
 	// Setup minimal config
 	err := os.WriteFile(".litmus.yaml", []byte(`
-config_file: "alertmanager.yml"
+config:
+  directory: "config"
+  file: "alertmanager.yml"
 global_labels:
   severity: "warning"
 regression:
   max_samples: 5
-  baseline_path: "regressions.litmus.mpk"
+  directory: "regressions"
 tests:
   directory: "tests/"
 `), 0644)
 	require.NoError(t, err)
 
-	err = os.WriteFile("alertmanager.yml", []byte(`
+	os.MkdirAll("config", 0755)
+	err = os.WriteFile("config/alertmanager.yml", []byte(`
 global:
   resolve_timeout: 5m
 route:
@@ -51,6 +54,7 @@ func TestCheckCommand_MissingConfig(t *testing.T) {
 	defer os.Chdir(oldCwd)
 	os.Chdir(tmpDir)
 
+	// Should fail because config/alertmanager.yml is missing (even with default litmus config)
 	cmd := newCheckCmd()
 	cmd.SetArgs([]string{})
 	err := cmd.Execute()
@@ -66,18 +70,21 @@ func TestCheckCommand_TextOutput(t *testing.T) {
 
 	// Setup minimal config
 	err := os.WriteFile(".litmus.yaml", []byte(`
-config_file: "alertmanager.yml"
+config:
+  directory: "config"
+  file: "alertmanager.yml"
 global_labels:
   severity: "warning"
 regression:
   max_samples: 5
-  baseline_path: "regressions.litmus.mpk"
+  directory: "regressions"
 tests:
   directory: "tests/"
 `), 0644)
 	require.NoError(t, err)
 
-	err = os.WriteFile("alertmanager.yml", []byte(`
+	os.MkdirAll("config", 0755)
+	err = os.WriteFile("config/alertmanager.yml", []byte(`
 global:
   resolve_timeout: 5m
 route:

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,19 +16,22 @@ func TestSnapshotCommand_GeneratesFiles(t *testing.T) {
 
 	// Create minimal litmus.yaml
 	err := os.WriteFile(".litmus.yaml", []byte(`
-config_file: "alertmanager.yml"
+config:
+  directory: "config"
+  file: "alertmanager.yml"
 global_labels:
   severity: "warning"
 regression:
   max_samples: 5
-  baseline_path: "regressions.litmus.mpk"
+  directory: "regressions"
 tests:
   directory: "tests/"
 `), 0644)
 	require.NoError(t, err)
 
 	// Create minimal alertmanager.yml
-	err = os.WriteFile("alertmanager.yml", []byte(`
+	os.MkdirAll("config", 0755)
+	err = os.WriteFile("config/alertmanager.yml", []byte(`
 global:
   resolve_timeout: 5m
 route:
@@ -42,8 +46,8 @@ receivers:
 	err = cmd.Execute()
 
 	require.NoError(t, err)
-	require.FileExists(t, "regressions.litmus.mpk")
-	require.FileExists(t, "regressions.litmus.mpk.yml")
+	require.FileExists(t, filepath.Join("regressions", "regressions.litmus.mpk"))
+	require.FileExists(t, filepath.Join("regressions", "regressions.litmus.yml"))
 }
 
 func TestSnapshotCommand_DriftDetection(t *testing.T) {
@@ -54,18 +58,21 @@ func TestSnapshotCommand_DriftDetection(t *testing.T) {
 
 	// Create config
 	err := os.WriteFile(".litmus.yaml", []byte(`
-config_file: "alertmanager.yml"
+config:
+  directory: "config"
+  file: "alertmanager.yml"
 global_labels:
   severity: "warning"
 regression:
   max_samples: 5
-  baseline_path: "regressions.litmus.mpk"
+  directory: "regressions"
 tests:
   directory: "tests/"
 `), 0644)
 	require.NoError(t, err)
 
-	err = os.WriteFile("alertmanager.yml", []byte(`
+	os.MkdirAll("config", 0755)
+	err = os.WriteFile("config/alertmanager.yml", []byte(`
 global:
   resolve_timeout: 5m
 route:
@@ -82,7 +89,7 @@ receivers:
 	require.NoError(t, err)
 
 	// Modify alertmanager config
-	err = os.WriteFile("alertmanager.yml", []byte(`
+	err = os.WriteFile("config/alertmanager.yml", []byte(`
 global:
   resolve_timeout: 5m
 route:
@@ -114,18 +121,21 @@ func TestSnapshotCommand_UpdateFlag(t *testing.T) {
 
 	// Create config
 	err := os.WriteFile(".litmus.yaml", []byte(`
-config_file: "alertmanager.yml"
+config:
+  directory: "config"
+  file: "alertmanager.yml"
 global_labels:
   severity: "warning"
 regression:
   max_samples: 5
-  baseline_path: "regressions.litmus.mpk"
+  directory: "regressions"
 tests:
   directory: "tests/"
 `), 0644)
 	require.NoError(t, err)
 
-	err = os.WriteFile("alertmanager.yml", []byte(`
+	os.MkdirAll("config", 0755)
+	err = os.WriteFile("config/alertmanager.yml", []byte(`
 global:
   resolve_timeout: 5m
 route:
@@ -142,7 +152,7 @@ receivers:
 	require.NoError(t, err)
 
 	// Modify alertmanager config
-	err = os.WriteFile("alertmanager.yml", []byte(`
+	err = os.WriteFile("config/alertmanager.yml", []byte(`
 global:
   resolve_timeout: 5m
 route:
@@ -163,7 +173,7 @@ receivers:
 	err = cmd.Execute()
 
 	require.NoError(t, err)
-	require.FileExists(t, "regressions.litmus.mpk")
+	require.FileExists(t, filepath.Join("regressions", "regressions.litmus.mpk"))
 }
 
 func TestSnapshotCommand_MissingConfig(t *testing.T) {
@@ -176,6 +186,7 @@ func TestSnapshotCommand_MissingConfig(t *testing.T) {
 	cmd.SetArgs([]string{})
 	err := cmd.Execute()
 
+	// Should fail because config/alertmanager.yml is missing
 	require.Error(t, err)
-	require.Contains(t, err.Error(), ".litmus.yaml")
+	require.Contains(t, err.Error(), "alertmanager.yml")
 }

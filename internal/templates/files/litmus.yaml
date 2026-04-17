@@ -1,6 +1,10 @@
-# Litmus configuration
-# Path to the Alertmanager configuration file to be tested
-config_file: "alertmanager.yml"
+# Litmus Configuration
+# See https://github.com/nyambati/litmus for documentation
+
+config:
+  directory: config       # Alertmanager config directory
+  file: alertmanager.yml  # Config filename
+  templates: templates/    # Templates directory (relative to config.directory)
 
 # Global Test Labels: These labels are automatically added to
 # EVERY synthesized alert during the 'snapshot' process.
@@ -8,14 +12,17 @@ global_labels:
   severity: "warning"
   cluster: "production"
 
+# Mimir Configuration (optional, used for 'litmus sync')
+mimir:
+  address: ""
+  tenant_id: ""
+  api_key: "{{ env \"MIMIR_API_KEY\" }}"
+
 # Regression Settings
 regression:
-  # Maximum label combinations per route before balanced coverage
+  directory: regressions/ # Baseline directory
   max_samples: 5
-  # Path to the MessagePack baseline
-  baseline_path: "regressions.litmus.mpk"
 
 # Behavioral Unit Test (BUT) Settings
 tests:
-  # Directory where human-authored .yml tests are stored
-  directory: "tests/"
+  directory: tests/       # Behavioral tests directory

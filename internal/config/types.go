@@ -1,25 +1,37 @@
 package config
 
 type (
+	// Config defines the Alertmanager configuration locations.
 	Config struct {
-		Directory string `yaml:"directory"`
-		File      string `yaml:"file"`
-		Templates string `yaml:"templates"`
+		Directory string `yaml:"directory" mapstructure:"directory"`
+		File      string `yaml:"file" mapstructure:"file"`
+		Templates string `yaml:"templates" mapstructure:"templates"`
 	}
 
+	// MimirConfig defines the connection parameters for Grafana Mimir.
+	MimirConfig struct {
+		Address  string `yaml:"address" mapstructure:"address"`
+		TenantID string `yaml:"tenant_id" mapstructure:"tenant_id"`
+		APIKey   string `yaml:"api_key" mapstructure:"api_key"`
+	}
+
+	// RegressionConfig defines the regression test parameters.
 	RegressionConfig struct {
-		MaxSamples int    `yaml:"max_samples"`
-		Directory  string `yaml:"directory"`
+		MaxSamples int    `yaml:"max_samples" mapstructure:"max_samples"`
+		Directory  string `yaml:"directory" mapstructure:"directory"`
 	}
 
+	// TestsConfig defines the behavioral unit test parameters.
 	TestsConfig struct {
-		Directory string `yaml:"directory"`
+		Directory string `yaml:"directory" mapstructure:"directory"`
 	}
 
+	// LitmusConfig is the root configuration object.
 	LitmusConfig struct {
-		Config       Config            `yaml:"config"`
-		GlobalLabels map[string]string `yaml:"global_labels"`
-		Regression   RegressionConfig  `yaml:"regression"`
-		Tests        TestsConfig       `yaml:"tests"`
+		Config       Config            `yaml:"config" mapstructure:"config"`
+		GlobalLabels map[string]string `yaml:"global_labels" mapstructure:"global_labels"`
+		Mimir        MimirConfig       `yaml:"mimir" mapstructure:"mimir"`
+		Regression   RegressionConfig  `yaml:"regression" mapstructure:"regression"`
+		Tests        TestsConfig       `yaml:"tests" mapstructure:"tests"`
 	}
 )

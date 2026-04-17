@@ -3,10 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 
-	"github.com/nyambati/litmus/internal/codec"
-	"github.com/nyambati/litmus/internal/types"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -31,15 +28,9 @@ func newInspectCmd() *cobra.Command {
 
 func runInspect(filePath string, format string) error {
 	// Load baseline file
-	file, err := os.Open(filePath)
+	tests, err := loadBaseline(filePath)
 	if err != nil {
-		return fmt.Errorf("opening file: %w", err)
-	}
-	defer file.Close()
-
-	var tests []*types.RegressionTest
-	if err := codec.DecodeMsgPack(file, &tests); err != nil {
-		return fmt.Errorf("decoding baseline: %w", err)
+		return fmt.Errorf("loading baseline: %w", err)
 	}
 
 	// Output in requested format

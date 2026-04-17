@@ -34,9 +34,12 @@ func runInit() error {
 		return fmt.Errorf("creating .litmus.yaml: %w", err)
 	}
 
-	// Create tests directory
-	if err := os.MkdirAll("tests", 0755); err != nil {
-		return fmt.Errorf("creating tests directory: %w", err)
+	// Create directories
+	dirs := []string{"config", "config/templates", "regressions", "tests"}
+	for _, dir := range dirs {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return fmt.Errorf("creating %s directory: %w", dir, err)
+		}
 	}
 
 	// Create tests/README.md
@@ -51,6 +54,7 @@ func runInit() error {
 	}
 
 	fmt.Println("✓ .litmus.yaml created")
+	fmt.Println("✓ config/ and regressions/ directories created")
 	fmt.Println("✓ tests/ directory created")
 	fmt.Println("✓ .gitattributes created")
 	fmt.Println("\nWorkspace initialized! Next steps:")
