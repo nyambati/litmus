@@ -14,7 +14,7 @@ func TestCheckCommand_Success(t *testing.T) {
 	os.Chdir(tmpDir)
 
 	// Setup minimal config
-	err := os.WriteFile("litmus.yaml", []byte(`
+	err := os.WriteFile(".litmus.yaml", []byte(`
 config_file: "alertmanager.yml"
 global_labels:
   severity: "warning"
@@ -65,7 +65,7 @@ func TestCheckCommand_TextOutput(t *testing.T) {
 	os.Chdir(tmpDir)
 
 	// Setup minimal config
-	err := os.WriteFile("litmus.yaml", []byte(`
+	err := os.WriteFile(".litmus.yaml", []byte(`
 config_file: "alertmanager.yml"
 global_labels:
   severity: "warning"

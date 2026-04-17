@@ -84,7 +84,7 @@ func newInitCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:          "init",
 		Short:        "Initialize a new litmus workspace",
-		Long:         "Creates litmus.yaml, tests/ directory, and .gitattributes for a new workspace",
+		Long:         "Creates .litmus.yaml, tests/ directory, and .gitattributes for a new workspace",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runInit()
@@ -94,13 +94,13 @@ func newInitCmd() *cobra.Command {
 
 func runInit() error {
 	// Check if litmus.yaml already exists
-	if _, err := os.Stat("litmus.yaml"); err == nil {
-		return fmt.Errorf("litmus.yaml already exists in this directory")
+	if _, err := os.Stat(".litmus.yaml"); err == nil {
+		return fmt.Errorf(".litmus.yaml already exists in this directory")
 	}
 
-	// Create litmus.yaml
-	if err := os.WriteFile("litmus.yaml", []byte(defaultLitmusYAML), 0644); err != nil {
-		return fmt.Errorf("creating litmus.yaml: %w", err)
+	// Create .litmus.yaml
+	if err := os.WriteFile(".litmus.yaml", []byte(defaultLitmusYAML), 0644); err != nil {
+		return fmt.Errorf("creating .litmus.yaml: %w", err)
 	}
 
 	// Create tests directory
@@ -119,11 +119,11 @@ func runInit() error {
 		return fmt.Errorf("creating .gitattributes: %w", err)
 	}
 
-	fmt.Println("✓ litmus.yaml created")
+	fmt.Println("✓ .litmus.yaml created")
 	fmt.Println("✓ tests/ directory created")
 	fmt.Println("✓ .gitattributes created")
 	fmt.Println("\nWorkspace initialized! Next steps:")
-	fmt.Println("1. Update litmus.yaml with your Alertmanager config path")
+	fmt.Println("1. Update .litmus.yaml with your Alertmanager config path")
 	fmt.Println("2. Add your behavioral unit tests to tests/")
 	fmt.Println("3. Run 'litmus snapshot' to generate regression baseline")
 

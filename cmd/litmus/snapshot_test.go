@@ -14,7 +14,7 @@ func TestSnapshotCommand_GeneratesFiles(t *testing.T) {
 	os.Chdir(tmpDir)
 
 	// Create minimal litmus.yaml
-	err := os.WriteFile("litmus.yaml", []byte(`
+	err := os.WriteFile(".litmus.yaml", []byte(`
 config_file: "alertmanager.yml"
 global_labels:
   severity: "warning"
@@ -53,7 +53,7 @@ func TestSnapshotCommand_DriftDetection(t *testing.T) {
 	os.Chdir(tmpDir)
 
 	// Create config
-	err := os.WriteFile("litmus.yaml", []byte(`
+	err := os.WriteFile(".litmus.yaml", []byte(`
 config_file: "alertmanager.yml"
 global_labels:
   severity: "warning"
@@ -113,7 +113,7 @@ func TestSnapshotCommand_UpdateFlag(t *testing.T) {
 	os.Chdir(tmpDir)
 
 	// Create config
-	err := os.WriteFile("litmus.yaml", []byte(`
+	err := os.WriteFile(".litmus.yaml", []byte(`
 config_file: "alertmanager.yml"
 global_labels:
   severity: "warning"
@@ -177,5 +177,5 @@ func TestSnapshotCommand_MissingConfig(t *testing.T) {
 	err := cmd.Execute()
 
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "litmus.yaml")
+	require.Contains(t, err.Error(), ".litmus.yaml")
 }

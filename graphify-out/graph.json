@@ -9,7 +9,7 @@
       "source_file": "cmd/litmus/check_test.go",
       "source_location": "L1",
       "id": "cmd_litmus_check_test_go",
-      "community": 0,
+      "community": 3,
       "norm_label": "check_test.go"
     },
     {
@@ -18,7 +18,7 @@
       "source_file": "cmd/litmus/check_test.go",
       "source_location": "L10",
       "id": "check_test_testcheckcommand_success",
-      "community": 0,
+      "community": 3,
       "norm_label": "testcheckcommand_success()"
     },
     {
@@ -27,7 +27,7 @@
       "source_file": "cmd/litmus/check_test.go",
       "source_location": "L48",
       "id": "check_test_testcheckcommand_missingconfig",
-      "community": 0,
+      "community": 3,
       "norm_label": "testcheckcommand_missingconfig()"
     },
     {
@@ -36,7 +36,7 @@
       "source_file": "cmd/litmus/check_test.go",
       "source_location": "L61",
       "id": "check_test_testcheckcommand_textoutput",
-      "community": 0,
+      "community": 3,
       "norm_label": "testcheckcommand_textoutput()"
     },
     {
@@ -45,7 +45,7 @@
       "source_file": "cmd/litmus/check.go",
       "source_location": "L1",
       "id": "cmd_litmus_check_go",
-      "community": 5,
+      "community": 3,
       "norm_label": "check.go"
     },
     {
@@ -54,7 +54,7 @@
       "source_file": "cmd/litmus/check.go",
       "source_location": "L15",
       "id": "litmus_checkresult",
-      "community": 5,
+      "community": 3,
       "norm_label": "checkresult"
     },
     {
@@ -63,7 +63,7 @@
       "source_file": "cmd/litmus/check.go",
       "source_location": "L24",
       "id": "litmus_sanityresult",
-      "community": 5,
+      "community": 3,
       "norm_label": "sanityresult"
     },
     {
@@ -72,7 +72,7 @@
       "source_file": "cmd/litmus/check.go",
       "source_location": "L30",
       "id": "litmus_regressionresult",
-      "community": 5,
+      "community": 3,
       "norm_label": "regressionresult"
     },
     {
@@ -81,7 +81,7 @@
       "source_file": "cmd/litmus/check.go",
       "source_location": "L37",
       "id": "litmus_behavioralresult",
-      "community": 5,
+      "community": 3,
       "norm_label": "behavioralresult"
     },
     {
@@ -90,7 +90,7 @@
       "source_file": "cmd/litmus/check.go",
       "source_location": "L44",
       "id": "check_newcheckcmd",
-      "community": 0,
+      "community": 3,
       "norm_label": "newcheckcmd()"
     },
     {
@@ -99,7 +99,7 @@
       "source_file": "cmd/litmus/check.go",
       "source_location": "L60",
       "id": "check_runcheck",
-      "community": 5,
+      "community": 3,
       "norm_label": "runcheck()"
     },
     {
@@ -108,7 +108,7 @@
       "source_file": "cmd/litmus/check.go",
       "source_location": "L108",
       "id": "check_runsanitychecks",
-      "community": 6,
+      "community": 3,
       "norm_label": "runsanitychecks()"
     },
     {
@@ -117,7 +117,7 @@
       "source_file": "cmd/litmus/check.go",
       "source_location": "L138",
       "id": "check_runregressiontests",
-      "community": 5,
+      "community": 3,
       "norm_label": "runregressiontests()"
     },
     {
@@ -126,7 +126,7 @@
       "source_file": "cmd/litmus/check.go",
       "source_location": "L153",
       "id": "check_runbehavioraltests",
-      "community": 5,
+      "community": 3,
       "norm_label": "runbehavioraltests()"
     },
     {
@@ -135,7 +135,7 @@
       "source_file": "cmd/litmus/check.go",
       "source_location": "L168",
       "id": "check_printtextoutput",
-      "community": 5,
+      "community": 3,
       "norm_label": "printtextoutput()"
     },
     {
@@ -144,7 +144,7 @@
       "source_file": "cmd/litmus/init_test.go",
       "source_location": "L1",
       "id": "cmd_litmus_init_test_go",
-      "community": 0,
+      "community": 1,
       "norm_label": "init_test.go"
     },
     {
@@ -153,7 +153,7 @@
       "source_file": "cmd/litmus/init_test.go",
       "source_location": "L11",
       "id": "init_test_testinitcommand_createsfiles",
-      "community": 0,
+      "community": 1,
       "norm_label": "testinitcommand_createsfiles()"
     },
     {
@@ -162,7 +162,7 @@
       "source_file": "cmd/litmus/init_test.go",
       "source_location": "L27",
       "id": "init_test_testinitcommand_litmusyaml",
-      "community": 0,
+      "community": 1,
       "norm_label": "testinitcommand_litmusyaml()"
     },
     {
@@ -171,7 +171,7 @@
       "source_file": "cmd/litmus/init_test.go",
       "source_location": "L47",
       "id": "init_test_testinitcommand_testsdirectory",
-      "community": 0,
+      "community": 1,
       "norm_label": "testinitcommand_testsdirectory()"
     },
     {
@@ -180,7 +180,7 @@
       "source_file": "cmd/litmus/init_test.go",
       "source_location": "L61",
       "id": "init_test_testinitcommand_gitattributes",
-      "community": 0,
+      "community": 1,
       "norm_label": "testinitcommand_gitattributes()"
     },
     {
@@ -189,7 +189,7 @@
       "source_file": "cmd/litmus/init_test.go",
       "source_location": "L78",
       "id": "init_test_testinitcommand_doesnotoverwrite",
-      "community": 0,
+      "community": 1,
       "norm_label": "testinitcommand_doesnotoverwrite()"
     },
     {
@@ -198,7 +198,7 @@
       "source_file": "cmd/litmus/inspect_test.go",
       "source_location": "L1",
       "id": "cmd_litmus_inspect_test_go",
-      "community": 7,
+      "community": 2,
       "norm_label": "inspect_test.go"
     },
     {
@@ -207,7 +207,7 @@
       "source_file": "cmd/litmus/inspect_test.go",
       "source_location": "L12",
       "id": "inspect_test_testinspectcommand_yaml",
-      "community": 7,
+      "community": 2,
       "norm_label": "testinspectcommand_yaml()"
     },
     {
@@ -216,7 +216,7 @@
       "source_file": "cmd/litmus/inspect_test.go",
       "source_location": "L39",
       "id": "inspect_test_testinspectcommand_json",
-      "community": 7,
+      "community": 2,
       "norm_label": "testinspectcommand_json()"
     },
     {
@@ -225,7 +225,7 @@
       "source_file": "cmd/litmus/inspect_test.go",
       "source_location": "L66",
       "id": "inspect_test_testinspectcommand_missingfile",
-      "community": 7,
+      "community": 2,
       "norm_label": "testinspectcommand_missingfile()"
     },
     {
@@ -234,7 +234,7 @@
       "source_file": "cmd/litmus/snapshot_test.go",
       "source_location": "L1",
       "id": "cmd_litmus_snapshot_test_go",
-      "community": 0,
+      "community": 1,
       "norm_label": "snapshot_test.go"
     },
     {
@@ -243,7 +243,7 @@
       "source_file": "cmd/litmus/snapshot_test.go",
       "source_location": "L10",
       "id": "snapshot_test_testsnapshotcommand_generatesfiles",
-      "community": 0,
+      "community": 1,
       "norm_label": "testsnapshotcommand_generatesfiles()"
     },
     {
@@ -252,7 +252,7 @@
       "source_file": "cmd/litmus/snapshot_test.go",
       "source_location": "L49",
       "id": "snapshot_test_testsnapshotcommand_driftdetection",
-      "community": 0,
+      "community": 1,
       "norm_label": "testsnapshotcommand_driftdetection()"
     },
     {
@@ -261,7 +261,7 @@
       "source_file": "cmd/litmus/snapshot_test.go",
       "source_location": "L109",
       "id": "snapshot_test_testsnapshotcommand_updateflag",
-      "community": 0,
+      "community": 1,
       "norm_label": "testsnapshotcommand_updateflag()"
     },
     {
@@ -270,7 +270,7 @@
       "source_file": "cmd/litmus/snapshot_test.go",
       "source_location": "L169",
       "id": "snapshot_test_testsnapshotcommand_missingconfig",
-      "community": 0,
+      "community": 1,
       "norm_label": "testsnapshotcommand_missingconfig()"
     },
     {
@@ -279,7 +279,7 @@
       "source_file": "cmd/litmus/inspect.go",
       "source_location": "L1",
       "id": "cmd_litmus_inspect_go",
-      "community": 7,
+      "community": 2,
       "norm_label": "inspect.go"
     },
     {
@@ -288,7 +288,7 @@
       "source_file": "cmd/litmus/inspect.go",
       "source_location": "L15",
       "id": "inspect_newinspectcmd",
-      "community": 7,
+      "community": 2,
       "norm_label": "newinspectcmd()"
     },
     {
@@ -297,7 +297,7 @@
       "source_file": "cmd/litmus/inspect.go",
       "source_location": "L32",
       "id": "inspect_runinspect",
-      "community": 7,
+      "community": 2,
       "norm_label": "runinspect()"
     },
     {
@@ -306,7 +306,7 @@
       "source_file": "cmd/litmus/snapshot.go",
       "source_location": "L1",
       "id": "cmd_litmus_snapshot_go",
-      "community": 5,
+      "community": 2,
       "norm_label": "snapshot.go"
     },
     {
@@ -315,7 +315,7 @@
       "source_file": "cmd/litmus/snapshot.go",
       "source_location": "L16",
       "id": "litmus_litmusconfig",
-      "community": 5,
+      "community": 2,
       "norm_label": "litmusconfig"
     },
     {
@@ -324,7 +324,7 @@
       "source_file": "cmd/litmus/snapshot.go",
       "source_location": "L24",
       "id": "litmus_regressionconfig",
-      "community": 5,
+      "community": 2,
       "norm_label": "regressionconfig"
     },
     {
@@ -333,7 +333,7 @@
       "source_file": "cmd/litmus/snapshot.go",
       "source_location": "L30",
       "id": "litmus_testsconfig",
-      "community": 5,
+      "community": 2,
       "norm_label": "testsconfig"
     },
     {
@@ -342,7 +342,7 @@
       "source_file": "cmd/litmus/snapshot.go",
       "source_location": "L35",
       "id": "snapshot_newsnapshotcmd",
-      "community": 0,
+      "community": 1,
       "norm_label": "newsnapshotcmd()"
     },
     {
@@ -351,7 +351,7 @@
       "source_file": "cmd/litmus/snapshot.go",
       "source_location": "L51",
       "id": "snapshot_runsnapshot",
-      "community": 5,
+      "community": 2,
       "norm_label": "runsnapshot()"
     },
     {
@@ -360,7 +360,7 @@
       "source_file": "cmd/litmus/snapshot.go",
       "source_location": "L117",
       "id": "snapshot_loadlitmusconfig",
-      "community": 5,
+      "community": 2,
       "norm_label": "loadlitmusconfig()"
     },
     {
@@ -369,7 +369,7 @@
       "source_file": "cmd/litmus/snapshot.go",
       "source_location": "L131",
       "id": "snapshot_loadalertmanagerconfig",
-      "community": 5,
+      "community": 2,
       "norm_label": "loadalertmanagerconfig()"
     },
     {
@@ -378,7 +378,7 @@
       "source_file": "cmd/litmus/snapshot.go",
       "source_location": "L145",
       "id": "snapshot_loadbaseline",
-      "community": 5,
+      "community": 2,
       "norm_label": "loadbaseline()"
     },
     {
@@ -387,7 +387,7 @@
       "source_file": "cmd/litmus/snapshot.go",
       "source_location": "L159",
       "id": "snapshot_haschanges",
-      "community": 5,
+      "community": 2,
       "norm_label": "haschanges()"
     },
     {
@@ -396,7 +396,7 @@
       "source_file": "cmd/litmus/init.go",
       "source_location": "L1",
       "id": "cmd_litmus_init_go",
-      "community": 0,
+      "community": 1,
       "norm_label": "init.go"
     },
     {
@@ -405,7 +405,7 @@
       "source_file": "cmd/litmus/init.go",
       "source_location": "L83",
       "id": "init_newinitcmd",
-      "community": 0,
+      "community": 1,
       "norm_label": "newinitcmd()"
     },
     {
@@ -414,7 +414,7 @@
       "source_file": "cmd/litmus/init.go",
       "source_location": "L95",
       "id": "init_runinit",
-      "community": 0,
+      "community": 1,
       "norm_label": "runinit()"
     },
     {
@@ -423,7 +423,7 @@
       "source_file": "cmd/litmus/main.go",
       "source_location": "L1",
       "id": "cmd_litmus_main_go",
-      "community": 0,
+      "community": 1,
       "norm_label": "main.go"
     },
     {
@@ -432,7 +432,7 @@
       "source_file": "cmd/litmus/main.go",
       "source_location": "L11",
       "id": "main_main",
-      "community": 0,
+      "community": 1,
       "norm_label": "main()"
     },
     {
@@ -513,7 +513,7 @@
       "source_file": "internal/codec/msgpack.go",
       "source_location": "L1",
       "id": "internal_codec_msgpack_go",
-      "community": 7,
+      "community": 2,
       "norm_label": "msgpack.go"
     },
     {
@@ -522,7 +522,7 @@
       "source_file": "internal/codec/msgpack.go",
       "source_location": "L9",
       "id": "msgpack_decodemsgpack",
-      "community": 7,
+      "community": 2,
       "norm_label": "decodemsgpack()"
     },
     {
@@ -531,7 +531,7 @@
       "source_file": "internal/codec/msgpack.go",
       "source_location": "L14",
       "id": "msgpack_encodemsgpack",
-      "community": 7,
+      "community": 2,
       "norm_label": "encodemsgpack()"
     },
     {
@@ -540,7 +540,7 @@
       "source_file": "internal/codec/codec_test.go",
       "source_location": "L1",
       "id": "internal_codec_codec_test_go",
-      "community": 7,
+      "community": 2,
       "norm_label": "codec_test.go"
     },
     {
@@ -549,7 +549,7 @@
       "source_file": "internal/codec/codec_test.go",
       "source_location": "L10",
       "id": "codec_test_testregressiontestroundtrip",
-      "community": 7,
+      "community": 2,
       "norm_label": "testregressiontestroundtrip()"
     },
     {
@@ -558,7 +558,7 @@
       "source_file": "internal/codec/codec_test.go",
       "source_location": "L53",
       "id": "codec_test_testbehavioraltestroundtrip",
-      "community": 7,
+      "community": 2,
       "norm_label": "testbehavioraltestroundtrip()"
     },
     {
@@ -567,7 +567,7 @@
       "source_file": "internal/codec/yaml.go",
       "source_location": "L1",
       "id": "internal_codec_yaml_go",
-      "community": 7,
+      "community": 2,
       "norm_label": "yaml.go"
     },
     {
@@ -576,7 +576,7 @@
       "source_file": "internal/codec/yaml.go",
       "source_location": "L9",
       "id": "yaml_decodeyaml",
-      "community": 7,
+      "community": 2,
       "norm_label": "decodeyaml()"
     },
     {
@@ -585,7 +585,7 @@
       "source_file": "internal/codec/yaml.go",
       "source_location": "L14",
       "id": "yaml_encodeyaml",
-      "community": 7,
+      "community": 2,
       "norm_label": "encodeyaml()"
     },
     {
@@ -594,7 +594,7 @@
       "source_file": "internal/stores/silence_store_test.go",
       "source_location": "L1",
       "id": "internal_stores_silence_store_test_go",
-      "community": 2,
+      "community": 0,
       "norm_label": "silence_store_test.go"
     },
     {
@@ -603,7 +603,7 @@
       "source_file": "internal/stores/silence_store_test.go",
       "source_location": "L12",
       "id": "silence_store_test_testsilencestore_mutes",
-      "community": 2,
+      "community": 0,
       "norm_label": "testsilencestore_mutes()"
     },
     {
@@ -612,7 +612,7 @@
       "source_file": "internal/stores/silence_store_test.go",
       "source_location": "L99",
       "id": "silence_store_test_testsilencestore_reset",
-      "community": 2,
+      "community": 0,
       "norm_label": "testsilencestore_reset()"
     },
     {
@@ -621,7 +621,7 @@
       "source_file": "internal/stores/silence_store.go",
       "source_location": "L1",
       "id": "internal_stores_silence_store_go",
-      "community": 2,
+      "community": 0,
       "norm_label": "silence_store.go"
     },
     {
@@ -630,7 +630,7 @@
       "source_file": "internal/stores/silence_store.go",
       "source_location": "L11",
       "id": "stores_silencestore",
-      "community": 2,
+      "community": 0,
       "norm_label": "silencestore"
     },
     {
@@ -639,7 +639,7 @@
       "source_file": "internal/stores/silence_store.go",
       "source_location": "L16",
       "id": "silence_store_newsilencestore",
-      "community": 2,
+      "community": 0,
       "norm_label": "newsilencestore()"
     },
     {
@@ -648,7 +648,7 @@
       "source_file": "internal/stores/silence_store.go",
       "source_location": "L23",
       "id": "stores_silencestore_mutes",
-      "community": 2,
+      "community": 0,
       "norm_label": ".mutes()"
     },
     {
@@ -657,7 +657,7 @@
       "source_file": "internal/stores/silence_store.go",
       "source_location": "L33",
       "id": "stores_silencestore_silencematches",
-      "community": 2,
+      "community": 0,
       "norm_label": ".silencematches()"
     },
     {
@@ -666,7 +666,7 @@
       "source_file": "internal/stores/silence_store.go",
       "source_location": "L43",
       "id": "stores_silencestore_reset",
-      "community": 2,
+      "community": 0,
       "norm_label": ".reset()"
     },
     {
@@ -675,7 +675,7 @@
       "source_file": "internal/stores/alert_store_test.go",
       "source_location": "L1",
       "id": "internal_stores_alert_store_test_go",
-      "community": 3,
+      "community": 0,
       "norm_label": "alert_store_test.go"
     },
     {
@@ -684,7 +684,7 @@
       "source_file": "internal/stores/alert_store_test.go",
       "source_location": "L12",
       "id": "alert_store_test_testalertstore_put",
-      "community": 3,
+      "community": 0,
       "norm_label": "testalertstore_put()"
     },
     {
@@ -693,7 +693,7 @@
       "source_file": "internal/stores/alert_store_test.go",
       "source_location": "L26",
       "id": "alert_store_test_testalertstore_get",
-      "community": 3,
+      "community": 0,
       "norm_label": "testalertstore_get()"
     },
     {
@@ -702,7 +702,7 @@
       "source_file": "internal/stores/alert_store_test.go",
       "source_location": "L47",
       "id": "alert_store_test_testalertstore_subscribe",
-      "community": 3,
+      "community": 0,
       "norm_label": "testalertstore_subscribe()"
     },
     {
@@ -711,7 +711,7 @@
       "source_file": "internal/stores/alert_store_test.go",
       "source_location": "L69",
       "id": "alert_store_test_testalertstore_reset",
-      "community": 3,
+      "community": 0,
       "norm_label": "testalertstore_reset()"
     },
     {
@@ -720,7 +720,7 @@
       "source_file": "internal/stores/alert_store.go",
       "source_location": "L1",
       "id": "internal_stores_alert_store_go",
-      "community": 3,
+      "community": 0,
       "norm_label": "alert_store.go"
     },
     {
@@ -729,7 +729,7 @@
       "source_file": "internal/stores/alert_store.go",
       "source_location": "L13",
       "id": "stores_alertstore",
-      "community": 3,
+      "community": 0,
       "norm_label": "alertstore"
     },
     {
@@ -738,7 +738,7 @@
       "source_file": "internal/stores/alert_store.go",
       "source_location": "L20",
       "id": "alert_store_newalertstore",
-      "community": 2,
+      "community": 0,
       "norm_label": "newalertstore()"
     },
     {
@@ -747,7 +747,7 @@
       "source_file": "internal/stores/alert_store.go",
       "source_location": "L28",
       "id": "stores_alertstore_put",
-      "community": 3,
+      "community": 0,
       "norm_label": ".put()"
     },
     {
@@ -756,7 +756,7 @@
       "source_file": "internal/stores/alert_store.go",
       "source_location": "L41",
       "id": "stores_alertstore_get",
-      "community": 3,
+      "community": 0,
       "norm_label": ".get()"
     },
     {
@@ -765,7 +765,7 @@
       "source_file": "internal/stores/alert_store.go",
       "source_location": "L53",
       "id": "stores_alertstore_subscribe",
-      "community": 3,
+      "community": 0,
       "norm_label": ".subscribe()"
     },
     {
@@ -774,7 +774,7 @@
       "source_file": "internal/stores/alert_store.go",
       "source_location": "L65",
       "id": "stores_alertstore_getpending",
-      "community": 3,
+      "community": 0,
       "norm_label": ".getpending()"
     },
     {
@@ -783,7 +783,7 @@
       "source_file": "internal/stores/alert_store.go",
       "source_location": "L77",
       "id": "stores_alertstore_reset",
-      "community": 3,
+      "community": 0,
       "norm_label": ".reset()"
     },
     {
@@ -792,7 +792,7 @@
       "source_file": "internal/stores/alert_store.go",
       "source_location": "L86",
       "id": "stores_alertiterator",
-      "community": 3,
+      "community": 2,
       "norm_label": "alertiterator"
     },
     {
@@ -801,7 +801,7 @@
       "source_file": "internal/stores/alert_store.go",
       "source_location": "L94",
       "id": "alert_store_newalertiterator",
-      "community": 3,
+      "community": 0,
       "norm_label": "newalertiterator()"
     },
     {
@@ -810,7 +810,7 @@
       "source_file": "internal/stores/alert_store.go",
       "source_location": "L103",
       "id": "stores_alertiterator_next",
-      "community": 3,
+      "community": 2,
       "norm_label": ".next()"
     },
     {
@@ -819,7 +819,7 @@
       "source_file": "internal/stores/alert_store.go",
       "source_location": "L123",
       "id": "stores_alertiterator_close",
-      "community": 3,
+      "community": 2,
       "norm_label": ".close()"
     },
     {
@@ -828,7 +828,7 @@
       "source_file": "internal/stores/alert_store.go",
       "source_location": "L128",
       "id": "stores_alertiterator_err",
-      "community": 3,
+      "community": 2,
       "norm_label": ".err()"
     },
     {
@@ -837,7 +837,7 @@
       "source_file": "internal/engine/pipeline/pipeline_test.go",
       "source_location": "L1",
       "id": "internal_engine_pipeline_pipeline_test_go",
-      "community": 2,
+      "community": 0,
       "norm_label": "pipeline_test.go"
     },
     {
@@ -846,7 +846,7 @@
       "source_file": "internal/engine/pipeline/pipeline_test.go",
       "source_location": "L15",
       "id": "pipeline_test_testpipeline_execute_silenced",
-      "community": 2,
+      "community": 0,
       "norm_label": "testpipeline_execute_silenced()"
     },
     {
@@ -855,7 +855,7 @@
       "source_file": "internal/engine/pipeline/pipeline_test.go",
       "source_location": "L34",
       "id": "pipeline_test_testpipeline_execute_active",
-      "community": 2,
+      "community": 0,
       "norm_label": "testpipeline_execute_active()"
     },
     {
@@ -864,8 +864,80 @@
       "source_file": "internal/engine/pipeline/pipeline_test.go",
       "source_location": "L49",
       "id": "pipeline_test_testpipeline_execute_inhibited",
-      "community": 2,
+      "community": 0,
       "norm_label": "testpipeline_execute_inhibited()"
+    },
+    {
+      "label": "router_test.go",
+      "file_type": "code",
+      "source_file": "internal/engine/pipeline/router_test.go",
+      "source_location": "L1",
+      "id": "internal_engine_pipeline_router_test_go",
+      "community": 8,
+      "norm_label": "router_test.go"
+    },
+    {
+      "label": "TestRouter_RootFallback()",
+      "file_type": "code",
+      "source_file": "internal/engine/pipeline/router_test.go",
+      "source_location": "L14",
+      "id": "router_test_testrouter_rootfallback",
+      "community": 8,
+      "norm_label": "testrouter_rootfallback()"
+    },
+    {
+      "label": "TestRouter_ExactMatch()",
+      "file_type": "code",
+      "source_file": "internal/engine/pipeline/router_test.go",
+      "source_location": "L24",
+      "id": "router_test_testrouter_exactmatch",
+      "community": 8,
+      "norm_label": "testrouter_exactmatch()"
+    },
+    {
+      "label": "TestRouter_RegexMatch()",
+      "file_type": "code",
+      "source_file": "internal/engine/pipeline/router_test.go",
+      "source_location": "L43",
+      "id": "router_test_testrouter_regexmatch",
+      "community": 8,
+      "norm_label": "testrouter_regexmatch()"
+    },
+    {
+      "label": "TestRouter_ContinueTrue_MultipleReceivers()",
+      "file_type": "code",
+      "source_file": "internal/engine/pipeline/router_test.go",
+      "source_location": "L64",
+      "id": "router_test_testrouter_continuetrue_multiplereceivers",
+      "community": 8,
+      "norm_label": "testrouter_continuetrue_multiplereceivers()"
+    },
+    {
+      "label": "TestRouter_ContinueFalse_StopsSiblings()",
+      "file_type": "code",
+      "source_file": "internal/engine/pipeline/router_test.go",
+      "source_location": "L86",
+      "id": "router_test_testrouter_continuefalse_stopssiblings",
+      "community": 8,
+      "norm_label": "testrouter_continuefalse_stopssiblings()"
+    },
+    {
+      "label": "TestRouter_NestedRoute()",
+      "file_type": "code",
+      "source_file": "internal/engine/pipeline/router_test.go",
+      "source_location": "L107",
+      "id": "router_test_testrouter_nestedroute",
+      "community": 8,
+      "norm_label": "testrouter_nestedroute()"
+    },
+    {
+      "label": "TestRouter_ModernMatchers()",
+      "file_type": "code",
+      "source_file": "internal/engine/pipeline/router_test.go",
+      "source_location": "L136",
+      "id": "router_test_testrouter_modernmatchers",
+      "community": 8,
+      "norm_label": "testrouter_modernmatchers()"
     },
     {
       "label": "pipeline.go",
@@ -873,7 +945,7 @@
       "source_file": "internal/engine/pipeline/pipeline.go",
       "source_location": "L1",
       "id": "internal_engine_pipeline_pipeline_go",
-      "community": 2,
+      "community": 0,
       "norm_label": "pipeline.go"
     },
     {
@@ -882,7 +954,7 @@
       "source_file": "internal/engine/pipeline/pipeline.go",
       "source_location": "L11",
       "id": "pipeline_outcome",
-      "community": 2,
+      "community": 0,
       "norm_label": "outcome"
     },
     {
@@ -891,7 +963,7 @@
       "source_file": "internal/engine/pipeline/pipeline.go",
       "source_location": "L17",
       "id": "pipeline_runner",
-      "community": 3,
+      "community": 0,
       "norm_label": "runner"
     },
     {
@@ -900,7 +972,7 @@
       "source_file": "internal/engine/pipeline/pipeline.go",
       "source_location": "L24",
       "id": "pipeline_newrunner",
-      "community": 2,
+      "community": 0,
       "norm_label": "newrunner()"
     },
     {
@@ -909,7 +981,7 @@
       "source_file": "internal/engine/pipeline/pipeline.go",
       "source_location": "L33",
       "id": "pipeline_runner_execute",
-      "community": 3,
+      "community": 0,
       "norm_label": ".execute()"
     },
     {
@@ -918,7 +990,7 @@
       "source_file": "internal/engine/pipeline/pipeline.go",
       "source_location": "L60",
       "id": "pipeline_runner_labelsmatch",
-      "community": 3,
+      "community": 0,
       "norm_label": ".labelsmatch()"
     },
     {
@@ -927,7 +999,7 @@
       "source_file": "internal/engine/snapshot/route_walker.go",
       "source_location": "L1",
       "id": "internal_engine_snapshot_route_walker_go",
-      "community": 1,
+      "community": 4,
       "norm_label": "route_walker.go"
     },
     {
@@ -936,7 +1008,7 @@
       "source_file": "internal/engine/snapshot/route_walker.go",
       "source_location": "L9",
       "id": "snapshot_routepath",
-      "community": 1,
+      "community": 4,
       "norm_label": "routepath"
     },
     {
@@ -945,7 +1017,7 @@
       "source_file": "internal/engine/snapshot/route_walker.go",
       "source_location": "L15",
       "id": "snapshot_routewalker",
-      "community": 1,
+      "community": 4,
       "norm_label": "routewalker"
     },
     {
@@ -954,7 +1026,7 @@
       "source_file": "internal/engine/snapshot/route_walker.go",
       "source_location": "L20",
       "id": "route_walker_newroutewalker",
-      "community": 1,
+      "community": 4,
       "norm_label": "newroutewalker()"
     },
     {
@@ -963,7 +1035,7 @@
       "source_file": "internal/engine/snapshot/route_walker.go",
       "source_location": "L25",
       "id": "snapshot_routewalker_findterminalpaths",
-      "community": 1,
+      "community": 4,
       "norm_label": ".findterminalpaths()"
     },
     {
@@ -972,7 +1044,7 @@
       "source_file": "internal/engine/snapshot/route_walker.go",
       "source_location": "L32",
       "id": "snapshot_routewalker_walk",
-      "community": 1,
+      "community": 4,
       "norm_label": ".walk()"
     },
     {
@@ -981,25 +1053,34 @@
       "source_file": "internal/engine/snapshot/route_walker_test.go",
       "source_location": "L1",
       "id": "internal_engine_snapshot_route_walker_test_go",
-      "community": 1,
+      "community": 4,
       "norm_label": "route_walker_test.go"
     },
     {
       "label": "TestRouteWalker_FindTerminalPaths()",
       "file_type": "code",
       "source_file": "internal/engine/snapshot/route_walker_test.go",
-      "source_location": "L11",
+      "source_location": "L13",
       "id": "route_walker_test_testroutewalker_findterminalpaths",
-      "community": 1,
+      "community": 4,
       "norm_label": "testroutewalker_findterminalpaths()"
+    },
+    {
+      "label": "TestRouteWalker_MatchersCapture()",
+      "file_type": "code",
+      "source_file": "internal/engine/snapshot/route_walker_test.go",
+      "source_location": "L93",
+      "id": "route_walker_test_testroutewalker_matcherscapture",
+      "community": 4,
+      "norm_label": "testroutewalker_matcherscapture()"
     },
     {
       "label": "TestRoutePath_Matchers()",
       "file_type": "code",
       "source_file": "internal/engine/snapshot/route_walker_test.go",
-      "source_location": "L91",
+      "source_location": "L142",
       "id": "route_walker_test_testroutepath_matchers",
-      "community": 1,
+      "community": 4,
       "norm_label": "testroutepath_matchers()"
     },
     {
@@ -1008,7 +1089,7 @@
       "source_file": "internal/engine/snapshot/snapshot_test.go",
       "source_location": "L1",
       "id": "internal_engine_snapshot_snapshot_test_go",
-      "community": 2,
+      "community": 0,
       "norm_label": "snapshot_test.go"
     },
     {
@@ -1017,7 +1098,7 @@
       "source_file": "internal/engine/snapshot/snapshot_test.go",
       "source_location": "L14",
       "id": "snapshot_test_testsnapshotsynthesizer_discoveroutcomes",
-      "community": 2,
+      "community": 0,
       "norm_label": "testsnapshotsynthesizer_discoveroutcomes()"
     },
     {
@@ -1026,7 +1107,7 @@
       "source_file": "internal/engine/snapshot/snapshot_test.go",
       "source_location": "L50",
       "id": "snapshot_test_testregressiontest_roundtrip",
-      "community": 2,
+      "community": 0,
       "norm_label": "testregressiontest_roundtrip()"
     },
     {
@@ -1035,7 +1116,7 @@
       "source_file": "internal/engine/snapshot/regex_expansion_test.go",
       "source_location": "L1",
       "id": "internal_engine_snapshot_regex_expansion_test_go",
-      "community": 4,
+      "community": 5,
       "norm_label": "regex_expansion_test.go"
     },
     {
@@ -1044,7 +1125,7 @@
       "source_file": "internal/engine/snapshot/regex_expansion_test.go",
       "source_location": "L9",
       "id": "regex_expansion_test_testregexexpansion_expandalternations",
-      "community": 4,
+      "community": 5,
       "norm_label": "testregexexpansion_expandalternations()"
     },
     {
@@ -1053,7 +1134,7 @@
       "source_file": "internal/engine/snapshot/regex_expansion_test.go",
       "source_location": "L51",
       "id": "regex_expansion_test_testlabelcombinations_balancedcovering",
-      "community": 4,
+      "community": 5,
       "norm_label": "testlabelcombinations_balancedcovering()"
     },
     {
@@ -1062,7 +1143,7 @@
       "source_file": "internal/engine/snapshot/regex_expansion_test.go",
       "source_location": "L125",
       "id": "regex_expansion_test_verifycoverage",
-      "community": 4,
+      "community": 5,
       "norm_label": "verifycoverage()"
     },
     {
@@ -1071,7 +1152,7 @@
       "source_file": "internal/engine/snapshot/snapshot.go",
       "source_location": "L1",
       "id": "internal_engine_snapshot_snapshot_go",
-      "community": 4,
+      "community": 5,
       "norm_label": "snapshot.go"
     },
     {
@@ -1080,7 +1161,7 @@
       "source_file": "internal/engine/snapshot/snapshot.go",
       "source_location": "L11",
       "id": "snapshot_synthesisresult",
-      "community": 4,
+      "community": 5,
       "norm_label": "synthesisresult"
     },
     {
@@ -1089,7 +1170,7 @@
       "source_file": "internal/engine/snapshot/snapshot.go",
       "source_location": "L17",
       "id": "snapshot_snapshotsynthesizer",
-      "community": 4,
+      "community": 5,
       "norm_label": "snapshotsynthesizer"
     },
     {
@@ -1098,7 +1179,7 @@
       "source_file": "internal/engine/snapshot/snapshot.go",
       "source_location": "L24",
       "id": "snapshot_newsnapshotsynthesizer",
-      "community": 4,
+      "community": 5,
       "norm_label": "newsnapshotsynthesizer()"
     },
     {
@@ -1107,7 +1188,7 @@
       "source_file": "internal/engine/snapshot/snapshot.go",
       "source_location": "L33",
       "id": "snapshot_snapshotsynthesizer_discoveroutcomes",
-      "community": 4,
+      "community": 5,
       "norm_label": ".discoveroutcomes()"
     },
     {
@@ -1116,7 +1197,7 @@
       "source_file": "internal/engine/snapshot/snapshot.go",
       "source_location": "L72",
       "id": "snapshot_snapshotsynthesizer_expandmatchers",
-      "community": 4,
+      "community": 5,
       "norm_label": ".expandmatchers()"
     },
     {
@@ -1125,7 +1206,7 @@
       "source_file": "internal/engine/snapshot/snapshot.go",
       "source_location": "L86",
       "id": "snapshot_snapshotsynthesizer_outcomekey",
-      "community": 4,
+      "community": 5,
       "norm_label": ".outcomekey()"
     },
     {
@@ -1134,7 +1215,7 @@
       "source_file": "internal/engine/snapshot/regex_expansion.go",
       "source_location": "L1",
       "id": "internal_engine_snapshot_regex_expansion_go",
-      "community": 4,
+      "community": 5,
       "norm_label": "regex_expansion.go"
     },
     {
@@ -1143,7 +1224,7 @@
       "source_file": "internal/engine/snapshot/regex_expansion.go",
       "source_location": "L9",
       "id": "snapshot_regexexpander",
-      "community": 4,
+      "community": 5,
       "norm_label": "regexexpander"
     },
     {
@@ -1152,7 +1233,7 @@
       "source_file": "internal/engine/snapshot/regex_expansion.go",
       "source_location": "L12",
       "id": "regex_expansion_newregexexpander",
-      "community": 4,
+      "community": 5,
       "norm_label": "newregexexpander()"
     },
     {
@@ -1161,7 +1242,7 @@
       "source_file": "internal/engine/snapshot/regex_expansion.go",
       "source_location": "L17",
       "id": "snapshot_regexexpander_expandalternations",
-      "community": 4,
+      "community": 5,
       "norm_label": ".expandalternations()"
     },
     {
@@ -1170,7 +1251,7 @@
       "source_file": "internal/engine/snapshot/regex_expansion.go",
       "source_location": "L47",
       "id": "snapshot_labelcombinationgenerator",
-      "community": 4,
+      "community": 5,
       "norm_label": "labelcombinationgenerator"
     },
     {
@@ -1179,7 +1260,7 @@
       "source_file": "internal/engine/snapshot/regex_expansion.go",
       "source_location": "L52",
       "id": "regex_expansion_newlabelcombinationgenerator",
-      "community": 4,
+      "community": 5,
       "norm_label": "newlabelcombinationgenerator()"
     },
     {
@@ -1188,7 +1269,7 @@
       "source_file": "internal/engine/snapshot/regex_expansion.go",
       "source_location": "L59",
       "id": "snapshot_labelcombinationgenerator_generatecovering",
-      "community": 4,
+      "community": 5,
       "norm_label": ".generatecovering()"
     },
     {
@@ -1197,7 +1278,7 @@
       "source_file": "internal/engine/snapshot/regex_expansion.go",
       "source_location": "L76",
       "id": "snapshot_labelcombinationgenerator_cartesianproduct",
-      "community": 4,
+      "community": 5,
       "norm_label": ".cartesianproduct()"
     },
     {
@@ -1206,7 +1287,7 @@
       "source_file": "internal/engine/snapshot/regex_expansion.go",
       "source_location": "L106",
       "id": "snapshot_labelcombinationgenerator_minimalcoveringset",
-      "community": 4,
+      "community": 5,
       "norm_label": ".minimalcoveringset()"
     },
     {
@@ -1215,7 +1296,7 @@
       "source_file": "internal/engine/behavioral/executor_test.go",
       "source_location": "L1",
       "id": "internal_engine_behavioral_executor_test_go",
-      "community": 0,
+      "community": 1,
       "norm_label": "executor_test.go"
     },
     {
@@ -1224,7 +1305,7 @@
       "source_file": "internal/engine/behavioral/executor_test.go",
       "source_location": "L11",
       "id": "executor_test_testbehavioraltestexecutor_execute_active",
-      "community": 0,
+      "community": 1,
       "norm_label": "testbehavioraltestexecutor_execute_active()"
     },
     {
@@ -1233,7 +1314,7 @@
       "source_file": "internal/engine/behavioral/executor_test.go",
       "source_location": "L35",
       "id": "executor_test_testbehavioraltestexecutor_execute_silenced",
-      "community": 0,
+      "community": 1,
       "norm_label": "testbehavioraltestexecutor_execute_silenced()"
     },
     {
@@ -1242,7 +1323,7 @@
       "source_file": "internal/engine/behavioral/executor_test.go",
       "source_location": "L62",
       "id": "executor_test_testbehavioraltestexecutor_execute_silenced_mismatch",
-      "community": 0,
+      "community": 1,
       "norm_label": "testbehavioraltestexecutor_execute_silenced_mismatch()"
     },
     {
@@ -1251,7 +1332,7 @@
       "source_file": "internal/engine/behavioral/executor_test.go",
       "source_location": "L89",
       "id": "executor_test_testbehavioraltestexecutor_execute_inhibited",
-      "community": 0,
+      "community": 1,
       "norm_label": "testbehavioraltestexecutor_execute_inhibited()"
     },
     {
@@ -1260,7 +1341,7 @@
       "source_file": "internal/engine/behavioral/executor_test.go",
       "source_location": "L115",
       "id": "executor_test_testbehavioraltestexecutor_execute_receivers_mismatch",
-      "community": 0,
+      "community": 1,
       "norm_label": "testbehavioraltestexecutor_execute_receivers_mismatch()"
     },
     {
@@ -1269,7 +1350,7 @@
       "source_file": "internal/engine/behavioral/executor_test.go",
       "source_location": "L139",
       "id": "executor_test_testbehavioraltestexecutor_execute_outcomeonly",
-      "community": 0,
+      "community": 1,
       "norm_label": "testbehavioraltestexecutor_execute_outcomeonly()"
     },
     {
@@ -1278,7 +1359,7 @@
       "source_file": "internal/engine/behavioral/loader.go",
       "source_location": "L1",
       "id": "internal_engine_behavioral_loader_go",
-      "community": 8,
+      "community": 3,
       "norm_label": "loader.go"
     },
     {
@@ -1287,7 +1368,7 @@
       "source_file": "internal/engine/behavioral/loader.go",
       "source_location": "L13",
       "id": "behavioral_behavioraltestloader",
-      "community": 8,
+      "community": 3,
       "norm_label": "behavioraltestloader"
     },
     {
@@ -1296,7 +1377,7 @@
       "source_file": "internal/engine/behavioral/loader.go",
       "source_location": "L16",
       "id": "loader_newbehavioraltestloader",
-      "community": 8,
+      "community": 3,
       "norm_label": "newbehavioraltestloader()"
     },
     {
@@ -1305,7 +1386,7 @@
       "source_file": "internal/engine/behavioral/loader.go",
       "source_location": "L21",
       "id": "behavioral_behavioraltestloader_loadfromfile",
-      "community": 8,
+      "community": 3,
       "norm_label": ".loadfromfile()"
     },
     {
@@ -1314,7 +1395,7 @@
       "source_file": "internal/engine/behavioral/loader.go",
       "source_location": "L36",
       "id": "behavioral_behavioraltestloader_loadfromdirectory",
-      "community": 8,
+      "community": 3,
       "norm_label": ".loadfromdirectory()"
     },
     {
@@ -1323,7 +1404,7 @@
       "source_file": "internal/engine/behavioral/executor.go",
       "source_location": "L1",
       "id": "internal_engine_behavioral_executor_go",
-      "community": 0,
+      "community": 1,
       "norm_label": "executor.go"
     },
     {
@@ -1332,7 +1413,7 @@
       "source_file": "internal/engine/behavioral/executor.go",
       "source_location": "L16",
       "id": "behavioral_testresult",
-      "community": 0,
+      "community": 1,
       "norm_label": "testresult"
     },
     {
@@ -1341,7 +1422,7 @@
       "source_file": "internal/engine/behavioral/executor.go",
       "source_location": "L23",
       "id": "behavioral_behavioraltestexecutor",
-      "community": 0,
+      "community": 1,
       "norm_label": "behavioraltestexecutor"
     },
     {
@@ -1350,7 +1431,7 @@
       "source_file": "internal/engine/behavioral/executor.go",
       "source_location": "L26",
       "id": "executor_newbehavioraltestexecutor",
-      "community": 0,
+      "community": 1,
       "norm_label": "newbehavioraltestexecutor()"
     },
     {
@@ -1359,7 +1440,7 @@
       "source_file": "internal/engine/behavioral/executor.go",
       "source_location": "L31",
       "id": "behavioral_behavioraltestexecutor_execute",
-      "community": 0,
+      "community": 1,
       "norm_label": ".execute()"
     },
     {
@@ -1368,7 +1449,7 @@
       "source_file": "internal/engine/behavioral/executor.go",
       "source_location": "L104",
       "id": "executor_receiversmatch",
-      "community": 0,
+      "community": 1,
       "norm_label": "receiversmatch()"
     },
     {
@@ -1377,7 +1458,7 @@
       "source_file": "internal/engine/behavioral/loader_test.go",
       "source_location": "L1",
       "id": "internal_engine_behavioral_loader_test_go",
-      "community": 8,
+      "community": 3,
       "norm_label": "loader_test.go"
     },
     {
@@ -1386,7 +1467,7 @@
       "source_file": "internal/engine/behavioral/loader_test.go",
       "source_location": "L11",
       "id": "loader_test_testbehavioraltestloader_loadfromfile",
-      "community": 8,
+      "community": 3,
       "norm_label": "testbehavioraltestloader_loadfromfile()"
     },
     {
@@ -1395,7 +1476,7 @@
       "source_file": "internal/engine/behavioral/loader_test.go",
       "source_location": "L59",
       "id": "loader_test_testbehavioraltestloader_loadfromdirectory",
-      "community": 8,
+      "community": 3,
       "norm_label": "testbehavioraltestloader_loadfromdirectory()"
     },
     {
@@ -1458,53 +1539,98 @@
       "source_file": "internal/engine/sanity/shadowed_test.go",
       "source_location": "L1",
       "id": "internal_engine_sanity_shadowed_test_go",
-      "community": 1,
+      "community": 7,
       "norm_label": "shadowed_test.go"
     },
     {
-      "label": "TestShadowedRouteDetector_NoShadow()",
+      "label": "mustMatcher()",
       "file_type": "code",
       "source_file": "internal/engine/sanity/shadowed_test.go",
-      "source_location": "L10",
-      "id": "shadowed_test_testshadowedroutedetector_noshadow",
-      "community": 1,
-      "norm_label": "testshadowedroutedetector_noshadow()"
+      "source_location": "L15",
+      "id": "shadowed_test_mustmatcher",
+      "community": 7,
+      "norm_label": "mustmatcher()"
     },
     {
-      "label": "TestShadowedRouteDetector_ShadowedByParent()",
+      "label": "mustRegexp()",
       "file_type": "code",
       "source_file": "internal/engine/sanity/shadowed_test.go",
-      "source_location": "L31",
-      "id": "shadowed_test_testshadowedroutedetector_shadowedbyparent",
-      "community": 1,
-      "norm_label": "testshadowedroutedetector_shadowedbyparent()"
+      "source_location": "L22",
+      "id": "shadowed_test_mustregexp",
+      "community": 7,
+      "norm_label": "mustregexp()"
     },
     {
-      "label": "TestShadowedRouteDetector_ShadowedByParentNoChild()",
+      "label": "detectIssues()",
       "file_type": "code",
       "source_file": "internal/engine/sanity/shadowed_test.go",
-      "source_location": "L54",
-      "id": "shadowed_test_testshadowedroutedetector_shadowedbyparentnochild",
-      "community": 1,
-      "norm_label": "testshadowedroutedetector_shadowedbyparentnochild()"
+      "source_location": "L26",
+      "id": "shadowed_test_detectissues",
+      "community": 7,
+      "norm_label": "detectissues()"
     },
     {
-      "label": "TestShadowedRouteDetector_ShadowedBySubsetMatcher()",
+      "label": "TestShadowedRouteDetector()",
       "file_type": "code",
       "source_file": "internal/engine/sanity/shadowed_test.go",
-      "source_location": "L77",
-      "id": "shadowed_test_testshadowedroutedetector_shadowedbysubsetmatcher",
-      "community": 1,
-      "norm_label": "testshadowedroutedetector_shadowedbysubsetmatcher()"
+      "source_location": "L32",
+      "id": "shadowed_test_testshadowedroutedetector",
+      "community": 7,
+      "norm_label": "testshadowedroutedetector()"
     },
     {
-      "label": "TestShadowedRouteDetector_NotShadowedDifferentMatchers()",
+      "label": "containsAny()",
       "file_type": "code",
       "source_file": "internal/engine/sanity/shadowed_test.go",
-      "source_location": "L99",
-      "id": "shadowed_test_testshadowedroutedetector_notshadoweddifferentmatchers",
-      "community": 1,
-      "norm_label": "testshadowedroutedetector_notshadoweddifferentmatchers()"
+      "source_location": "L231",
+      "id": "shadowed_test_containsany",
+      "community": 7,
+      "norm_label": "containsany()"
+    },
+    {
+      "label": "isShadowedVictim()",
+      "file_type": "code",
+      "source_file": "internal/engine/sanity/shadowed_test.go",
+      "source_location": "L242",
+      "id": "shadowed_test_isshadowedvictim",
+      "community": 7,
+      "norm_label": "isshadowedvictim()"
+    },
+    {
+      "label": "TestShadowedRouteDetector_NegativeMatcher()",
+      "file_type": "code",
+      "source_file": "internal/engine/sanity/shadowed_test.go",
+      "source_location": "L249",
+      "id": "shadowed_test_testshadowedroutedetector_negativematcher",
+      "community": 7,
+      "norm_label": "testshadowedroutedetector_negativematcher()"
+    },
+    {
+      "label": "TestShadowedRouteDetector_MatcherFormats()",
+      "file_type": "code",
+      "source_file": "internal/engine/sanity/shadowed_test.go",
+      "source_location": "L329",
+      "id": "shadowed_test_testshadowedroutedetector_matcherformats",
+      "community": 7,
+      "norm_label": "testshadowedroutedetector_matcherformats()"
+    },
+    {
+      "label": "TestShadowedRouteDetector_NestedRoutes()",
+      "file_type": "code",
+      "source_file": "internal/engine/sanity/shadowed_test.go",
+      "source_location": "L419",
+      "id": "shadowed_test_testshadowedroutedetector_nestedroutes",
+      "community": 7,
+      "norm_label": "testshadowedroutedetector_nestedroutes()"
+    },
+    {
+      "label": "TestShadowedRouteDetector_RegressionCases()",
+      "file_type": "code",
+      "source_file": "internal/engine/sanity/shadowed_test.go",
+      "source_location": "L478",
+      "id": "shadowed_test_testshadowedroutedetector_regressioncases",
+      "community": 7,
+      "norm_label": "testshadowedroutedetector_regressioncases()"
     },
     {
       "label": "shadowed.go",
@@ -1512,62 +1638,107 @@
       "source_file": "internal/engine/sanity/shadowed.go",
       "source_location": "L1",
       "id": "internal_engine_sanity_shadowed_go",
-      "community": 1,
+      "community": 4,
       "norm_label": "shadowed.go"
     },
     {
       "label": "ShadowedRouteDetector",
       "file_type": "code",
       "source_file": "internal/engine/sanity/shadowed.go",
-      "source_location": "L12",
+      "source_location": "L10",
       "id": "sanity_shadowedroutedetector",
-      "community": 1,
+      "community": 4,
       "norm_label": "shadowedroutedetector"
     },
     {
       "label": "NewShadowedRouteDetector()",
       "file_type": "code",
       "source_file": "internal/engine/sanity/shadowed.go",
-      "source_location": "L17",
+      "source_location": "L15",
       "id": "shadowed_newshadowedroutedetector",
-      "community": 1,
+      "community": 4,
       "norm_label": "newshadowedroutedetector()"
     },
     {
       "label": ".Detect()",
       "file_type": "code",
       "source_file": "internal/engine/sanity/shadowed.go",
-      "source_location": "L22",
+      "source_location": "L20",
       "id": "sanity_shadowedroutedetector_detect",
-      "community": 1,
+      "community": 4,
       "norm_label": ".detect()"
     },
     {
       "label": ".isShadowed()",
       "file_type": "code",
       "source_file": "internal/engine/sanity/shadowed.go",
-      "source_location": "L46",
+      "source_location": "L44",
       "id": "sanity_shadowedroutedetector_isshadowed",
-      "community": 1,
+      "community": 4,
       "norm_label": ".isshadowed()"
     },
     {
-      "label": ".isSubset()",
+      "label": "route_inspector.go",
       "file_type": "code",
-      "source_file": "internal/engine/sanity/shadowed.go",
-      "source_location": "L52",
-      "id": "sanity_shadowedroutedetector_issubset",
-      "community": 1,
-      "norm_label": ".issubset()"
+      "source_file": "internal/engine/sanity/route_inspector.go",
+      "source_location": "L1",
+      "id": "internal_engine_sanity_route_inspector_go",
+      "community": 4,
+      "norm_label": "route_inspector.go"
     },
     {
-      "label": ".mergeMatchers()",
+      "label": "sanityMatcher",
       "file_type": "code",
-      "source_file": "internal/engine/sanity/shadowed.go",
-      "source_location": "L67",
-      "id": "sanity_shadowedroutedetector_mergematchers",
-      "community": 1,
-      "norm_label": ".mergematchers()"
+      "source_file": "internal/engine/sanity/route_inspector.go",
+      "source_location": "L10",
+      "id": "sanity_sanitymatcher",
+      "community": 4,
+      "norm_label": "sanitymatcher"
+    },
+    {
+      "label": "sanityPath",
+      "file_type": "code",
+      "source_file": "internal/engine/sanity/route_inspector.go",
+      "source_location": "L17",
+      "id": "sanity_sanitypath",
+      "community": 4,
+      "norm_label": "sanitypath"
+    },
+    {
+      "label": "routeInspector",
+      "file_type": "code",
+      "source_file": "internal/engine/sanity/route_inspector.go",
+      "source_location": "L24",
+      "id": "sanity_routeinspector",
+      "community": 4,
+      "norm_label": "routeinspector"
+    },
+    {
+      "label": "newRouteInspector()",
+      "file_type": "code",
+      "source_file": "internal/engine/sanity/route_inspector.go",
+      "source_location": "L28",
+      "id": "route_inspector_newrouteinspector",
+      "community": 4,
+      "norm_label": "newrouteinspector()"
+    },
+    {
+      "label": ".findPaths()",
+      "file_type": "code",
+      "source_file": "internal/engine/sanity/route_inspector.go",
+      "source_location": "L33",
+      "id": "sanity_routeinspector_findpaths",
+      "community": 4,
+      "norm_label": ".findpaths()"
+    },
+    {
+      "label": ".walk()",
+      "file_type": "code",
+      "source_file": "internal/engine/sanity/route_inspector.go",
+      "source_location": "L39",
+      "id": "sanity_routeinspector_walk",
+      "community": 4,
+      "norm_label": ".walk()"
     },
     {
       "label": "inhibition.go",
@@ -1908,8 +2079,8 @@
       "source_file": "cmd/litmus/main.go",
       "source_location": "L23",
       "weight": 1.0,
-      "_src": "main_main",
-      "_tgt": "check_newcheckcmd",
+      "_src": "check_newcheckcmd",
+      "_tgt": "main_main",
       "source": "check_newcheckcmd",
       "target": "main_main"
     },
@@ -2616,8 +2787,8 @@
       "source_file": "cmd/litmus/main.go",
       "source_location": "L24",
       "weight": 1.0,
-      "_src": "main_main",
-      "_tgt": "inspect_newinspectcmd",
+      "_src": "inspect_newinspectcmd",
+      "_tgt": "main_main",
       "source": "inspect_newinspectcmd",
       "target": "main_main"
     },
@@ -2772,8 +2943,8 @@
       "source_file": "cmd/litmus/main.go",
       "source_location": "L22",
       "weight": 1.0,
-      "_src": "main_main",
-      "_tgt": "snapshot_newsnapshotcmd",
+      "_src": "snapshot_newsnapshotcmd",
+      "_tgt": "main_main",
       "source": "snapshot_newsnapshotcmd",
       "target": "main_main"
     },
@@ -2940,8 +3111,8 @@
       "source_file": "cmd/litmus/main.go",
       "source_location": "L21",
       "weight": 1.0,
-      "_src": "main_main",
-      "_tgt": "init_newinitcmd",
+      "_src": "init_newinitcmd",
+      "_tgt": "main_main",
       "source": "init_newinitcmd",
       "target": "main_main"
     },
@@ -3348,8 +3519,8 @@
       "source_file": "internal/engine/pipeline/pipeline_test.go",
       "source_location": "L22",
       "weight": 1.0,
-      "_src": "pipeline_test_testpipeline_execute_silenced",
-      "_tgt": "silence_store_newsilencestore",
+      "_src": "silence_store_newsilencestore",
+      "_tgt": "pipeline_test_testpipeline_execute_silenced",
       "source": "silence_store_newsilencestore",
       "target": "pipeline_test_testpipeline_execute_silenced"
     },
@@ -3360,8 +3531,8 @@
       "source_file": "internal/engine/pipeline/pipeline_test.go",
       "source_location": "L36",
       "weight": 1.0,
-      "_src": "pipeline_test_testpipeline_execute_active",
-      "_tgt": "silence_store_newsilencestore",
+      "_src": "silence_store_newsilencestore",
+      "_tgt": "pipeline_test_testpipeline_execute_active",
       "source": "silence_store_newsilencestore",
       "target": "pipeline_test_testpipeline_execute_active"
     },
@@ -3372,8 +3543,8 @@
       "source_file": "internal/engine/pipeline/pipeline_test.go",
       "source_location": "L51",
       "weight": 1.0,
-      "_src": "pipeline_test_testpipeline_execute_inhibited",
-      "_tgt": "silence_store_newsilencestore",
+      "_src": "silence_store_newsilencestore",
+      "_tgt": "pipeline_test_testpipeline_execute_inhibited",
       "source": "silence_store_newsilencestore",
       "target": "pipeline_test_testpipeline_execute_inhibited"
     },
@@ -3384,8 +3555,8 @@
       "source_file": "internal/engine/snapshot/snapshot_test.go",
       "source_location": "L16",
       "weight": 1.0,
-      "_src": "snapshot_test_testsnapshotsynthesizer_discoveroutcomes",
-      "_tgt": "silence_store_newsilencestore",
+      "_src": "silence_store_newsilencestore",
+      "_tgt": "snapshot_test_testsnapshotsynthesizer_discoveroutcomes",
       "source": "silence_store_newsilencestore",
       "target": "snapshot_test_testsnapshotsynthesizer_discoveroutcomes"
     },
@@ -3396,8 +3567,8 @@
       "source_file": "internal/engine/behavioral/executor.go",
       "source_location": "L40",
       "weight": 1.0,
-      "_src": "behavioral_behavioraltestexecutor_execute",
-      "_tgt": "silence_store_newsilencestore",
+      "_src": "silence_store_newsilencestore",
+      "_tgt": "behavioral_behavioraltestexecutor_execute",
       "source": "silence_store_newsilencestore",
       "target": "behavioral_behavioraltestexecutor_execute"
     },
@@ -3420,8 +3591,8 @@
       "source_file": "internal/engine/pipeline/pipeline.go",
       "source_location": "L35",
       "weight": 1.0,
-      "_src": "pipeline_runner_execute",
-      "_tgt": "stores_silencestore_mutes",
+      "_src": "stores_silencestore_mutes",
+      "_tgt": "pipeline_runner_execute",
       "source": "stores_silencestore_mutes",
       "target": "pipeline_runner_execute"
     },
@@ -3756,8 +3927,8 @@
       "source_file": "internal/engine/pipeline/pipeline_test.go",
       "source_location": "L23",
       "weight": 1.0,
-      "_src": "pipeline_test_testpipeline_execute_silenced",
-      "_tgt": "alert_store_newalertstore",
+      "_src": "alert_store_newalertstore",
+      "_tgt": "pipeline_test_testpipeline_execute_silenced",
       "source": "alert_store_newalertstore",
       "target": "pipeline_test_testpipeline_execute_silenced"
     },
@@ -3768,8 +3939,8 @@
       "source_file": "internal/engine/pipeline/pipeline_test.go",
       "source_location": "L37",
       "weight": 1.0,
-      "_src": "pipeline_test_testpipeline_execute_active",
-      "_tgt": "alert_store_newalertstore",
+      "_src": "alert_store_newalertstore",
+      "_tgt": "pipeline_test_testpipeline_execute_active",
       "source": "alert_store_newalertstore",
       "target": "pipeline_test_testpipeline_execute_active"
     },
@@ -3780,8 +3951,8 @@
       "source_file": "internal/engine/pipeline/pipeline_test.go",
       "source_location": "L52",
       "weight": 1.0,
-      "_src": "pipeline_test_testpipeline_execute_inhibited",
-      "_tgt": "alert_store_newalertstore",
+      "_src": "alert_store_newalertstore",
+      "_tgt": "pipeline_test_testpipeline_execute_inhibited",
       "source": "alert_store_newalertstore",
       "target": "pipeline_test_testpipeline_execute_inhibited"
     },
@@ -3792,8 +3963,8 @@
       "source_file": "internal/engine/snapshot/snapshot_test.go",
       "source_location": "L17",
       "weight": 1.0,
-      "_src": "snapshot_test_testsnapshotsynthesizer_discoveroutcomes",
-      "_tgt": "alert_store_newalertstore",
+      "_src": "alert_store_newalertstore",
+      "_tgt": "snapshot_test_testsnapshotsynthesizer_discoveroutcomes",
       "source": "alert_store_newalertstore",
       "target": "snapshot_test_testsnapshotsynthesizer_discoveroutcomes"
     },
@@ -3804,8 +3975,8 @@
       "source_file": "internal/engine/behavioral/executor.go",
       "source_location": "L41",
       "weight": 1.0,
-      "_src": "behavioral_behavioraltestexecutor_execute",
-      "_tgt": "alert_store_newalertstore",
+      "_src": "alert_store_newalertstore",
+      "_tgt": "behavioral_behavioraltestexecutor_execute",
       "source": "alert_store_newalertstore",
       "target": "behavioral_behavioraltestexecutor_execute"
     },
@@ -3816,8 +3987,8 @@
       "source_file": "internal/engine/pipeline/pipeline_test.go",
       "source_location": "L61",
       "weight": 1.0,
-      "_src": "pipeline_test_testpipeline_execute_inhibited",
-      "_tgt": "stores_alertstore_put",
+      "_src": "stores_alertstore_put",
+      "_tgt": "pipeline_test_testpipeline_execute_inhibited",
       "source": "stores_alertstore_put",
       "target": "pipeline_test_testpipeline_execute_inhibited"
     },
@@ -3828,8 +3999,8 @@
       "source_file": "internal/engine/behavioral/executor.go",
       "source_location": "L55",
       "weight": 1.0,
-      "_src": "behavioral_behavioraltestexecutor_execute",
-      "_tgt": "stores_alertstore_put",
+      "_src": "stores_alertstore_put",
+      "_tgt": "behavioral_behavioraltestexecutor_execute",
       "source": "stores_alertstore_put",
       "target": "behavioral_behavioraltestexecutor_execute"
     },
@@ -3864,8 +4035,8 @@
       "source_file": "internal/engine/pipeline/pipeline.go",
       "source_location": "L40",
       "weight": 1.0,
-      "_src": "pipeline_runner_execute",
-      "_tgt": "stores_alertstore_getpending",
+      "_src": "stores_alertstore_getpending",
+      "_tgt": "pipeline_runner_execute",
       "source": "stores_alertstore_getpending",
       "target": "pipeline_runner_execute"
     },
@@ -3924,8 +4095,8 @@
       "source_file": "internal/engine/pipeline/pipeline.go",
       "source_location": "L41",
       "weight": 1.0,
-      "_src": "pipeline_runner_execute",
-      "_tgt": "stores_alertiterator_next",
+      "_src": "stores_alertiterator_next",
+      "_tgt": "pipeline_runner_execute",
       "source": "stores_alertiterator_next",
       "target": "pipeline_runner_execute"
     },
@@ -3936,8 +4107,8 @@
       "source_file": "internal/engine/pipeline/pipeline.go",
       "source_location": "L46",
       "weight": 1.0,
-      "_src": "pipeline_runner_execute",
-      "_tgt": "stores_alertiterator_close",
+      "_src": "stores_alertiterator_close",
+      "_tgt": "pipeline_runner_execute",
       "source": "stores_alertiterator_close",
       "target": "pipeline_runner_execute"
     },
@@ -4052,6 +4223,90 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "internal/engine/pipeline/router_test.go",
+      "source_location": "L14",
+      "weight": 1.0,
+      "_src": "internal_engine_pipeline_router_test_go",
+      "_tgt": "router_test_testrouter_rootfallback",
+      "source": "internal_engine_pipeline_router_test_go",
+      "target": "router_test_testrouter_rootfallback",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/pipeline/router_test.go",
+      "source_location": "L24",
+      "weight": 1.0,
+      "_src": "internal_engine_pipeline_router_test_go",
+      "_tgt": "router_test_testrouter_exactmatch",
+      "source": "internal_engine_pipeline_router_test_go",
+      "target": "router_test_testrouter_exactmatch",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/pipeline/router_test.go",
+      "source_location": "L43",
+      "weight": 1.0,
+      "_src": "internal_engine_pipeline_router_test_go",
+      "_tgt": "router_test_testrouter_regexmatch",
+      "source": "internal_engine_pipeline_router_test_go",
+      "target": "router_test_testrouter_regexmatch",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/pipeline/router_test.go",
+      "source_location": "L64",
+      "weight": 1.0,
+      "_src": "internal_engine_pipeline_router_test_go",
+      "_tgt": "router_test_testrouter_continuetrue_multiplereceivers",
+      "source": "internal_engine_pipeline_router_test_go",
+      "target": "router_test_testrouter_continuetrue_multiplereceivers",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/pipeline/router_test.go",
+      "source_location": "L86",
+      "weight": 1.0,
+      "_src": "internal_engine_pipeline_router_test_go",
+      "_tgt": "router_test_testrouter_continuefalse_stopssiblings",
+      "source": "internal_engine_pipeline_router_test_go",
+      "target": "router_test_testrouter_continuefalse_stopssiblings",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/pipeline/router_test.go",
+      "source_location": "L107",
+      "weight": 1.0,
+      "_src": "internal_engine_pipeline_router_test_go",
+      "_tgt": "router_test_testrouter_nestedroute",
+      "source": "internal_engine_pipeline_router_test_go",
+      "target": "router_test_testrouter_nestedroute",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/pipeline/router_test.go",
+      "source_location": "L136",
+      "weight": 1.0,
+      "_src": "internal_engine_pipeline_router_test_go",
+      "_tgt": "router_test_testrouter_modernmatchers",
+      "source": "internal_engine_pipeline_router_test_go",
+      "target": "router_test_testrouter_modernmatchers",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "internal/engine/pipeline/pipeline.go",
       "source_location": "L11",
       "weight": 1.0,
@@ -4116,8 +4371,8 @@
       "source_file": "internal/engine/snapshot/snapshot_test.go",
       "source_location": "L18",
       "weight": 1.0,
-      "_src": "snapshot_test_testsnapshotsynthesizer_discoveroutcomes",
-      "_tgt": "pipeline_newrunner",
+      "_src": "pipeline_newrunner",
+      "_tgt": "snapshot_test_testsnapshotsynthesizer_discoveroutcomes",
       "source": "pipeline_newrunner",
       "target": "snapshot_test_testsnapshotsynthesizer_discoveroutcomes"
     },
@@ -4128,8 +4383,8 @@
       "source_file": "internal/engine/behavioral/executor.go",
       "source_location": "L59",
       "weight": 1.0,
-      "_src": "behavioral_behavioraltestexecutor_execute",
-      "_tgt": "pipeline_newrunner",
+      "_src": "pipeline_newrunner",
+      "_tgt": "behavioral_behavioraltestexecutor_execute",
       "source": "pipeline_newrunner",
       "target": "behavioral_behavioraltestexecutor_execute"
     },
@@ -4212,10 +4467,22 @@
       "source_file": "internal/engine/snapshot/route_walker_test.go",
       "source_location": "L80",
       "weight": 1.0,
-      "_src": "route_walker_test_testroutewalker_findterminalpaths",
-      "_tgt": "route_walker_newroutewalker",
+      "_src": "route_walker_newroutewalker",
+      "_tgt": "route_walker_test_testroutewalker_findterminalpaths",
       "source": "route_walker_newroutewalker",
       "target": "route_walker_test_testroutewalker_findterminalpaths"
+    },
+    {
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "internal/engine/snapshot/route_walker_test.go",
+      "source_location": "L127",
+      "weight": 1.0,
+      "_src": "route_walker_test_testroutewalker_matcherscapture",
+      "_tgt": "route_walker_newroutewalker",
+      "source": "route_walker_newroutewalker",
+      "target": "route_walker_test_testroutewalker_matcherscapture"
     },
     {
       "relation": "calls",
@@ -4224,8 +4491,8 @@
       "source_file": "internal/engine/sanity/shadowed.go",
       "source_location": "L23",
       "weight": 1.0,
-      "_src": "sanity_shadowedroutedetector_detect",
-      "_tgt": "route_walker_newroutewalker",
+      "_src": "route_walker_newroutewalker",
+      "_tgt": "sanity_shadowedroutedetector_detect",
       "source": "route_walker_newroutewalker",
       "target": "sanity_shadowedroutedetector_detect"
     },
@@ -4248,10 +4515,22 @@
       "source_file": "internal/engine/snapshot/route_walker_test.go",
       "source_location": "L81",
       "weight": 1.0,
-      "_src": "route_walker_test_testroutewalker_findterminalpaths",
-      "_tgt": "snapshot_routewalker_findterminalpaths",
+      "_src": "snapshot_routewalker_findterminalpaths",
+      "_tgt": "route_walker_test_testroutewalker_findterminalpaths",
       "source": "snapshot_routewalker_findterminalpaths",
       "target": "route_walker_test_testroutewalker_findterminalpaths"
+    },
+    {
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "internal/engine/snapshot/route_walker_test.go",
+      "source_location": "L128",
+      "weight": 1.0,
+      "_src": "route_walker_test_testroutewalker_matcherscapture",
+      "_tgt": "snapshot_routewalker_findterminalpaths",
+      "source": "snapshot_routewalker_findterminalpaths",
+      "target": "route_walker_test_testroutewalker_matcherscapture"
     },
     {
       "relation": "calls",
@@ -4260,16 +4539,28 @@
       "source_file": "internal/engine/sanity/shadowed.go",
       "source_location": "L24",
       "weight": 1.0,
-      "_src": "sanity_shadowedroutedetector_detect",
-      "_tgt": "snapshot_routewalker_findterminalpaths",
+      "_src": "snapshot_routewalker_findterminalpaths",
+      "_tgt": "sanity_shadowedroutedetector_detect",
       "source": "snapshot_routewalker_findterminalpaths",
       "target": "sanity_shadowedroutedetector_detect"
+    },
+    {
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "internal/engine/snapshot/route_walker.go",
+      "source_location": "L72",
+      "weight": 1.0,
+      "_src": "snapshot_routewalker_walk",
+      "_tgt": "sanity_routeinspector_walk",
+      "source": "snapshot_routewalker_walk",
+      "target": "sanity_routeinspector_walk"
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "internal/engine/snapshot/route_walker_test.go",
-      "source_location": "L11",
+      "source_location": "L13",
       "weight": 1.0,
       "_src": "internal_engine_snapshot_route_walker_test_go",
       "_tgt": "route_walker_test_testroutewalker_findterminalpaths",
@@ -4281,7 +4572,19 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "internal/engine/snapshot/route_walker_test.go",
-      "source_location": "L91",
+      "source_location": "L93",
+      "weight": 1.0,
+      "_src": "internal_engine_snapshot_route_walker_test_go",
+      "_tgt": "route_walker_test_testroutewalker_matcherscapture",
+      "source": "internal_engine_snapshot_route_walker_test_go",
+      "target": "route_walker_test_testroutewalker_matcherscapture",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/snapshot/route_walker_test.go",
+      "source_location": "L142",
       "weight": 1.0,
       "_src": "internal_engine_snapshot_route_walker_test_go",
       "_tgt": "route_walker_test_testroutepath_matchers",
@@ -4992,8 +5295,8 @@
       "source_file": "internal/engine/behavioral/loader_test.go",
       "source_location": "L42",
       "weight": 1.0,
-      "_src": "loader_test_testbehavioraltestloader_loadfromfile",
-      "_tgt": "loader_newbehavioraltestloader",
+      "_src": "loader_newbehavioraltestloader",
+      "_tgt": "loader_test_testbehavioraltestloader_loadfromfile",
       "source": "loader_newbehavioraltestloader",
       "target": "loader_test_testbehavioraltestloader_loadfromfile"
     },
@@ -5004,8 +5307,8 @@
       "source_file": "internal/engine/behavioral/loader_test.go",
       "source_location": "L101",
       "weight": 1.0,
-      "_src": "loader_test_testbehavioraltestloader_loadfromdirectory",
-      "_tgt": "loader_newbehavioraltestloader",
+      "_src": "loader_newbehavioraltestloader",
+      "_tgt": "loader_test_testbehavioraltestloader_loadfromdirectory",
       "source": "loader_newbehavioraltestloader",
       "target": "loader_test_testbehavioraltestloader_loadfromdirectory"
     },
@@ -5028,8 +5331,8 @@
       "source_file": "internal/engine/behavioral/loader_test.go",
       "source_location": "L43",
       "weight": 1.0,
-      "_src": "loader_test_testbehavioraltestloader_loadfromfile",
-      "_tgt": "behavioral_behavioraltestloader_loadfromfile",
+      "_src": "behavioral_behavioraltestloader_loadfromfile",
+      "_tgt": "loader_test_testbehavioraltestloader_loadfromfile",
       "source": "behavioral_behavioraltestloader_loadfromfile",
       "target": "loader_test_testbehavioraltestloader_loadfromfile"
     },
@@ -5040,8 +5343,8 @@
       "source_file": "internal/engine/behavioral/loader_test.go",
       "source_location": "L102",
       "weight": 1.0,
-      "_src": "loader_test_testbehavioraltestloader_loadfromdirectory",
-      "_tgt": "behavioral_behavioraltestloader_loadfromdirectory",
+      "_src": "behavioral_behavioraltestloader_loadfromdirectory",
+      "_tgt": "loader_test_testbehavioraltestloader_loadfromdirectory",
       "source": "behavioral_behavioraltestloader_loadfromdirectory",
       "target": "loader_test_testbehavioraltestloader_loadfromdirectory"
     },
@@ -5325,84 +5628,240 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "internal/engine/sanity/shadowed_test.go",
-      "source_location": "L10",
+      "source_location": "L15",
       "weight": 1.0,
       "_src": "internal_engine_sanity_shadowed_test_go",
-      "_tgt": "shadowed_test_testshadowedroutedetector_noshadow",
+      "_tgt": "shadowed_test_mustmatcher",
       "source": "internal_engine_sanity_shadowed_test_go",
-      "target": "shadowed_test_testshadowedroutedetector_noshadow",
+      "target": "shadowed_test_mustmatcher",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "internal/engine/sanity/shadowed_test.go",
-      "source_location": "L31",
+      "source_location": "L22",
       "weight": 1.0,
       "_src": "internal_engine_sanity_shadowed_test_go",
-      "_tgt": "shadowed_test_testshadowedroutedetector_shadowedbyparent",
+      "_tgt": "shadowed_test_mustregexp",
       "source": "internal_engine_sanity_shadowed_test_go",
-      "target": "shadowed_test_testshadowedroutedetector_shadowedbyparent",
+      "target": "shadowed_test_mustregexp",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "internal/engine/sanity/shadowed_test.go",
-      "source_location": "L54",
-      "weight": 1.0,
-      "_src": "internal_engine_sanity_shadowed_test_go",
-      "_tgt": "shadowed_test_testshadowedroutedetector_shadowedbyparentnochild",
-      "source": "internal_engine_sanity_shadowed_test_go",
-      "target": "shadowed_test_testshadowedroutedetector_shadowedbyparentnochild",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "internal/engine/sanity/shadowed_test.go",
-      "source_location": "L77",
-      "weight": 1.0,
-      "_src": "internal_engine_sanity_shadowed_test_go",
-      "_tgt": "shadowed_test_testshadowedroutedetector_shadowedbysubsetmatcher",
-      "source": "internal_engine_sanity_shadowed_test_go",
-      "target": "shadowed_test_testshadowedroutedetector_shadowedbysubsetmatcher",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "internal/engine/sanity/shadowed_test.go",
-      "source_location": "L99",
-      "weight": 1.0,
-      "_src": "internal_engine_sanity_shadowed_test_go",
-      "_tgt": "shadowed_test_testshadowedroutedetector_notshadoweddifferentmatchers",
-      "source": "internal_engine_sanity_shadowed_test_go",
-      "target": "shadowed_test_testshadowedroutedetector_notshadoweddifferentmatchers",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "internal/engine/sanity/shadowed_test.go",
-      "source_location": "L25",
-      "weight": 1.0,
-      "_src": "shadowed_test_testshadowedroutedetector_noshadow",
-      "_tgt": "shadowed_newshadowedroutedetector",
-      "source": "shadowed_test_testshadowedroutedetector_noshadow",
-      "target": "shadowed_newshadowedroutedetector"
-    },
-    {
-      "relation": "calls",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
       "source_file": "internal/engine/sanity/shadowed_test.go",
       "source_location": "L26",
       "weight": 1.0,
-      "_src": "shadowed_test_testshadowedroutedetector_noshadow",
+      "_src": "internal_engine_sanity_shadowed_test_go",
+      "_tgt": "shadowed_test_detectissues",
+      "source": "internal_engine_sanity_shadowed_test_go",
+      "target": "shadowed_test_detectissues",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/sanity/shadowed_test.go",
+      "source_location": "L32",
+      "weight": 1.0,
+      "_src": "internal_engine_sanity_shadowed_test_go",
+      "_tgt": "shadowed_test_testshadowedroutedetector",
+      "source": "internal_engine_sanity_shadowed_test_go",
+      "target": "shadowed_test_testshadowedroutedetector",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/sanity/shadowed_test.go",
+      "source_location": "L231",
+      "weight": 1.0,
+      "_src": "internal_engine_sanity_shadowed_test_go",
+      "_tgt": "shadowed_test_containsany",
+      "source": "internal_engine_sanity_shadowed_test_go",
+      "target": "shadowed_test_containsany",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/sanity/shadowed_test.go",
+      "source_location": "L242",
+      "weight": 1.0,
+      "_src": "internal_engine_sanity_shadowed_test_go",
+      "_tgt": "shadowed_test_isshadowedvictim",
+      "source": "internal_engine_sanity_shadowed_test_go",
+      "target": "shadowed_test_isshadowedvictim",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/sanity/shadowed_test.go",
+      "source_location": "L249",
+      "weight": 1.0,
+      "_src": "internal_engine_sanity_shadowed_test_go",
+      "_tgt": "shadowed_test_testshadowedroutedetector_negativematcher",
+      "source": "internal_engine_sanity_shadowed_test_go",
+      "target": "shadowed_test_testshadowedroutedetector_negativematcher",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/sanity/shadowed_test.go",
+      "source_location": "L329",
+      "weight": 1.0,
+      "_src": "internal_engine_sanity_shadowed_test_go",
+      "_tgt": "shadowed_test_testshadowedroutedetector_matcherformats",
+      "source": "internal_engine_sanity_shadowed_test_go",
+      "target": "shadowed_test_testshadowedroutedetector_matcherformats",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/sanity/shadowed_test.go",
+      "source_location": "L419",
+      "weight": 1.0,
+      "_src": "internal_engine_sanity_shadowed_test_go",
+      "_tgt": "shadowed_test_testshadowedroutedetector_nestedroutes",
+      "source": "internal_engine_sanity_shadowed_test_go",
+      "target": "shadowed_test_testshadowedroutedetector_nestedroutes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/sanity/shadowed_test.go",
+      "source_location": "L478",
+      "weight": 1.0,
+      "_src": "internal_engine_sanity_shadowed_test_go",
+      "_tgt": "shadowed_test_testshadowedroutedetector_regressioncases",
+      "source": "internal_engine_sanity_shadowed_test_go",
+      "target": "shadowed_test_testshadowedroutedetector_regressioncases",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/sanity/shadowed_test.go",
+      "source_location": "L252",
+      "weight": 1.0,
+      "_src": "shadowed_test_testshadowedroutedetector_negativematcher",
+      "_tgt": "shadowed_test_mustmatcher",
+      "source": "shadowed_test_mustmatcher",
+      "target": "shadowed_test_testshadowedroutedetector_negativematcher",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/sanity/shadowed_test.go",
+      "source_location": "L359",
+      "weight": 1.0,
+      "_src": "shadowed_test_testshadowedroutedetector_matcherformats",
+      "_tgt": "shadowed_test_mustmatcher",
+      "source": "shadowed_test_mustmatcher",
+      "target": "shadowed_test_testshadowedroutedetector_matcherformats",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/sanity/shadowed_test.go",
+      "source_location": "L484",
+      "weight": 1.0,
+      "_src": "shadowed_test_testshadowedroutedetector_regressioncases",
+      "_tgt": "shadowed_test_mustmatcher",
+      "source": "shadowed_test_mustmatcher",
+      "target": "shadowed_test_testshadowedroutedetector_regressioncases",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/sanity/shadowed_test.go",
+      "source_location": "L331",
+      "weight": 1.0,
+      "_src": "shadowed_test_testshadowedroutedetector_matcherformats",
+      "_tgt": "shadowed_test_mustregexp",
+      "source": "shadowed_test_mustregexp",
+      "target": "shadowed_test_testshadowedroutedetector_matcherformats",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/sanity/shadowed_test.go",
+      "source_location": "L216",
+      "weight": 1.0,
+      "_src": "shadowed_test_testshadowedroutedetector",
+      "_tgt": "shadowed_test_detectissues",
+      "source": "shadowed_test_detectissues",
+      "target": "shadowed_test_testshadowedroutedetector",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/sanity/shadowed_test.go",
+      "source_location": "L260",
+      "weight": 1.0,
+      "_src": "shadowed_test_testshadowedroutedetector_negativematcher",
+      "_tgt": "shadowed_test_detectissues",
+      "source": "shadowed_test_detectissues",
+      "target": "shadowed_test_testshadowedroutedetector_negativematcher",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/sanity/shadowed_test.go",
+      "source_location": "L336",
+      "weight": 1.0,
+      "_src": "shadowed_test_testshadowedroutedetector_matcherformats",
+      "_tgt": "shadowed_test_detectissues",
+      "source": "shadowed_test_detectissues",
+      "target": "shadowed_test_testshadowedroutedetector_matcherformats",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/sanity/shadowed_test.go",
+      "source_location": "L431",
+      "weight": 1.0,
+      "_src": "shadowed_test_testshadowedroutedetector_nestedroutes",
+      "_tgt": "shadowed_test_detectissues",
+      "source": "shadowed_test_detectissues",
+      "target": "shadowed_test_testshadowedroutedetector_nestedroutes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/sanity/shadowed_test.go",
+      "source_location": "L499",
+      "weight": 1.0,
+      "_src": "shadowed_test_testshadowedroutedetector_regressioncases",
+      "_tgt": "shadowed_test_detectissues",
+      "source": "shadowed_test_detectissues",
+      "target": "shadowed_test_testshadowedroutedetector_regressioncases",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "internal/engine/sanity/shadowed_test.go",
+      "source_location": "L27",
+      "weight": 1.0,
+      "_src": "shadowed_test_detectissues",
       "_tgt": "sanity_shadowedroutedetector_detect",
-      "source": "shadowed_test_testshadowedroutedetector_noshadow",
+      "source": "shadowed_test_detectissues",
       "target": "sanity_shadowedroutedetector_detect"
     },
     {
@@ -5410,102 +5869,90 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "internal/engine/sanity/shadowed_test.go",
-      "source_location": "L48",
+      "source_location": "L27",
       "weight": 1.0,
-      "_src": "shadowed_test_testshadowedroutedetector_shadowedbyparent",
+      "_src": "shadowed_test_detectissues",
       "_tgt": "shadowed_newshadowedroutedetector",
-      "source": "shadowed_test_testshadowedroutedetector_shadowedbyparent",
+      "source": "shadowed_test_detectissues",
       "target": "shadowed_newshadowedroutedetector"
     },
     {
       "relation": "calls",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
+      "confidence": "EXTRACTED",
       "source_file": "internal/engine/sanity/shadowed_test.go",
-      "source_location": "L49",
+      "source_location": "L219",
       "weight": 1.0,
-      "_src": "shadowed_test_testshadowedroutedetector_shadowedbyparent",
-      "_tgt": "sanity_shadowedroutedetector_detect",
-      "source": "shadowed_test_testshadowedroutedetector_shadowedbyparent",
-      "target": "sanity_shadowedroutedetector_detect"
+      "_src": "shadowed_test_testshadowedroutedetector",
+      "_tgt": "shadowed_test_isshadowedvictim",
+      "source": "shadowed_test_testshadowedroutedetector",
+      "target": "shadowed_test_isshadowedvictim",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
+      "confidence": "EXTRACTED",
       "source_file": "internal/engine/sanity/shadowed_test.go",
-      "source_location": "L69",
+      "source_location": "L244",
       "weight": 1.0,
-      "_src": "shadowed_test_testshadowedroutedetector_shadowedbyparentnochild",
-      "_tgt": "shadowed_newshadowedroutedetector",
-      "source": "shadowed_test_testshadowedroutedetector_shadowedbyparentnochild",
-      "target": "shadowed_newshadowedroutedetector"
+      "_src": "shadowed_test_isshadowedvictim",
+      "_tgt": "shadowed_test_containsany",
+      "source": "shadowed_test_containsany",
+      "target": "shadowed_test_isshadowedvictim",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
+      "confidence": "EXTRACTED",
       "source_file": "internal/engine/sanity/shadowed_test.go",
-      "source_location": "L70",
+      "source_location": "L338",
       "weight": 1.0,
-      "_src": "shadowed_test_testshadowedroutedetector_shadowedbyparentnochild",
-      "_tgt": "sanity_shadowedroutedetector_detect",
-      "source": "shadowed_test_testshadowedroutedetector_shadowedbyparentnochild",
-      "target": "sanity_shadowedroutedetector_detect"
+      "_src": "shadowed_test_testshadowedroutedetector_matcherformats",
+      "_tgt": "shadowed_test_containsany",
+      "source": "shadowed_test_containsany",
+      "target": "shadowed_test_testshadowedroutedetector_matcherformats",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
+      "confidence": "EXTRACTED",
       "source_file": "internal/engine/sanity/shadowed_test.go",
-      "source_location": "L92",
+      "source_location": "L291",
       "weight": 1.0,
-      "_src": "shadowed_test_testshadowedroutedetector_shadowedbysubsetmatcher",
-      "_tgt": "shadowed_newshadowedroutedetector",
-      "source": "shadowed_test_testshadowedroutedetector_shadowedbysubsetmatcher",
-      "target": "shadowed_newshadowedroutedetector"
+      "_src": "shadowed_test_testshadowedroutedetector_negativematcher",
+      "_tgt": "shadowed_test_isshadowedvictim",
+      "source": "shadowed_test_isshadowedvictim",
+      "target": "shadowed_test_testshadowedroutedetector_negativematcher",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
+      "confidence": "EXTRACTED",
       "source_file": "internal/engine/sanity/shadowed_test.go",
-      "source_location": "L93",
+      "source_location": "L368",
       "weight": 1.0,
-      "_src": "shadowed_test_testshadowedroutedetector_shadowedbysubsetmatcher",
-      "_tgt": "sanity_shadowedroutedetector_detect",
-      "source": "shadowed_test_testshadowedroutedetector_shadowedbysubsetmatcher",
-      "target": "sanity_shadowedroutedetector_detect"
+      "_src": "shadowed_test_testshadowedroutedetector_matcherformats",
+      "_tgt": "shadowed_test_isshadowedvictim",
+      "source": "shadowed_test_isshadowedvictim",
+      "target": "shadowed_test_testshadowedroutedetector_matcherformats",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
+      "confidence": "EXTRACTED",
       "source_file": "internal/engine/sanity/shadowed_test.go",
-      "source_location": "L114",
+      "source_location": "L451",
       "weight": 1.0,
-      "_src": "shadowed_test_testshadowedroutedetector_notshadoweddifferentmatchers",
-      "_tgt": "shadowed_newshadowedroutedetector",
-      "source": "shadowed_test_testshadowedroutedetector_notshadoweddifferentmatchers",
-      "target": "shadowed_newshadowedroutedetector"
-    },
-    {
-      "relation": "calls",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "internal/engine/sanity/shadowed_test.go",
-      "source_location": "L115",
-      "weight": 1.0,
-      "_src": "shadowed_test_testshadowedroutedetector_notshadoweddifferentmatchers",
-      "_tgt": "sanity_shadowedroutedetector_detect",
-      "source": "shadowed_test_testshadowedroutedetector_notshadoweddifferentmatchers",
-      "target": "sanity_shadowedroutedetector_detect"
+      "_src": "shadowed_test_testshadowedroutedetector_nestedroutes",
+      "_tgt": "shadowed_test_isshadowedvictim",
+      "source": "shadowed_test_isshadowedvictim",
+      "target": "shadowed_test_testshadowedroutedetector_nestedroutes",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "internal/engine/sanity/shadowed.go",
-      "source_location": "L12",
+      "source_location": "L10",
       "weight": 1.0,
       "_src": "internal_engine_sanity_shadowed_go",
       "_tgt": "sanity_shadowedroutedetector",
@@ -5517,7 +5964,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "internal/engine/sanity/shadowed.go",
-      "source_location": "L17",
+      "source_location": "L15",
       "weight": 1.0,
       "_src": "internal_engine_sanity_shadowed_go",
       "_tgt": "shadowed_newshadowedroutedetector",
@@ -5529,7 +5976,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "internal/engine/sanity/shadowed.go",
-      "source_location": "L22",
+      "source_location": "L20",
       "weight": 1.0,
       "_src": "sanity_shadowedroutedetector",
       "_tgt": "sanity_shadowedroutedetector_detect",
@@ -5541,7 +5988,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "internal/engine/sanity/shadowed.go",
-      "source_location": "L46",
+      "source_location": "L44",
       "weight": 1.0,
       "_src": "sanity_shadowedroutedetector",
       "_tgt": "sanity_shadowedroutedetector_isshadowed",
@@ -5550,34 +5997,10 @@
       "confidence_score": 1.0
     },
     {
-      "relation": "method",
-      "confidence": "EXTRACTED",
-      "source_file": "internal/engine/sanity/shadowed.go",
-      "source_location": "L52",
-      "weight": 1.0,
-      "_src": "sanity_shadowedroutedetector",
-      "_tgt": "sanity_shadowedroutedetector_issubset",
-      "source": "sanity_shadowedroutedetector",
-      "target": "sanity_shadowedroutedetector_issubset",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "method",
-      "confidence": "EXTRACTED",
-      "source_file": "internal/engine/sanity/shadowed.go",
-      "source_location": "L67",
-      "weight": 1.0,
-      "_src": "sanity_shadowedroutedetector",
-      "_tgt": "sanity_shadowedroutedetector_mergematchers",
-      "source": "sanity_shadowedroutedetector",
-      "target": "sanity_shadowedroutedetector_mergematchers",
-      "confidence_score": 1.0
-    },
-    {
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "internal/engine/sanity/shadowed.go",
-      "source_location": "L31",
+      "source_location": "L26",
       "weight": 1.0,
       "_src": "sanity_shadowedroutedetector_detect",
       "_tgt": "sanity_shadowedroutedetector_isshadowed",
@@ -5587,26 +6010,110 @@
     },
     {
       "relation": "calls",
-      "confidence": "EXTRACTED",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
       "source_file": "internal/engine/sanity/shadowed.go",
-      "source_location": "L47",
+      "source_location": "L21",
       "weight": 1.0,
-      "_src": "sanity_shadowedroutedetector_isshadowed",
-      "_tgt": "sanity_shadowedroutedetector_issubset",
-      "source": "sanity_shadowedroutedetector_isshadowed",
-      "target": "sanity_shadowedroutedetector_issubset",
+      "_src": "sanity_shadowedroutedetector_detect",
+      "_tgt": "sanity_routeinspector_findpaths",
+      "source": "sanity_shadowedroutedetector_detect",
+      "target": "sanity_routeinspector_findpaths"
+    },
+    {
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "internal/engine/sanity/shadowed.go",
+      "source_location": "L21",
+      "weight": 1.0,
+      "_src": "sanity_shadowedroutedetector_detect",
+      "_tgt": "route_inspector_newrouteinspector",
+      "source": "sanity_shadowedroutedetector_detect",
+      "target": "route_inspector_newrouteinspector"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/sanity/route_inspector.go",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_src": "internal_engine_sanity_route_inspector_go",
+      "_tgt": "sanity_sanitymatcher",
+      "source": "internal_engine_sanity_route_inspector_go",
+      "target": "sanity_sanitymatcher",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/sanity/route_inspector.go",
+      "source_location": "L17",
+      "weight": 1.0,
+      "_src": "internal_engine_sanity_route_inspector_go",
+      "_tgt": "sanity_sanitypath",
+      "source": "internal_engine_sanity_route_inspector_go",
+      "target": "sanity_sanitypath",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/sanity/route_inspector.go",
+      "source_location": "L24",
+      "weight": 1.0,
+      "_src": "internal_engine_sanity_route_inspector_go",
+      "_tgt": "sanity_routeinspector",
+      "source": "internal_engine_sanity_route_inspector_go",
+      "target": "sanity_routeinspector",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/sanity/route_inspector.go",
+      "source_location": "L28",
+      "weight": 1.0,
+      "_src": "internal_engine_sanity_route_inspector_go",
+      "_tgt": "route_inspector_newrouteinspector",
+      "source": "internal_engine_sanity_route_inspector_go",
+      "target": "route_inspector_newrouteinspector",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/sanity/route_inspector.go",
+      "source_location": "L33",
+      "weight": 1.0,
+      "_src": "sanity_routeinspector",
+      "_tgt": "sanity_routeinspector_findpaths",
+      "source": "sanity_routeinspector",
+      "target": "sanity_routeinspector_findpaths",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "internal/engine/sanity/route_inspector.go",
+      "source_location": "L39",
+      "weight": 1.0,
+      "_src": "sanity_routeinspector",
+      "_tgt": "sanity_routeinspector_walk",
+      "source": "sanity_routeinspector",
+      "target": "sanity_routeinspector_walk",
       "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "confidence": "EXTRACTED",
-      "source_file": "internal/engine/sanity/shadowed.go",
-      "source_location": "L54",
+      "source_file": "internal/engine/sanity/route_inspector.go",
+      "source_location": "L35",
       "weight": 1.0,
-      "_src": "sanity_shadowedroutedetector_issubset",
-      "_tgt": "sanity_shadowedroutedetector_mergematchers",
-      "source": "sanity_shadowedroutedetector_issubset",
-      "target": "sanity_shadowedroutedetector_mergematchers",
+      "_src": "sanity_routeinspector_findpaths",
+      "_tgt": "sanity_routeinspector_walk",
+      "source": "sanity_routeinspector_findpaths",
+      "target": "sanity_routeinspector_walk",
       "confidence_score": 1.0
     },
     {

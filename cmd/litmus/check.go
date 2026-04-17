@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/prometheus/alertmanager/config"
-	"github.com/spf13/cobra"
 	"litmus/internal/engine/behavioral"
 	"litmus/internal/engine/sanity"
+
+	"github.com/prometheus/alertmanager/config"
+	"github.com/spf13/cobra"
 )
 
 // CheckResult holds results from validation run.
@@ -59,7 +60,7 @@ func newCheckCmd() *cobra.Command {
 
 func runCheck(format string) error {
 	// Load configs
-	litmusConfig, err := loadLitmusConfig("litmus.yaml")
+	litmusConfig, err := loadLitmusConfig(".litmus.yaml")
 	if err != nil {
 		return fmt.Errorf("loading litmus.yaml: %w", err)
 	}

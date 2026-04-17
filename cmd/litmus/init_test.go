@@ -19,7 +19,7 @@ func TestInitCommand_CreatesFiles(t *testing.T) {
 	err := cmd.Execute()
 
 	require.NoError(t, err)
-	require.FileExists(t, "litmus.yaml")
+	require.FileExists(t, ".litmus.yaml")
 	require.DirExists(t, "tests")
 	require.FileExists(t, ".gitattributes")
 }
@@ -36,7 +36,7 @@ func TestInitCommand_LitmusYAML(t *testing.T) {
 
 	require.NoError(t, err)
 
-	content, err := os.ReadFile("litmus.yaml")
+	content, err := os.ReadFile(".litmus.yaml")
 	require.NoError(t, err)
 	require.Contains(t, string(content), "config_file:")
 	require.Contains(t, string(content), "global_labels:")
@@ -83,7 +83,7 @@ func TestInitCommand_DoesNotOverwrite(t *testing.T) {
 
 	// Create a pre-existing litmus.yaml
 	existingContent := "existing: true\n"
-	err := os.WriteFile("litmus.yaml", []byte(existingContent), 0644)
+	err := os.WriteFile(".litmus.yaml", []byte(existingContent), 0644)
 	require.NoError(t, err)
 
 	cmd := newInitCmd()
@@ -94,6 +94,6 @@ func TestInitCommand_DoesNotOverwrite(t *testing.T) {
 	require.Contains(t, err.Error(), "already exists")
 
 	// Verify original content is preserved
-	content, _ := os.ReadFile("litmus.yaml")
+	content, _ := os.ReadFile(".litmus.yaml")
 	require.Equal(t, existingContent, string(content))
 }

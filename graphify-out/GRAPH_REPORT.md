@@ -1,12 +1,12 @@
 # Graph Report - .  (2026-04-17)
 
 ## Corpus Check
-- 34 files · ~16,049 words
+- 36 files · ~21,203 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 184 nodes · 341 edges · 11 communities detected
-- Extraction: 53% EXTRACTED · 47% INFERRED · 0% AMBIGUOUS · INFERRED: 159 edges (avg confidence: 0.8)
+- 203 nodes · 369 edges · 11 communities detected
+- Extraction: 58% EXTRACTED · 42% INFERRED · 0% AMBIGUOUS · INFERRED: 156 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -29,60 +29,60 @@
 4. `runSanityChecks()` - 8 edges
 5. `newInitCmd()` - 8 edges
 6. `NewSilenceStore()` - 8 edges
-7. `newSnapshotCmd()` - 7 edges
-8. `NewBehavioralTestExecutor()` - 7 edges
-9. `NewShadowedRouteDetector()` - 7 edges
+7. `detectIssues()` - 8 edges
+8. `newSnapshotCmd()` - 7 edges
+9. `NewBehavioralTestExecutor()` - 7 edges
 10. `newCheckCmd()` - 6 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `runSanityChecks()` --calls--> `NewShadowedRouteDetector()`  [INFERRED]
   cmd/litmus/check.go → internal/engine/sanity/shadowed.go
-- `runBehavioralTests()` --calls--> `NewBehavioralTestLoader()`  [INFERRED]
-  cmd/litmus/check.go → internal/engine/behavioral/loader.go
+- `runSanityChecks()` --calls--> `NewOrphanReceiverDetector()`  [INFERRED]
+  cmd/litmus/check.go → internal/engine/sanity/inhibition.go
+- `runSanityChecks()` --calls--> `NewInhibitionCycleDetector()`  [INFERRED]
+  cmd/litmus/check.go → internal/engine/sanity/inhibition.go
 - `runSnapshot()` --calls--> `NewRouteWalker()`  [INFERRED]
   cmd/litmus/snapshot.go → internal/engine/snapshot/route_walker.go
-- `runSnapshot()` --calls--> `EncodeMsgPack()`  [INFERRED]
-  cmd/litmus/snapshot.go → internal/codec/msgpack.go
-- `loadBaseline()` --calls--> `DecodeMsgPack()`  [INFERRED]
-  cmd/litmus/snapshot.go → internal/codec/msgpack.go
+- `runBehavioralTests()` --calls--> `NewBehavioralTestLoader()`  [INFERRED]
+  cmd/litmus/check.go → internal/engine/behavioral/loader.go
 
 ## Communities
 
 ### Community 0 - "Community 0"
-Cohesion: 0.11
-Nodes (27): BehavioralTestExecutor, TestResult, newCheckCmd(), TestCheckCommand_MissingConfig(), TestCheckCommand_Success(), TestCheckCommand_TextOutput(), NewBehavioralTestExecutor(), receiversMatch() (+19 more)
+Cohesion: 0.1
+Nodes (18): newAlertIterator(), NewAlertStore(), TestAlertStore_Get(), TestAlertStore_Put(), TestAlertStore_Reset(), TestAlertStore_Subscribe(), NewRunner(), Outcome (+10 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.16
-Nodes (11): NewRouteWalker(), TestRouteWalker_FindTerminalPaths(), ShadowedRouteDetector, NewShadowedRouteDetector(), TestShadowedRouteDetector_NoShadow(), TestShadowedRouteDetector_NotShadowedDifferentMatchers(), TestShadowedRouteDetector_ShadowedByParent(), TestShadowedRouteDetector_ShadowedByParentNoChild() (+3 more)
+Cohesion: 0.13
+Nodes (23): BehavioralTestExecutor, TestResult, NewBehavioralTestExecutor(), receiversMatch(), TestBehavioralTestExecutor_Execute_Active(), TestBehavioralTestExecutor_Execute_Inhibited(), TestBehavioralTestExecutor_Execute_OutcomeOnly(), TestBehavioralTestExecutor_Execute_Receivers_Mismatch() (+15 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.16
-Nodes (11): NewAlertStore(), NewRunner(), Outcome, TestPipeline_Execute_Active(), TestPipeline_Execute_Inhibited(), TestPipeline_Execute_Silenced(), NewSilenceStore(), TestSilenceStore_Mutes() (+3 more)
+Cohesion: 0.12
+Nodes (20): TestBehavioralTestRoundTrip(), TestRegressionTestRoundTrip(), newInspectCmd(), runInspect(), TestInspectCommand_JSON(), TestInspectCommand_MissingFile(), TestInspectCommand_YAML(), LitmusConfig (+12 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.18
-Nodes (8): newAlertIterator(), TestAlertStore_Get(), TestAlertStore_Put(), TestAlertStore_Reset(), TestAlertStore_Subscribe(), Runner, alertIterator, AlertStore
+Cohesion: 0.13
+Nodes (17): BehavioralTestLoader, newCheckCmd(), printTextOutput(), runBehavioralTests(), runCheck(), runRegressionTests(), runSanityChecks(), TestCheckCommand_MissingConfig() (+9 more)
 
 ### Community 4 - "Community 4"
+Cohesion: 0.13
+Nodes (11): newRouteInspector(), NewRouteWalker(), TestRouteWalker_FindTerminalPaths(), TestRouteWalker_MatchersCapture(), routeInspector, sanityMatcher, sanityPath, ShadowedRouteDetector (+3 more)
+
+### Community 5 - "Community 5"
 Cohesion: 0.16
 Nodes (10): NewLabelCombinationGenerator(), NewRegexExpander(), TestLabelCombinations_BalancedCovering(), TestRegexExpansion_ExpandAlternations(), verifyCoverage(), LabelCombinationGenerator, NewSnapshotSynthesizer(), RegexExpander (+2 more)
 
-### Community 5 - "Community 5"
-Cohesion: 0.17
-Nodes (16): printTextOutput(), runBehavioralTests(), runCheck(), runRegressionTests(), BehavioralResult, CheckResult, LitmusConfig, RegressionConfig (+8 more)
-
 ### Community 6 - "Community 6"
 Cohesion: 0.23
-Nodes (10): runSanityChecks(), NewInhibitionCycleDetector(), NewOrphanReceiverDetector(), TestInhibitionCycleDetector_DirectCycle(), TestInhibitionCycleDetector_NoCycle(), TestOrphanReceiverDetector_HasOrphans(), TestOrphanReceiverDetector_NestedRoutes(), TestOrphanReceiverDetector_NoOrphans() (+2 more)
+Nodes (9): NewInhibitionCycleDetector(), NewOrphanReceiverDetector(), TestInhibitionCycleDetector_DirectCycle(), TestInhibitionCycleDetector_NoCycle(), TestOrphanReceiverDetector_HasOrphans(), TestOrphanReceiverDetector_NestedRoutes(), TestOrphanReceiverDetector_NoOrphans(), InhibitionCycleDetector (+1 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.2
-Nodes (11): TestBehavioralTestRoundTrip(), TestRegressionTestRoundTrip(), newInspectCmd(), runInspect(), TestInspectCommand_JSON(), TestInspectCommand_MissingFile(), TestInspectCommand_YAML(), DecodeMsgPack() (+3 more)
+Cohesion: 0.45
+Nodes (10): containsAny(), detectIssues(), isShadowedVictim(), mustMatcher(), mustRegexp(), TestShadowedRouteDetector(), TestShadowedRouteDetector_MatcherFormats(), TestShadowedRouteDetector_NegativeMatcher() (+2 more)
 
 ### Community 8 - "Community 8"
-Cohesion: 0.39
-Nodes (4): BehavioralTestLoader, NewBehavioralTestLoader(), TestBehavioralTestLoader_LoadFromDirectory(), TestBehavioralTestLoader_LoadFromFile()
+Cohesion: 0.25
+Nodes (0): 
 
 ### Community 9 - "Community 9"
 Cohesion: 0.33
@@ -93,7 +93,7 @@ Cohesion: 1.0
 Nodes (1): RegressionTest
 
 ## Knowledge Gaps
-- **17 isolated node(s):** `CheckResult`, `SanityResult`, `RegressionResult`, `BehavioralResult`, `LitmusConfig` (+12 more)
+- **19 isolated node(s):** `CheckResult`, `SanityResult`, `RegressionResult`, `BehavioralResult`, `LitmusConfig` (+14 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **Thin community `Community 10`** (2 nodes): `regression.go`, `RegressionTest`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -101,12 +101,12 @@ Nodes (1): RegressionTest
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `runSanityChecks()` connect `Community 6` to `Community 1`, `Community 5`?**
-  _High betweenness centrality (0.201) - this node is a cross-community bridge._
-- **Why does `newCheckCmd()` connect `Community 0` to `Community 5`?**
+- **Why does `runSnapshot()` connect `Community 2` to `Community 1`, `Community 4`?**
+  _High betweenness centrality (0.206) - this node is a cross-community bridge._
+- **Why does `runSanityChecks()` connect `Community 3` to `Community 4`, `Community 6`?**
   _High betweenness centrality (0.195) - this node is a cross-community bridge._
-- **Why does `runSnapshot()` connect `Community 5` to `Community 0`, `Community 1`, `Community 3`, `Community 7`?**
-  _High betweenness centrality (0.187) - this node is a cross-community bridge._
+- **Why does `newCheckCmd()` connect `Community 3` to `Community 1`?**
+  _High betweenness centrality (0.171) - this node is a cross-community bridge._
 - **Are the 4 inferred relationships involving `runSnapshot()` (e.g. with `NewRouteWalker()` and `.FindTerminalPaths()`) actually correct?**
   _`runSnapshot()` has 4 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 9 inferred relationships involving `NewAlertStore()` (e.g. with `TestAlertStore_Put()` and `TestAlertStore_Get()`) actually correct?**

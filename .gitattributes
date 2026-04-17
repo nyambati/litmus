@@ -1,0 +1,5 @@
+# Litmus MessagePack files
+*.mpk binary diff=litmus
+
+[diff "litmus"]
+	textconv = litmus inspect

@@ -34,3 +34,7 @@ coverage.html
 graphify-out/cache
 *.local.json
 alertmanager.*
+regressions.litmus*
+docs/superpowers
+tests
+.gemini

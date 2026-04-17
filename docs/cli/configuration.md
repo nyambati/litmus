@@ -1,6 +1,6 @@
 # Litmus Configuration: Specification
 
-The `litmus.yaml` file defines the project-level settings for the `litmus` workspace. It acts as the bridge between your test suite and your Alertmanager configuration.
+The `.litmus.yaml` file defines the project-level settings for the `litmus` workspace. It acts as the bridge between your test suite and your Alertmanager configuration.
 
 ## 1. Schema Definition
 

@@ -3,13 +3,15 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
+
+	"litmus/internal/codec"
+	"litmus/internal/engine/snapshot"
+	"litmus/internal/types"
 
 	"github.com/prometheus/alertmanager/config"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
-	"litmus/internal/codec"
-	"litmus/internal/engine/snapshot"
-	"litmus/internal/types"
 )
 
 // LitmusConfig represents the litmus.yaml configuration.
@@ -50,7 +52,7 @@ func newSnapshotCmd() *cobra.Command {
 
 func runSnapshot(update bool) error {
 	// Load litmus.yaml
-	litmusConfig, err := loadLitmusConfig("litmus.yaml")
+	litmusConfig, err := loadLitmusConfig(".litmus.yaml")
 	if err != nil {
 		return fmt.Errorf("loading litmus.yaml: %w", err)
 	}
@@ -103,7 +105,7 @@ func runSnapshot(update bool) error {
 	}
 
 	// Write YAML mirror
-	ymlPath := litmusConfig.Regression.BaselinePath + ".yml"
+	ymlPath := strings.Replace(litmusConfig.Regression.BaselinePath, "mpk", "yml", 1)
 	ymlData, _ := yaml.Marshal(regTests)
 	if err := os.WriteFile(ymlPath, ymlData, 0644); err != nil {
 		return fmt.Errorf("writing YAML mirror: %w", err)
