@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	"github.com/prometheus/alertmanager/config"
-	"github.com/prometheus/common/model"
-	"litmus/internal/engine/snapshot"
 )
 
 // ShadowedRouteDetector detects unreachable routes.
@@ -20,56 +18,62 @@ func NewShadowedRouteDetector(root *config.Route) *ShadowedRouteDetector {
 
 // Detect returns list of shadowed route issues.
 func (srd *ShadowedRouteDetector) Detect() []string {
-	walker := snapshot.NewRouteWalker(srd.root)
-	paths := walker.FindTerminalPaths()
+	paths := newRouteInspector(srd.root).findPaths()
 
 	var issues []string
-
 	for i, path := range paths {
-		// Check if this path is shadowed by any earlier path
 		for j := 0; j < i; j++ {
 			if srd.isShadowed(path, paths[j]) {
 				issues = append(issues, fmt.Sprintf(
-					"Route to %q is shadowed by earlier route to %q: matchers %v are subset of %v",
-					path.Receiver, paths[j].Receiver, path.Matchers, paths[j].Matchers,
+					"Route to %q is shadowed by earlier route to %q",
+					path.receiver, paths[j].receiver,
 				))
 				break
 			}
 		}
 	}
-
 	return issues
 }
 
-// isShadowed checks if child path is shadowed by parent path.
-// Child is shadowed if parent's matchers are a superset of child's matchers.
-func (srd *ShadowedRouteDetector) isShadowed(child, parent *snapshot.RoutePath) bool {
-	return srd.isSubset(parent.Matchers, child.Matchers)
-}
+// isShadowed returns true when parent completely shadows child — i.e., every alert
+// matching child would also match parent, making child unreachable. Requires:
+//   - parent has continue:false (otherwise Alertmanager evaluates child regardless)
+//   - parent's positive matchers ⊆ child's positive matchers (parent broader)
+//   - parent has no negative matcher that conflicts with a child positive matcher
+//     on the same label+value (mutual exclusion → routes are disjoint, not shadowed)
+func (srd *ShadowedRouteDetector) isShadowed(child, parent *sanityPath) bool {
+	if parent.continueOnMatch {
+		return false
+	}
+	childPos := make(map[string]string)
+	for _, m := range child.matchers {
+		if !m.isNeg {
+			childPos[m.name] = m.value
+		}
+	}
 
-// isSubset checks if parentMatchers is a superset of childMatchers.
-// Returns true if every key-value pair in childMatchers appears in parentMatchers.
-func (srd *ShadowedRouteDetector) isSubset(parentMatchers, childMatchers []model.LabelSet) bool {
-	// Merge all matchers for each
-	parentLabels := srd.mergeMatchers(parentMatchers)
-	childLabels := srd.mergeMatchers(childMatchers)
-
-	// Check if all child labels are in parent labels with same values
-	for k, v := range childLabels {
-		if pv, ok := parentLabels[k]; !ok || pv != v {
+	// Parent's positive matchers must all appear in child's positive matchers
+	// (parent broader: fewer/equal constraints → larger match set).
+	for _, m := range parent.matchers {
+		if m.isNeg {
+			continue
+		}
+		if cv, ok := childPos[m.name]; !ok || cv != m.value {
 			return false
 		}
 	}
-	return true
-}
 
-// mergeMatchers combines multiple LabelSets into one.
-func (srd *ShadowedRouteDetector) mergeMatchers(matchers []model.LabelSet) model.LabelSet {
-	merged := make(model.LabelSet)
-	for _, matcher := range matchers {
-		for k, v := range matcher {
-			merged[k] = v
+	// Parent's negative matcher on a label where child has a matching positive
+	// matcher means the two routes are mutually exclusive on that label —
+	// parent excludes the very alerts child requires, so parent cannot shadow child.
+	for _, m := range parent.matchers {
+		if !m.isNeg {
+			continue
+		}
+		if cv, ok := childPos[m.name]; ok && cv == m.value {
+			return false
 		}
 	}
-	return merged
+
+	return true
 }

@@ -1,9 +1,11 @@
 package snapshot
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/prometheus/alertmanager/config"
+	labels "github.com/prometheus/alertmanager/pkg/labels"
 	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/require"
 )
@@ -84,6 +86,55 @@ func TestRouteWalker_FindTerminalPaths(t *testing.T) {
 			for _, path := range paths {
 				require.Contains(t, tt.wantReceivers, path.Receiver)
 			}
+		})
+	}
+}
+
+func TestRouteWalker_MatchersCapture(t *testing.T) {
+	rePattern := regexp.MustCompile("^(?:apac-compliance-team)$")
+
+	matcherEq, err := labels.NewMatcher(labels.MatchEqual, "dh_env", "production")
+	require.NoError(t, err)
+
+	tests := []struct {
+		name          string
+		route         *config.Route
+		wantLabelKey  model.LabelName
+		wantLabelVal  model.LabelValue
+	}{
+		{
+			name: "match_re matchers captured",
+			route: &config.Route{
+				Receiver: "apac",
+				MatchRE:  config.MatchRegexps{"local_team": config.Regexp{Regexp: rePattern}},
+			},
+			wantLabelKey: "local_team",
+			wantLabelVal: model.LabelValue(rePattern.String()),
+		},
+		{
+			name: "modern matchers captured",
+			route: &config.Route{
+				Receiver: "prod",
+				Matchers: config.Matchers{matcherEq},
+			},
+			wantLabelKey: "dh_env",
+			wantLabelVal: "production",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			walker := NewRouteWalker(tt.route)
+			paths := walker.FindTerminalPaths()
+
+			require.Len(t, paths, 1)
+			merged := make(model.LabelSet)
+			for _, ls := range paths[0].Matchers {
+				for k, v := range ls {
+					merged[k] = v
+				}
+			}
+			require.Equal(t, tt.wantLabelVal, merged[tt.wantLabelKey])
 		})
 	}
 }
