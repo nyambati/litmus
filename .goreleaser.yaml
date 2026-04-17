@@ -1,0 +1,48 @@
+version: 2
+
+project_name: litmus
+
+builds:
+  - id: litmus
+    main: ./cmd/litmus
+    binary: litmus
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+
+archives:
+  - id: default
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+    files:
+      - .gitattributes
+      - README.md
+      - LICENSE
+      - docs/**/*
+
+release:
+  github:
+    owner: thomasnyambati
+    name: litmus
+  draft: false
+  prerelease: false
+  name_template: 'Release {{.Version}}'
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
