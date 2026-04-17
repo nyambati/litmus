@@ -80,18 +80,26 @@ func (bte *BehavioralTestExecutor) Execute(ctx context.Context, test *types.Beha
 
 	if outcome.Status != test.Expect.Outcome {
 		return &TestResult{
-			Name:  test.Name,
-			Pass:  false,
-			Error: fmt.Sprintf("expected outcome %q, got %q", test.Expect.Outcome, outcome.Status),
+			Name: test.Name,
+			Pass: false,
+			Error: fmt.Sprintf(
+				"Expected outcome: %q\n \t   - Actual outcome: %q",
+				test.Expect.Outcome,
+				outcome.Status,
+			),
 		}
 	}
 
 	if test.Expect.Outcome == "active" && len(test.Expect.Receivers) > 0 {
 		if !receiversMatch(outcome.Receivers, test.Expect.Receivers) {
 			return &TestResult{
-				Name:  test.Name,
-				Pass:  false,
-				Error: fmt.Sprintf("expected receivers %v, got %v", test.Expect.Receivers, outcome.Receivers),
+				Name: test.Name,
+				Pass: false,
+				Error: fmt.Sprintf(
+					"Expected receivers: %v\n \t   - Actual receivers: %v",
+					test.Expect.Receivers,
+					outcome.Receivers,
+				),
 			}
 		}
 	}

@@ -10,11 +10,14 @@ import (
 	"github.com/prometheus/common/model"
 )
 
-// RegressionResult holds execution result for a regression test.
+// RegressionResult holds execution result for a single regression test.
 type RegressionResult struct {
-	Name  string
-	Pass  bool
-	Error string
+	Name     string
+	Pass     bool
+	Error    string
+	Labels   map[string]string // failing label set; nil on pass
+	Expected []string
+	Actual   []string
 }
 
 // RegressionTestExecutor executes regression tests through the pipeline.
@@ -30,16 +33,13 @@ func NewRegressionTestExecutor() *RegressionTestExecutor {
 func (rte *RegressionTestExecutor) Execute(ctx context.Context, tests []*types.RegressionTest, router *pipeline.Router) []*RegressionResult {
 	results := make([]*RegressionResult, 0, len(tests))
 
-	// Regression tests run with empty silence and alert stores (pure routing)
 	silenceStore := stores.NewSilenceStore(nil)
 	alertStore := stores.NewAlertStore()
 	runner := pipeline.NewRunner(silenceStore, alertStore, router, nil)
 
 	for _, test := range tests {
-		pass := true
-		var errMsg string
+		result := &RegressionResult{Name: test.Name, Pass: true}
 
-		// A regression test might have multiple label sets to check
 		for _, labels := range test.Labels {
 			labelSet := make(model.LabelSet)
 			for k, v := range labels {
@@ -48,23 +48,22 @@ func (rte *RegressionTestExecutor) Execute(ctx context.Context, tests []*types.R
 
 			outcome, err := runner.Execute(ctx, labelSet)
 			if err != nil {
-				pass = false
-				errMsg = fmt.Sprintf("pipeline execution failed: %v", err)
+				result.Pass = false
+				result.Error = fmt.Sprintf("pipeline execution failed: %v", err)
+				result.Labels = labels
 				break
 			}
 
 			if !receiversMatch(outcome.Receivers, test.Expected) {
-				pass = false
-				errMsg = fmt.Sprintf("expected receivers %v, got %v", test.Expected, outcome.Receivers)
+				result.Pass = false
+				result.Labels = labels
+				result.Expected = test.Expected
+				result.Actual = outcome.Receivers
 				break
 			}
 		}
 
-		results = append(results, &RegressionResult{
-			Name:  test.Name,
-			Pass:  pass,
-			Error: errMsg,
-		})
+		results = append(results, result)
 	}
 
 	return results
