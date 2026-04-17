@@ -30,7 +30,7 @@ func (rw *RouteWalker) FindTerminalPaths() []*RoutePath {
 
 // walk recursively traverses route tree, accumulating matchers.
 func (rw *RouteWalker) walk(route *config.Route, matchers []model.LabelSet, paths *[]*RoutePath) {
-	currentMatchers := matchers
+	currentMatchers := append([]model.LabelSet{}, matchers...)
 
 	if len(route.Match) > 0 {
 		labelSet := make(model.LabelSet)

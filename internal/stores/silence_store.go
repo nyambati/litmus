@@ -30,7 +30,11 @@ func (s *SilenceStore) Mutes(ctx context.Context, labels model.LabelSet) bool {
 }
 
 // silenceMatches checks if a silence matches all its labels in the label set.
+// A silence with no labels never matches.
 func (s *SilenceStore) silenceMatches(silence types.Silence, labels model.LabelSet) bool {
+	if len(silence.Labels) == 0 {
+		return false
+	}
 	for silenceKey, silenceValue := range silence.Labels {
 		if labelValue, exists := labels[model.LabelName(silenceKey)]; !exists || string(labelValue) != silenceValue {
 			return false
@@ -39,7 +43,3 @@ func (s *SilenceStore) silenceMatches(silence types.Silence, labels model.LabelS
 	return true
 }
 
-// Reset replaces the silence list.
-func (s *SilenceStore) Reset(silences []types.Silence) {
-	s.silences = silences
-}

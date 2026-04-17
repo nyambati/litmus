@@ -17,8 +17,8 @@ func NewBehavioralTestLoader() *BehavioralTestLoader {
 	return &BehavioralTestLoader{}
 }
 
-// LoadFromFile loads behavioral tests from single YAML file.
-func (btl *BehavioralTestLoader) LoadFromFile(path string) ([]*types.BehavioralTest, error) {
+// LoadFromFile loads a single behavioral test from a YAML file.
+func (btl *BehavioralTestLoader) LoadFromFile(path string) (*types.BehavioralTest, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("reading file: %w", err)
@@ -29,10 +29,10 @@ func (btl *BehavioralTestLoader) LoadFromFile(path string) ([]*types.BehavioralT
 		return nil, fmt.Errorf("parsing YAML: %w", err)
 	}
 
-	return []*types.BehavioralTest{&test}, nil
+	return &test, nil
 }
 
-// LoadFromDirectory loads all YAML files from directory.
+// LoadFromDirectory loads all behavioral tests from YAML files in a directory.
 func (btl *BehavioralTestLoader) LoadFromDirectory(dir string) ([]*types.BehavioralTest, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -45,19 +45,18 @@ func (btl *BehavioralTestLoader) LoadFromDirectory(dir string) ([]*types.Behavio
 		if entry.IsDir() {
 			continue
 		}
-
-		// Only process YAML files
-		if filepath.Ext(entry.Name()) != ".yml" && filepath.Ext(entry.Name()) != ".yaml" {
+		ext := filepath.Ext(entry.Name())
+		if ext != ".yml" && ext != ".yaml" {
 			continue
 		}
 
 		filePath := filepath.Join(dir, entry.Name())
-		tests, err := btl.LoadFromFile(filePath)
+		test, err := btl.LoadFromFile(filePath)
 		if err != nil {
 			return nil, fmt.Errorf("loading %s: %w", entry.Name(), err)
 		}
 
-		allTests = append(allTests, tests...)
+		allTests = append(allTests, test)
 	}
 
 	return allTests, nil

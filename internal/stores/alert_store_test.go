@@ -23,33 +23,12 @@ func TestAlertStore_Put(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestAlertStore_Get(t *testing.T) {
+func TestAlertStore_GetPending(t *testing.T) {
 	store := NewAlertStore()
 
-	now := time.Now()
 	alert := &types.Alert{
 		Alert: model.Alert{
 			Labels:   model.LabelSet{"service": "api", "severity": "critical"},
-			StartsAt: now,
-		},
-	}
-
-	err := store.Put(alert)
-	require.NoError(t, err)
-
-	fp := alert.Fingerprint()
-	retrieved, err := store.Get(fp)
-	require.NoError(t, err)
-	require.NotNil(t, retrieved)
-	require.Equal(t, alert.Labels, retrieved.Labels)
-}
-
-func TestAlertStore_Subscribe(t *testing.T) {
-	store := NewAlertStore()
-
-	alert := &types.Alert{
-		Alert: model.Alert{
-			Labels:   model.LabelSet{"service": "api"},
 			StartsAt: time.Now(),
 		},
 	}
@@ -57,13 +36,13 @@ func TestAlertStore_Subscribe(t *testing.T) {
 	err := store.Put(alert)
 	require.NoError(t, err)
 
-	iter := store.Subscribe()
+	iter := store.GetPending()
 	require.NotNil(t, iter)
+	defer iter.Close()
 
-	alertChan := iter.Next()
-	require.NotNil(t, alertChan)
-
-	iter.Close()
+	received := <-iter.Next()
+	require.NotNil(t, received)
+	require.Equal(t, alert.Labels, received.Labels)
 }
 
 func TestAlertStore_Reset(t *testing.T) {
@@ -79,12 +58,22 @@ func TestAlertStore_Reset(t *testing.T) {
 	err := store.Put(alert)
 	require.NoError(t, err)
 
-	fp := alert.Fingerprint()
-	_, err = store.Get(fp)
-	require.NoError(t, err)
-
 	store.Reset()
 
-	_, err = store.Get(fp)
-	require.Error(t, err)
+	iter := store.GetPending()
+	defer iter.Close()
+	ch := iter.Next()
+	_, ok := <-ch
+	require.False(t, ok)
+}
+
+func TestAlertIterator_CloseSafe(t *testing.T) {
+	store := NewAlertStore()
+	iter := store.GetPending()
+
+	// Double-close must not panic
+	require.NotPanics(t, func() {
+		iter.Close()
+		iter.Close()
+	})
 }

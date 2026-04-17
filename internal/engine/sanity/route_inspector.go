@@ -37,7 +37,7 @@ func (ri *routeInspector) findPaths() []*sanityPath {
 }
 
 func (ri *routeInspector) walk(route *config.Route, inherited []sanityMatcher, paths *[]*sanityPath) {
-	current := inherited
+	current := append([]sanityMatcher{}, inherited...)
 
 	for k, v := range route.Match {
 		current = append(current, sanityMatcher{name: k, value: v, isNeg: false})

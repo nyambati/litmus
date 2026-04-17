@@ -35,6 +35,8 @@ graphify-out
 
 # Project specific
 docs/superpowers/
-/*.mpk
-/*.litmus.yml
-/*.mpk.yml
+*.mpk
+*.litmus.yml
+*.mpk.yml
+tests
+config

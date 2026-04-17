@@ -8,6 +8,7 @@ import (
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/stores"
 	"github.com/nyambati/litmus/internal/types"
+	amconfig "github.com/prometheus/alertmanager/config"
 	alertmgr "github.com/prometheus/alertmanager/types"
 	"github.com/prometheus/common/model"
 )
@@ -20,16 +21,17 @@ type TestResult struct {
 }
 
 // BehavioralTestExecutor executes behavioral tests through the pipeline.
-type BehavioralTestExecutor struct{}
+type BehavioralTestExecutor struct {
+	inhibitRules []amconfig.InhibitRule
+}
 
 // NewBehavioralTestExecutor creates test executor.
-func NewBehavioralTestExecutor() *BehavioralTestExecutor {
-	return &BehavioralTestExecutor{}
+func NewBehavioralTestExecutor(inhibitRules []amconfig.InhibitRule) *BehavioralTestExecutor {
+	return &BehavioralTestExecutor{inhibitRules: inhibitRules}
 }
 
 // Execute runs a behavioral test through the pipeline and verifies assertions.
 func (bte *BehavioralTestExecutor) Execute(ctx context.Context, test *types.BehavioralTest, router *pipeline.Router) *TestResult {
-	// Create stores from test state
 	var silences []types.Silence
 	var activeAlerts []types.AlertSample
 	if test.State != nil {
@@ -40,7 +42,6 @@ func (bte *BehavioralTestExecutor) Execute(ctx context.Context, test *types.Beha
 	silenceStore := stores.NewSilenceStore(silences)
 	alertStore := stores.NewAlertStore()
 
-	// Populate alert store with active alerts
 	for _, alert := range activeAlerts {
 		labelSet := make(model.LabelSet)
 		for k, v := range alert.Labels {
@@ -52,19 +53,22 @@ func (bte *BehavioralTestExecutor) Execute(ctx context.Context, test *types.Beha
 				StartsAt: time.Now(),
 			},
 		}
-		alertStore.Put(alertmgrAlert)
+		if err := alertStore.Put(alertmgrAlert); err != nil {
+			return &TestResult{
+				Name:  test.Name,
+				Pass:  false,
+				Error: fmt.Sprintf("seeding active alert: %v", err),
+			}
+		}
 	}
 
-	// Create pipeline runner
-	runner := pipeline.NewRunner(silenceStore, alertStore, router)
+	runner := pipeline.NewRunner(silenceStore, alertStore, router, bte.inhibitRules)
 
-	// Convert test alert labels to model.LabelSet
 	labelSet := make(model.LabelSet)
 	for k, v := range test.Alert.Labels {
 		labelSet[model.LabelName(k)] = model.LabelValue(v)
 	}
 
-	// Execute through pipeline
 	outcome, err := runner.Execute(ctx, labelSet)
 	if err != nil {
 		return &TestResult{
@@ -74,7 +78,6 @@ func (bte *BehavioralTestExecutor) Execute(ctx context.Context, test *types.Beha
 		}
 	}
 
-	// Verify outcome
 	if outcome.Status != test.Expect.Outcome {
 		return &TestResult{
 			Name:  test.Name,
@@ -83,7 +86,6 @@ func (bte *BehavioralTestExecutor) Execute(ctx context.Context, test *types.Beha
 		}
 	}
 
-	// Verify receivers if outcome is active
 	if test.Expect.Outcome == "active" && len(test.Expect.Receivers) > 0 {
 		if !receiversMatch(outcome.Receivers, test.Expect.Receivers) {
 			return &TestResult{

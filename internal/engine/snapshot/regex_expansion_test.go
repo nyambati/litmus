@@ -37,6 +37,31 @@ func TestRegexExpansion_ExpandAlternations(t *testing.T) {
 			pattern:  ".*",
 			wantVals: []string{"litmus_match"},
 		},
+		{
+			name:     "non-capturing group single value",
+			pattern:  "(?:latam-compliance-team)$",
+			wantVals: []string{"latam-compliance-team"},
+		},
+		{
+			name:     "non-capturing group alternation",
+			pattern:  "(?:routing|assignment)$",
+			wantVals: []string{"routing", "assignment"},
+		},
+		{
+			name:     "bare alternation no parens",
+			pattern:  "production|production.*",
+			wantVals: []string{"production"},
+		},
+		{
+			name:     "bare alternation with wildcards",
+			pattern:  "prd.*|infra01|infra03|production|production.*",
+			wantVals: []string{"prd", "infra01", "infra03", "production"},
+		},
+		{
+			name:     "suffix wildcard",
+			pattern:  "prd.*",
+			wantVals: []string{"prd"},
+		},
 	}
 
 	for _, tt := range tests {

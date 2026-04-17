@@ -8,7 +8,7 @@ import (
 	"github.com/nyambati/litmus/internal/stores"
 	lithtypes "github.com/nyambati/litmus/internal/types"
 
-	"github.com/prometheus/alertmanager/config"
+	amconfig "github.com/prometheus/alertmanager/config"
 	"github.com/prometheus/alertmanager/types"
 	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/require"
@@ -23,9 +23,9 @@ func TestPipeline_Execute_Silenced(t *testing.T) {
 	}
 	silenceStore := stores.NewSilenceStore(silences)
 	alertStore := stores.NewAlertStore()
-	router := NewRouter(&config.Route{Receiver: "default"})
+	router := NewRouter(&amconfig.Route{Receiver: "default"})
 
-	pipeline := NewRunner(silenceStore, alertStore, router)
+	pipeline := NewRunner(silenceStore, alertStore, router, nil)
 
 	labels := model.LabelSet{"service": "api", "severity": "critical"}
 	outcome, err := pipeline.Execute(context.Background(), labels)
@@ -35,12 +35,11 @@ func TestPipeline_Execute_Silenced(t *testing.T) {
 }
 
 func TestPipeline_Execute_Active(t *testing.T) {
-	silences := []lithtypes.Silence{}
-	silenceStore := stores.NewSilenceStore(silences)
+	silenceStore := stores.NewSilenceStore([]lithtypes.Silence{})
 	alertStore := stores.NewAlertStore()
-	router := NewRouter(&config.Route{Receiver: "default"})
+	router := NewRouter(&amconfig.Route{Receiver: "default"})
 
-	pipeline := NewRunner(silenceStore, alertStore, router)
+	pipeline := NewRunner(silenceStore, alertStore, router, nil)
 
 	labels := model.LabelSet{"service": "api", "severity": "critical"}
 	outcome, err := pipeline.Execute(context.Background(), labels)
@@ -51,24 +50,29 @@ func TestPipeline_Execute_Active(t *testing.T) {
 }
 
 func TestPipeline_Execute_Inhibited(t *testing.T) {
-	silences := []lithtypes.Silence{}
-	silenceStore := stores.NewSilenceStore(silences)
+	silenceStore := stores.NewSilenceStore([]lithtypes.Silence{})
 	alertStore := stores.NewAlertStore()
 
-	// Add inhibiting alert with critical severity
 	inhibitor := &types.Alert{
 		Alert: model.Alert{
-			Labels:   model.LabelSet{"severity": "critical"},
+			Labels:   model.LabelSet{"service": "api", "severity": "critical"},
 			StartsAt: time.Now(),
 		},
 	}
 	alertStore.Put(inhibitor)
 
-	router := NewRouter(&config.Route{Receiver: "default"})
-	pipeline := NewRunner(silenceStore, alertStore, router)
+	rules := []amconfig.InhibitRule{
+		{
+			SourceMatch: map[string]string{"severity": "critical"},
+			TargetMatch: map[string]string{"severity": "warning"},
+			Equal:       model.LabelNames{"service"},
+		},
+	}
 
-	// Incoming alert with warning severity matches critical inhibitor
-	labels := model.LabelSet{"severity": "critical"}
+	router := NewRouter(&amconfig.Route{Receiver: "default"})
+	pipeline := NewRunner(silenceStore, alertStore, router, rules)
+
+	labels := model.LabelSet{"service": "api", "severity": "warning"}
 	outcome, err := pipeline.Execute(context.Background(), labels)
 
 	require.NoError(t, err)

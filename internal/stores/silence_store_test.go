@@ -23,6 +23,14 @@ func TestSilenceStore_Mutes(t *testing.T) {
 			wantMute: false,
 		},
 		{
+			name: "silence with no labels never mutes",
+			silences: []types.Silence{
+				{Labels: map[string]string{}, Comment: "bad silence"},
+			},
+			labels:   model.LabelSet{"service": "api"},
+			wantMute: false,
+		},
+		{
 			name: "exact label match mutes",
 			silences: []types.Silence{
 				{
@@ -94,19 +102,4 @@ func TestSilenceStore_Mutes(t *testing.T) {
 			require.Equal(t, tt.wantMute, got)
 		})
 	}
-}
-
-func TestSilenceStore_Reset(t *testing.T) {
-	initial := []types.Silence{
-		{
-			Labels:  map[string]string{"service": "api"},
-			Comment: "api maintenance",
-		},
-	}
-
-	store := NewSilenceStore(initial)
-	require.True(t, store.Mutes(context.Background(), model.LabelSet{"service": "api"}))
-
-	store.Reset([]types.Silence{})
-	require.False(t, store.Mutes(context.Background(), model.LabelSet{"service": "api"}))
 }

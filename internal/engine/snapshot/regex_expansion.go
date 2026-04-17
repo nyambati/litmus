@@ -5,6 +5,13 @@ import (
 	"strings"
 )
 
+var (
+	ncgRegex    = regexp.MustCompile(`^\(\?:([^)]+)\)\$?$`)
+	capRegex    = regexp.MustCompile(`^\(([^)]+)\)$`)
+	prefixRegex = regexp.MustCompile(`^\^([^.]+)`)
+	charRegex   = regexp.MustCompile(`^\[([a-z])-([a-z])\]$`)
+)
+
 // RegexExpander extracts values from regex patterns.
 type RegexExpander struct{}
 
@@ -13,34 +20,64 @@ func NewRegexExpander() *RegexExpander {
 	return &RegexExpander{}
 }
 
-// ExpandAlternations extracts all options from alternation pattern.
+// ExpandAlternations extracts all concrete options from a regex pattern.
 func (re *RegexExpander) ExpandAlternations(pattern string) []string {
-	// Simple alternation: (opt1|opt2|opt3)
-	altRegex := regexp.MustCompile(`^\(([^)]+)\)$`)
-	if matches := altRegex.FindStringSubmatch(pattern); matches != nil {
-		opts := strings.Split(matches[1], "|")
-		return opts
+	// Non-capturing group: (?:opt1|opt2)$ — Alertmanager's compiled regex format
+	if matches := ncgRegex.FindStringSubmatch(pattern); matches != nil {
+		return sanitizeParts(strings.Split(matches[1], "|"))
+	}
+
+	// Simple capturing group: (opt1|opt2)
+	if matches := capRegex.FindStringSubmatch(pattern); matches != nil {
+		return sanitizeParts(strings.Split(matches[1], "|"))
+	}
+
+	// Bare alternation without parens: a|b|c.*
+	if strings.Contains(pattern, "|") {
+		return sanitizeParts(strings.Split(pattern, "|"))
 	}
 
 	// Anchored prefix: ^api-.* -> "api-"
-	prefixRegex := regexp.MustCompile(`^\^([^.]+)`)
 	if matches := prefixRegex.FindStringSubmatch(pattern); matches != nil {
 		return []string{matches[1]}
 	}
 
-	// Wildcard: .* -> "litmus_match"
+	// Suffix wildcard: prd.* -> "prd"
+	if strings.HasSuffix(pattern, ".*") || strings.HasSuffix(pattern, ".+") {
+		base := strings.TrimSuffix(strings.TrimSuffix(pattern, ".*"), ".+")
+		if base == "" {
+			return []string{"litmus_match"}
+		}
+		return []string{base}
+	}
+
+	// Pure wildcard
 	if pattern == ".*" || pattern == ".+" {
 		return []string{"litmus_match"}
 	}
 
 	// Character class: [a-z] -> "a"
-	charRegex := regexp.MustCompile(`^\[([a-z])-([a-z])\]$`)
 	if matches := charRegex.FindStringSubmatch(pattern); matches != nil {
 		return []string{string(matches[1][0])}
 	}
 
-	// No expansion: return pattern as-is
+	// No expansion: return literal as-is
 	return []string{pattern}
+}
+
+// sanitizeParts strips regex metacharacters from alternation parts and deduplicates.
+func sanitizeParts(parts []string) []string {
+	seen := make(map[string]bool)
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSuffix(strings.TrimSuffix(p, ".*"), ".+")
+		p = strings.TrimPrefix(p, "^")
+		if p != "" && !seen[p] {
+			seen[p] = true
+			result = append(result, p)
+		}
+	}
+	return result
 }
 
 // LabelCombinationGenerator creates balanced label combinations.
@@ -57,18 +94,15 @@ func NewLabelCombinationGenerator(max int) *LabelCombinationGenerator {
 // If product <= max, generates full Cartesian product.
 // Otherwise, generates minimum set to exercise each option at least once.
 func (lcg *LabelCombinationGenerator) GenerateCovering(matchers map[string][]string) []map[string]string {
-	// Count total combinations
 	totalCombos := 1
 	for _, vals := range matchers {
 		totalCombos *= len(vals)
 	}
 
-	// Full Cartesian if small enough
 	if totalCombos <= lcg.maxCombinations {
 		return lcg.cartesianProduct(matchers)
 	}
 
-	// Covering set: minimum to exercise each option
 	return lcg.minimalCoveringSet(matchers)
 }
 
@@ -102,16 +136,10 @@ func (lcg *LabelCombinationGenerator) cartesianProduct(matchers map[string][]str
 	return result
 }
 
-// minimalCoveringSet generates combinations via partial Cartesian product up to max.
+// minimalCoveringSet selects up to maxCombinations combos that maximise coverage.
 func (lcg *LabelCombinationGenerator) minimalCoveringSet(matchers map[string][]string) []map[string]string {
-	// Start with full Cartesian and trim to maxCombinations
 	full := lcg.cartesianProduct(matchers)
-	if len(full) <= lcg.maxCombinations {
-		return full
-	}
 
-	// Greedy selection: pick combos that maximize uncovered options
-	var result []map[string]string
 	covered := make(map[string]map[string]bool)
 	for k := range matchers {
 		covered[k] = make(map[string]bool)
@@ -120,8 +148,8 @@ func (lcg *LabelCombinationGenerator) minimalCoveringSet(matchers map[string][]s
 	remaining := make([]map[string]string, len(full))
 	copy(remaining, full)
 
+	var result []map[string]string
 	for len(result) < lcg.maxCombinations && len(remaining) > 0 {
-		// Pick combo covering most new options
 		bestIdx := 0
 		bestScore := -1
 
@@ -138,14 +166,12 @@ func (lcg *LabelCombinationGenerator) minimalCoveringSet(matchers map[string][]s
 			}
 		}
 
-		// Add best combo
 		chosen := remaining[bestIdx]
 		result = append(result, chosen)
 		for k, v := range chosen {
 			covered[k][v] = true
 		}
 
-		// Remove chosen from remaining
 		remaining = append(remaining[:bestIdx], remaining[bestIdx+1:]...)
 	}
 

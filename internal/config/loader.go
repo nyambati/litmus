@@ -9,7 +9,6 @@ import (
 
 	amconfig "github.com/prometheus/alertmanager/config"
 	"github.com/spf13/viper"
-	"gopkg.in/yaml.v3"
 )
 
 // DefaultConfigName is the base name of the configuration file.
@@ -64,18 +63,19 @@ func LoadConfig() (*LitmusConfig, error) {
 }
 
 // LoadAlertmanagerConfig reads and parses the Alertmanager YAML configuration.
+// Uses alertmanager's own loader to apply validation, defaults, and compiled matchers.
 func LoadAlertmanagerConfig(path string) (*amconfig.Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("reading alertmanager config: %w", err)
 	}
 
-	var cfg amconfig.Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
+	cfg, err := amconfig.Load(string(data))
+	if err != nil {
 		return nil, fmt.Errorf("parsing alertmanager config: %w", err)
 	}
 
-	return &cfg, nil
+	return cfg, nil
 }
 
 // expandEnv processes fields that might contain {{ env "VAR" }} templates.

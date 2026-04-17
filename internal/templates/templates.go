@@ -10,5 +10,5 @@ var (
 	//go:embed files/README.md
 	ReadmeMD string
 	//go:embed files/gitattributes
-	GitAtrributes string
+	GitAttributes string
 )

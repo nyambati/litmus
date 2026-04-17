@@ -40,12 +40,10 @@ expect:
 	require.NoError(t, err)
 
 	loader := NewBehavioralTestLoader()
-	tests, err := loader.LoadFromFile(testFile)
+	test, err := loader.LoadFromFile(testFile)
 
 	require.NoError(t, err)
-	require.Len(t, tests, 1)
-
-	test := tests[0]
+	require.NotNil(t, test)
 	require.Equal(t, "API service routing", test.Name)
 	require.Len(t, test.Tags, 1)
 	require.Equal(t, "routing", test.Tags[0])

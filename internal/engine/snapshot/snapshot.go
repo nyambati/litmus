@@ -2,6 +2,8 @@ package snapshot
 
 import (
 	"context"
+	"sort"
+	"strings"
 
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/prometheus/common/model"
@@ -82,15 +84,9 @@ func (ss *SnapshotSynthesizer) expandMatchers(matchers []model.LabelSet) map[str
 	return opts
 }
 
-// outcomeKey creates unique key for receiver list.
+// outcomeKey creates a stable unique key for a receiver list.
 func (ss *SnapshotSynthesizer) outcomeKey(receivers []string) string {
-	// Simple join - in production would sort for consistency
-	var key string
-	for i, r := range receivers {
-		if i > 0 {
-			key += ","
-		}
-		key += r
-	}
-	return key
+	sorted := append([]string{}, receivers...)
+	sort.Strings(sorted)
+	return strings.Join(sorted, ",")
 }

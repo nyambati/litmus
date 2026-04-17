@@ -17,7 +17,7 @@ func TestSnapshotSynthesizer_DiscoverOutcomes(t *testing.T) {
 	silenceStore := stores.NewSilenceStore([]types.Silence{})
 	alertStore := stores.NewAlertStore()
 	router := pipeline.NewRouter(&config.Route{Receiver: "api-team"})
-	runner := pipeline.NewRunner(silenceStore, alertStore, router)
+	runner := pipeline.NewRunner(silenceStore, alertStore, router, nil)
 
 	// Create test route paths
 	paths := []*RoutePath{

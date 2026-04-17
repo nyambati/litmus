@@ -33,7 +33,7 @@ func (rte *RegressionTestExecutor) Execute(ctx context.Context, tests []*types.R
 	// Regression tests run with empty silence and alert stores (pure routing)
 	silenceStore := stores.NewSilenceStore(nil)
 	alertStore := stores.NewAlertStore()
-	runner := pipeline.NewRunner(silenceStore, alertStore, router)
+	runner := pipeline.NewRunner(silenceStore, alertStore, router, nil)
 
 	for _, test := range tests {
 		pass := true

@@ -6,12 +6,13 @@ import (
 
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/types"
-	"github.com/prometheus/alertmanager/config"
+	amconfig "github.com/prometheus/alertmanager/config"
+	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/require"
 )
 
 func TestBehavioralTestExecutor_Execute_Active(t *testing.T) {
-	executor := NewBehavioralTestExecutor()
+	executor := NewBehavioralTestExecutor(nil)
 
 	test := &types.BehavioralTest{
 		Name: "Alert routes to api-team",
@@ -29,14 +30,14 @@ func TestBehavioralTestExecutor_Execute_Active(t *testing.T) {
 		},
 	}
 
-	router := pipeline.NewRouter(&config.Route{Receiver: "api-team"})
+	router := pipeline.NewRouter(&amconfig.Route{Receiver: "api-team"})
 	result := executor.Execute(context.Background(), test, router)
 	require.True(t, result.Pass)
 	require.Equal(t, "", result.Error)
 }
 
 func TestBehavioralTestExecutor_Execute_Silenced(t *testing.T) {
-	executor := NewBehavioralTestExecutor()
+	executor := NewBehavioralTestExecutor(nil)
 
 	test := &types.BehavioralTest{
 		Name: "Alert is silenced during maintenance",
@@ -58,13 +59,13 @@ func TestBehavioralTestExecutor_Execute_Silenced(t *testing.T) {
 		},
 	}
 
-	router := pipeline.NewRouter(&config.Route{Receiver: "api-team"})
+	router := pipeline.NewRouter(&amconfig.Route{Receiver: "api-team"})
 	result := executor.Execute(context.Background(), test, router)
 	require.True(t, result.Pass)
 }
 
 func TestBehavioralTestExecutor_Execute_Silenced_Mismatch(t *testing.T) {
-	executor := NewBehavioralTestExecutor()
+	executor := NewBehavioralTestExecutor(nil)
 
 	test := &types.BehavioralTest{
 		Name: "Alert should be silenced but is not",
@@ -85,14 +86,21 @@ func TestBehavioralTestExecutor_Execute_Silenced_Mismatch(t *testing.T) {
 		},
 	}
 
-	router := pipeline.NewRouter(&config.Route{Receiver: "api-team"})
+	router := pipeline.NewRouter(&amconfig.Route{Receiver: "api-team"})
 	result := executor.Execute(context.Background(), test, router)
 	require.False(t, result.Pass)
 	require.Contains(t, result.Error, "silenced")
 }
 
 func TestBehavioralTestExecutor_Execute_Inhibited(t *testing.T) {
-	executor := NewBehavioralTestExecutor()
+	rules := []amconfig.InhibitRule{
+		{
+			SourceMatch: map[string]string{"service": "api"},
+			TargetMatch: map[string]string{"severity": "warning"},
+			Equal:       model.LabelNames{"service"},
+		},
+	}
+	executor := NewBehavioralTestExecutor(rules)
 
 	test := &types.BehavioralTest{
 		Name: "Alert is inhibited by critical alert",
@@ -113,13 +121,13 @@ func TestBehavioralTestExecutor_Execute_Inhibited(t *testing.T) {
 		},
 	}
 
-	router := pipeline.NewRouter(&config.Route{Receiver: "api-team"})
+	router := pipeline.NewRouter(&amconfig.Route{Receiver: "api-team"})
 	result := executor.Execute(context.Background(), test, router)
 	require.True(t, result.Pass)
 }
 
 func TestBehavioralTestExecutor_Execute_Receivers_Mismatch(t *testing.T) {
-	executor := NewBehavioralTestExecutor()
+	executor := NewBehavioralTestExecutor(nil)
 
 	test := &types.BehavioralTest{
 		Name: "Alert should route to specific receivers",
@@ -137,14 +145,14 @@ func TestBehavioralTestExecutor_Execute_Receivers_Mismatch(t *testing.T) {
 		},
 	}
 
-	router := pipeline.NewRouter(&config.Route{Receiver: "api-team"})
+	router := pipeline.NewRouter(&amconfig.Route{Receiver: "api-team"})
 	result := executor.Execute(context.Background(), test, router)
 	require.False(t, result.Pass)
 	require.Contains(t, result.Error, "receivers")
 }
 
 func TestBehavioralTestExecutor_Execute_OutcomeOnly(t *testing.T) {
-	executor := NewBehavioralTestExecutor()
+	executor := NewBehavioralTestExecutor(nil)
 
 	test := &types.BehavioralTest{
 		Name: "Alert is active",
@@ -161,7 +169,7 @@ func TestBehavioralTestExecutor_Execute_OutcomeOnly(t *testing.T) {
 		},
 	}
 
-	router := pipeline.NewRouter(&config.Route{Receiver: "api-team"})
+	router := pipeline.NewRouter(&amconfig.Route{Receiver: "api-team"})
 	result := executor.Execute(context.Background(), test, router)
 	require.True(t, result.Pass)
 }
