@@ -4,7 +4,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/types"
+	"github.com/prometheus/alertmanager/config"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,7 +29,8 @@ func TestBehavioralTestExecutor_Execute_Active(t *testing.T) {
 		},
 	}
 
-	result := executor.Execute(context.Background(), test, []string{"api-team"})
+	router := pipeline.NewRouter(&config.Route{Receiver: "api-team"})
+	result := executor.Execute(context.Background(), test, router)
 	require.True(t, result.Pass)
 	require.Equal(t, "", result.Error)
 }
@@ -55,7 +58,8 @@ func TestBehavioralTestExecutor_Execute_Silenced(t *testing.T) {
 		},
 	}
 
-	result := executor.Execute(context.Background(), test, []string{"api-team"})
+	router := pipeline.NewRouter(&config.Route{Receiver: "api-team"})
+	result := executor.Execute(context.Background(), test, router)
 	require.True(t, result.Pass)
 }
 
@@ -81,7 +85,8 @@ func TestBehavioralTestExecutor_Execute_Silenced_Mismatch(t *testing.T) {
 		},
 	}
 
-	result := executor.Execute(context.Background(), test, []string{"api-team"})
+	router := pipeline.NewRouter(&config.Route{Receiver: "api-team"})
+	result := executor.Execute(context.Background(), test, router)
 	require.False(t, result.Pass)
 	require.Contains(t, result.Error, "silenced")
 }
@@ -108,7 +113,8 @@ func TestBehavioralTestExecutor_Execute_Inhibited(t *testing.T) {
 		},
 	}
 
-	result := executor.Execute(context.Background(), test, []string{"api-team"})
+	router := pipeline.NewRouter(&config.Route{Receiver: "api-team"})
+	result := executor.Execute(context.Background(), test, router)
 	require.True(t, result.Pass)
 }
 
@@ -131,7 +137,8 @@ func TestBehavioralTestExecutor_Execute_Receivers_Mismatch(t *testing.T) {
 		},
 	}
 
-	result := executor.Execute(context.Background(), test, []string{"api-team"})
+	router := pipeline.NewRouter(&config.Route{Receiver: "api-team"})
+	result := executor.Execute(context.Background(), test, router)
 	require.False(t, result.Pass)
 	require.Contains(t, result.Error, "receivers")
 }
@@ -154,6 +161,7 @@ func TestBehavioralTestExecutor_Execute_OutcomeOnly(t *testing.T) {
 		},
 	}
 
-	result := executor.Execute(context.Background(), test, []string{"api-team"})
+	router := pipeline.NewRouter(&config.Route{Receiver: "api-team"})
+	result := executor.Execute(context.Background(), test, router)
 	require.True(t, result.Pass)
 }

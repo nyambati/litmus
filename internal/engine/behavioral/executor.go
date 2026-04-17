@@ -28,7 +28,7 @@ func NewBehavioralTestExecutor() *BehavioralTestExecutor {
 }
 
 // Execute runs a behavioral test through the pipeline and verifies assertions.
-func (bte *BehavioralTestExecutor) Execute(ctx context.Context, test *types.BehavioralTest, defaultReceivers []string) *TestResult {
+func (bte *BehavioralTestExecutor) Execute(ctx context.Context, test *types.BehavioralTest, router *pipeline.Router) *TestResult {
 	// Create stores from test state
 	var silences []types.Silence
 	var activeAlerts []types.AlertSample
@@ -56,7 +56,7 @@ func (bte *BehavioralTestExecutor) Execute(ctx context.Context, test *types.Beha
 	}
 
 	// Create pipeline runner
-	runner := pipeline.NewRunner(silenceStore, alertStore, defaultReceivers)
+	runner := pipeline.NewRunner(silenceStore, alertStore, router)
 
 	// Convert test alert labels to model.LabelSet
 	labelSet := make(model.LabelSet)

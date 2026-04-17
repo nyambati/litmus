@@ -8,6 +8,7 @@ import (
 	"github.com/nyambati/litmus/internal/stores"
 	lithtypes "github.com/nyambati/litmus/internal/types"
 
+	"github.com/prometheus/alertmanager/config"
 	"github.com/prometheus/alertmanager/types"
 	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/require"
@@ -22,8 +23,9 @@ func TestPipeline_Execute_Silenced(t *testing.T) {
 	}
 	silenceStore := stores.NewSilenceStore(silences)
 	alertStore := stores.NewAlertStore()
+	router := NewRouter(&config.Route{Receiver: "default"})
 
-	pipeline := NewRunner(silenceStore, alertStore, []string{"default"})
+	pipeline := NewRunner(silenceStore, alertStore, router)
 
 	labels := model.LabelSet{"service": "api", "severity": "critical"}
 	outcome, err := pipeline.Execute(context.Background(), labels)
@@ -36,8 +38,9 @@ func TestPipeline_Execute_Active(t *testing.T) {
 	silences := []lithtypes.Silence{}
 	silenceStore := stores.NewSilenceStore(silences)
 	alertStore := stores.NewAlertStore()
+	router := NewRouter(&config.Route{Receiver: "default"})
 
-	pipeline := NewRunner(silenceStore, alertStore, []string{"default"})
+	pipeline := NewRunner(silenceStore, alertStore, router)
 
 	labels := model.LabelSet{"service": "api", "severity": "critical"}
 	outcome, err := pipeline.Execute(context.Background(), labels)
@@ -61,7 +64,8 @@ func TestPipeline_Execute_Inhibited(t *testing.T) {
 	}
 	alertStore.Put(inhibitor)
 
-	pipeline := NewRunner(silenceStore, alertStore, []string{"default"})
+	router := NewRouter(&config.Route{Receiver: "default"})
+	pipeline := NewRunner(silenceStore, alertStore, router)
 
 	// Incoming alert with warning severity matches critical inhibitor
 	labels := model.LabelSet{"severity": "critical"}

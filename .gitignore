@@ -27,7 +27,7 @@ Thumbs.db
 # Build output
 /bin/
 /dist/
-
+config/
 # Test coverage
 coverage.out
 coverage.html

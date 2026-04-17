@@ -17,15 +17,15 @@ type Outcome struct {
 type Runner struct {
 	silenceStore *stores.SilenceStore
 	alertStore   *stores.AlertStore
-	receivers    []string // Default receivers for routing
+	router       *Router
 }
 
 // NewRunner creates pipeline runner with stores and config.
-func NewRunner(silenceStore *stores.SilenceStore, alertStore *stores.AlertStore, receivers []string) *Runner {
+func NewRunner(silenceStore *stores.SilenceStore, alertStore *stores.AlertStore, router *Router) *Runner {
 	return &Runner{
 		silenceStore: silenceStore,
 		alertStore:   alertStore,
-		receivers:    receivers,
+		router:       router,
 	}
 }
 
@@ -50,9 +50,10 @@ func (r *Runner) Execute(ctx context.Context, labels model.LabelSet) (*Outcome, 
 	iter.Close()
 
 	// Active: route to receivers
+	receivers := r.router.Match(labels)
 	return &Outcome{
 		Status:    "active",
-		Receivers: r.receivers,
+		Receivers: receivers,
 	}, nil
 }
 

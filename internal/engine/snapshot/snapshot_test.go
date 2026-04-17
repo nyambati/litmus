@@ -7,6 +7,7 @@ import (
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/stores"
 	"github.com/nyambati/litmus/internal/types"
+	"github.com/prometheus/alertmanager/config"
 	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/require"
 )
@@ -15,7 +16,8 @@ func TestSnapshotSynthesizer_DiscoverOutcomes(t *testing.T) {
 	// Create pipeline runner
 	silenceStore := stores.NewSilenceStore([]types.Silence{})
 	alertStore := stores.NewAlertStore()
-	runner := pipeline.NewRunner(silenceStore, alertStore, []string{"api-team", "db-team"})
+	router := pipeline.NewRouter(&config.Route{Receiver: "api-team"})
+	runner := pipeline.NewRunner(silenceStore, alertStore, router)
 
 	// Create test route paths
 	paths := []*RoutePath{

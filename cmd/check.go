@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -8,7 +9,9 @@ import (
 
 	"github.com/nyambati/litmus/internal/config"
 	"github.com/nyambati/litmus/internal/engine/behavioral"
+	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/engine/sanity"
+	"github.com/nyambati/litmus/internal/engine/snapshot"
 	amconfig "github.com/prometheus/alertmanager/config"
 	"github.com/spf13/cobra"
 )
@@ -60,6 +63,8 @@ func newCheckCmd() *cobra.Command {
 }
 
 func runCheck(format string) error {
+	ctx := context.Background()
+
 	// Load configs
 	litmusConfig, err := config.LoadConfig()
 	if err != nil {
@@ -72,14 +77,17 @@ func runCheck(format string) error {
 		return fmt.Errorf("loading alertmanager config: %w", err)
 	}
 
+	// Initialize Router
+	router := pipeline.NewRouter(alertConfig.Route)
+
 	// Run sanity checks
 	sanityResult := runSanityChecks(alertConfig)
 
 	// Run regression tests
-	regressionResult := runRegressionTests(litmusConfig)
+	regressionResult := runRegressionTests(ctx, litmusConfig, router)
 
 	// Run behavioral tests
-	behavioralResult := runBehavioralTests(litmusConfig)
+	behavioralResult := runBehavioralTests(ctx, litmusConfig, router)
 
 	// Compile results
 	result := CheckResult{
@@ -138,7 +146,7 @@ func runSanityChecks(alertConfig *amconfig.Config) SanityResult {
 	return result
 }
 
-func runRegressionTests(litmusConfig *config.LitmusConfig) RegressionResult {
+func runRegressionTests(ctx context.Context, litmusConfig *config.LitmusConfig, router *pipeline.Router) RegressionResult {
 	result := RegressionResult{Passed: true}
 
 	baselinePath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.mpk")
@@ -150,22 +158,41 @@ func runRegressionTests(litmusConfig *config.LitmusConfig) RegressionResult {
 	}
 
 	result.Tests = len(baseline)
-	// In a full implementation, would execute tests and verify they pass
+	executor := snapshot.NewRegressionTestExecutor()
+	execResults := executor.Execute(ctx, baseline, router)
+
+	for _, res := range execResults {
+		if !res.Pass {
+			result.Passed = false
+			result.Failures = append(result.Failures, fmt.Sprintf("%s: %s", res.Name, res.Error))
+		}
+	}
+
 	return result
 }
 
-func runBehavioralTests(litmusConfig *config.LitmusConfig) BehavioralResult {
+func runBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, router *pipeline.Router) BehavioralResult {
 	result := BehavioralResult{Passed: true}
 
 	// Load test files
 	loader := behavioral.NewBehavioralTestLoader()
 	tests, err := loader.LoadFromDirectory(litmusConfig.Tests.Directory)
 	if err != nil {
+		result.Tests = 0
 		return result
 	}
 
 	result.Tests = len(tests)
-	// In a full implementation, would execute tests through pipeline
+	executor := behavioral.NewBehavioralTestExecutor()
+
+	for _, test := range tests {
+		res := executor.Execute(ctx, test, router)
+		if !res.Pass {
+			result.Passed = false
+			result.Failures = append(result.Failures, fmt.Sprintf("%s: %s", res.Name, res.Error))
+		}
+	}
+
 	return result
 }
 
