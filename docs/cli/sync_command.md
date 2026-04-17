@@ -117,7 +117,7 @@ config/templates/:
 
 1. CLI flags (highest priority)
 2. Environment variables (`LITMUS_MIMIR_*`)
-3. `.litmus.yaml` values (with `{{ env "VAR" }}` substitution)
+3. `.litmus.yaml` values (with `env(VAR)` substitution)
 4. Error if mimir.address not available
 
 ## 4. Pipeline: Process → Validate → Push
@@ -128,13 +128,13 @@ The sync command reads configuration from `.litmus.yaml` and resolves paths usin
 
 1. Load `.litmus.yaml` with env substitution for mimir credentials
 2. Load alertmanager config from `{config.directory}/{config.file}`
-3. Parse config for `{{ env "VAR" }}` patterns and substitute with `os.Getenv("VAR")`
+3. Parse config for `env(VAR)` patterns and substitute with the env var value
 
-**Syntax**: Go text/template style
+**Syntax**: `env(VAR_NAME)` — works in both `.litmus.yaml` and `alertmanager.yml`
 ```yaml
 global:
-  smtp_smarthost: '{{ env "SMTP_HOST" }}:587'
-  smtp_from: '{{ env "SMTP_FROM" }}'
+  smtp_smarthost: 'env(SMTP_HOST):587'
+  smtp_from: 'env(SMTP_FROM)'
 ```
 
 **Behavior**:

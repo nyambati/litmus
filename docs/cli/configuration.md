@@ -29,9 +29,9 @@ config:
   templates: templates/    # templates directory (relative to config.directory)
 
 mimir:
-  address: "{{ env "MIMIR_ADDRESS" }}"   # env substitution supported
-  tenant_id: "{{ env "MIMIR_TENANT_ID" }}"
-  api_key: "{{ env "MIMIR_API_KEY" }}"
+  address: "env(MIMIR_ADDRESS)"   # env substitution supported
+  tenant_id: "env(MIMIR_TENANT_ID)"
+  api_key: "env(MIMIR_API_KEY)"
 
 regression:
   directory: regressions/ # baseline directory
@@ -51,16 +51,16 @@ tests:
 
 ### Mimir Configuration
 
-Mimir credentials support environment variable substitution using Go template syntax:
+Mimir credentials support environment variable substitution using `env(VAR)` syntax:
 
 ```yaml
 mimir:
   address: "https://mimir.example.com"
   tenant_id: "anonymous"
-  api_key: "{{ env "MIMIR_API_KEY" }}"
+  api_key: "env(MIMIR_API_KEY)"
 ```
 
-When `{{ env "VAR" }}` is encountered, litmus replaces it with the value of the environment variable.
+When `env(VAR)` is encountered, litmus replaces it with the value of the environment variable.
 
 ## Configuration Loading
 

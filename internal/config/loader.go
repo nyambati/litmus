@@ -1,11 +1,10 @@
 package config
 
 import (
-	"bytes"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
-	"text/template"
 
 	amconfig "github.com/prometheus/alertmanager/config"
 	"github.com/spf13/viper"
@@ -13,6 +12,9 @@ import (
 
 // DefaultConfigName is the base name of the configuration file.
 const DefaultConfigName = ".litmus"
+
+// envPattern matches env(VAR_NAME) where VAR_NAME is an uppercase env var identifier.
+var envPattern = regexp.MustCompile(`env\(([A-Za-z_][A-Za-z0-9_]*)\)`)
 
 // LoadConfig initializes and returns the litmus configuration.
 // It follows the precedence order: Flags > Env Vars > Config File > Defaults.
@@ -54,7 +56,7 @@ func LoadConfig() (*LitmusConfig, error) {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
-	// 5. Post-process: Environment variable substitution
+	// 5. Post-process: env(VAR) substitution across all string fields
 	if err := cfg.expandEnv(); err != nil {
 		return nil, fmt.Errorf("failed to expand environment variables: %w", err)
 	}
@@ -62,15 +64,20 @@ func LoadConfig() (*LitmusConfig, error) {
 	return &cfg, nil
 }
 
-// LoadAlertmanagerConfig reads and parses the Alertmanager YAML configuration.
-// Uses alertmanager's own loader to apply validation, defaults, and compiled matchers.
+// LoadAlertmanagerConfig reads, expands env(VAR) placeholders, and parses the
+// Alertmanager YAML using alertmanager's own loader (applies validation and defaults).
 func LoadAlertmanagerConfig(path string) (*amconfig.Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("reading alertmanager config: %w", err)
 	}
 
-	cfg, err := amconfig.Load(string(data))
+	expanded, err := expandEnvVars(string(data))
+	if err != nil {
+		return nil, fmt.Errorf("expanding env vars in alertmanager config: %w", err)
+	}
+
+	cfg, err := amconfig.Load(expanded)
 	if err != nil {
 		return nil, fmt.Errorf("parsing alertmanager config: %w", err)
 	}
@@ -78,39 +85,53 @@ func LoadAlertmanagerConfig(path string) (*amconfig.Config, error) {
 	return cfg, nil
 }
 
-// expandEnv processes fields that might contain {{ env "VAR" }} templates.
+// expandEnv applies env(VAR) substitution to all string fields in LitmusConfig.
 func (c *LitmusConfig) expandEnv() error {
-	funcMap := template.FuncMap{
-		"env": func(key string) string {
-			return os.Getenv(key)
-		},
+	fields := []*string{
+		&c.Config.Directory,
+		&c.Config.File,
+		&c.Config.Templates,
+		&c.Regression.Directory,
+		&c.Tests.Directory,
+		&c.Mimir.Address,
+		&c.Mimir.TenantID,
+		&c.Mimir.APIKey,
 	}
-
-	expand := func(s string) (string, error) {
-		if !strings.Contains(s, "{{") {
-			return s, nil
-		}
-		tmpl, err := template.New("config").Funcs(funcMap).Parse(s)
+	for _, f := range fields {
+		expanded, err := expandEnvVars(*f)
 		if err != nil {
-			return s, err
+			return err
 		}
-		var buf bytes.Buffer
-		if err := tmpl.Execute(&buf, nil); err != nil {
-			return s, err
+		*f = expanded
+	}
+	for k, v := range c.GlobalLabels {
+		expanded, err := expandEnvVars(v)
+		if err != nil {
+			return err
 		}
-		return buf.String(), nil
+		c.GlobalLabels[k] = expanded
 	}
-
-	var err error
-	if c.Mimir.Address, err = expand(c.Mimir.Address); err != nil {
-		return err
-	}
-	if c.Mimir.TenantID, err = expand(c.Mimir.TenantID); err != nil {
-		return err
-	}
-	if c.Mimir.APIKey, err = expand(c.Mimir.APIKey); err != nil {
-		return err
-	}
-
 	return nil
+}
+
+// expandEnvVars replaces env(VAR_NAME) expressions with the corresponding
+// environment variable values. Returns an error if a referenced variable is unset.
+func expandEnvVars(s string) (string, error) {
+	if !strings.Contains(s, "env(") {
+		return s, nil
+	}
+	var expandErr error
+	result := envPattern.ReplaceAllStringFunc(s, func(match string) string {
+		sub := envPattern.FindStringSubmatch(match)
+		if len(sub) < 2 {
+			return match
+		}
+		val, ok := os.LookupEnv(strings.ToUpper(sub[1]))
+		if !ok {
+			expandErr = fmt.Errorf("env var %q referenced in config but not set", strings.ToUpper(sub[1]))
+			return match
+		}
+		return val
+	})
+	return result, expandErr
 }
