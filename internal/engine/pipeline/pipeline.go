@@ -3,8 +3,8 @@ package pipeline
 import (
 	"context"
 
+	"github.com/nyambati/litmus/internal/stores"
 	"github.com/prometheus/common/model"
-	"litmus/internal/stores"
 )
 
 // Outcome represents result of executing alert through pipeline.

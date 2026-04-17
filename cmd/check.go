@@ -1,13 +1,12 @@
-package main
+package cmd
 
 import (
 	"encoding/json"
 	"fmt"
 	"os"
 
-	"litmus/internal/engine/behavioral"
-	"litmus/internal/engine/sanity"
-
+	"github.com/nyambati/litmus/internal/engine/behavioral"
+	"github.com/nyambati/litmus/internal/engine/sanity"
 	"github.com/prometheus/alertmanager/config"
 	"github.com/spf13/cobra"
 )

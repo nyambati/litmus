@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/nyambati/litmus/internal/types"
 	"gopkg.in/yaml.v3"
-	"litmus/internal/types"
 )
 
 // BehavioralTestLoader loads human-authored test scenarios from YAML.

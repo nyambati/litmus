@@ -1,0 +1,21 @@
+# Litmus configuration
+# Path to the Alertmanager configuration file to be tested
+config_file: "alertmanager.yml"
+
+# Global Test Labels: These labels are automatically added to
+# EVERY synthesized alert during the 'snapshot' process.
+global_labels:
+  severity: "warning"
+  cluster: "production"
+
+# Regression Settings
+regression:
+  # Maximum label combinations per route before balanced coverage
+  max_samples: 5
+  # Path to the MessagePack baseline
+  baseline_path: "regressions.litmus.mpk"
+
+# Behavioral Unit Test (BUT) Settings
+tests:
+  # Directory where human-authored .yml tests are stored
+  directory: "tests/"

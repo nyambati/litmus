@@ -3,8 +3,8 @@ package stores
 import (
 	"context"
 
+	"github.com/nyambati/litmus/internal/types"
 	"github.com/prometheus/common/model"
-	"litmus/internal/types"
 )
 
 // SilenceStore holds silences and provides muting logic.

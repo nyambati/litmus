@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/nyambati/litmus/internal/engine/pipeline"
+	"github.com/nyambati/litmus/internal/stores"
+	"github.com/nyambati/litmus/internal/types"
 	alertmgr "github.com/prometheus/alertmanager/types"
 	"github.com/prometheus/common/model"
-	"litmus/internal/engine/pipeline"
-	"litmus/internal/stores"
-	"litmus/internal/types"
 )
 
 // TestResult holds execution result for a behavioral test.

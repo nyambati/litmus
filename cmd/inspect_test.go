@@ -1,12 +1,12 @@
-package main
+package cmd
 
 import (
 	"os"
 	"testing"
 
+	"github.com/nyambati/litmus/internal/codec"
+	"github.com/nyambati/litmus/internal/types"
 	"github.com/stretchr/testify/require"
-	"litmus/internal/codec"
-	"litmus/internal/types"
 )
 
 func TestInspectCommand_YAML(t *testing.T) {

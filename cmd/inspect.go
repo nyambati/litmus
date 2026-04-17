@@ -1,14 +1,14 @@
-package main
+package cmd
 
 import (
 	"encoding/json"
 	"fmt"
 	"os"
 
+	"github.com/nyambati/litmus/internal/codec"
+	"github.com/nyambati/litmus/internal/types"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
-	"litmus/internal/codec"
-	"litmus/internal/types"
 )
 
 // newInspectCmd creates the inspect command.

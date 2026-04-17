@@ -1,4 +1,4 @@
-module litmus
+module github.com/nyambati/litmus
 
 go 1.26.2
 

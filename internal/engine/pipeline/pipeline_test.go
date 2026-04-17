@@ -5,11 +5,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nyambati/litmus/internal/stores"
+	lithtypes "github.com/nyambati/litmus/internal/types"
+
 	"github.com/prometheus/alertmanager/types"
 	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/require"
-	"litmus/internal/stores"
-	lithtypes "litmus/internal/types"
 )
 
 func TestPipeline_Execute_Silenced(t *testing.T) {

@@ -1,14 +1,13 @@
-package main
+package cmd
 
 import (
 	"fmt"
 	"os"
 	"strings"
 
-	"litmus/internal/codec"
-	"litmus/internal/engine/snapshot"
-	"litmus/internal/types"
-
+	"github.com/nyambati/litmus/internal/codec"
+	"github.com/nyambati/litmus/internal/engine/snapshot"
+	"github.com/nyambati/litmus/internal/types"
 	"github.com/prometheus/alertmanager/config"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"

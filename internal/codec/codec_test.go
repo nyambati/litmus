@@ -2,9 +2,10 @@ package codec
 
 import (
 	"bytes"
-	"litmus/internal/types"
 	"reflect"
 	"testing"
+
+	"github.com/nyambati/litmus/internal/types"
 )
 
 func TestRegressionTestRoundTrip(t *testing.T) {

@@ -3,8 +3,8 @@ package snapshot
 import (
 	"context"
 
+	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/prometheus/common/model"
-	"litmus/internal/engine/pipeline"
 )
 
 // SynthesisResult holds outcome for synthesized alert.

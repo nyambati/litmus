@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/nyambati/litmus/internal/types"
 	"github.com/stretchr/testify/require"
-	"litmus/internal/types"
 )
 
 func TestBehavioralTestExecutor_Execute_Active(t *testing.T) {

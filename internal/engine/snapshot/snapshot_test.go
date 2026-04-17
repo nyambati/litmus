@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/nyambati/litmus/internal/engine/pipeline"
+	"github.com/nyambati/litmus/internal/stores"
+	"github.com/nyambati/litmus/internal/types"
 	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/require"
-	"litmus/internal/engine/pipeline"
-	"litmus/internal/stores"
-	"litmus/internal/types"
 )
 
 func TestSnapshotSynthesizer_DiscoverOutcomes(t *testing.T) {

@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/nyambati/litmus/internal/types"
 	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/require"
-	"litmus/internal/types"
 )
 
 func TestSilenceStore_Mutes(t *testing.T) {
