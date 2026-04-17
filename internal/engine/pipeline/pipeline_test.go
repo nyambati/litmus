@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prometheus/common/model"
 	"github.com/prometheus/alertmanager/types"
+	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/require"
 	"litmus/internal/stores"
 	lithtypes "litmus/internal/types"

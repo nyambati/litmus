@@ -35,9 +35,11 @@ vet:
 
 build:
 	@echo "Building litmus..."
-	@go build -o litmus ./cmd/litmus
+	@go build -o bin/litmus ./cmd/litmus
 
 clean:
 	@echo "Cleaning up..."
-	@rm -f litmus
+	@rm -f bin/litmus
 	@go clean
+
+all: fmt test vet

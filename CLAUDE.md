@@ -25,19 +25,17 @@ All code depends on `internal/types`:
 
 ```bash
 # Test (table-driven tests in *_test.go)
-go test ./...
-go test -v ./internal/codec    # Codec roundtrip tests
-go test -run TestRegressionTestRoundTrip ./...
+make test ./...
+.
 
-# Lint
-golangci-lint run ./...
+make lint
 
 # Build CLI
-go build -o litmus ./cmd/litmus
+make build
 
 # Formatter & vet
-go fmt ./...
-go vet ./...
+make fmt
+make vet ./...
 ```
 
 ## Architecture

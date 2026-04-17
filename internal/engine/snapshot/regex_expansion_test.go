@@ -79,8 +79,8 @@ func TestLabelCombinations_BalancedCovering(t *testing.T) {
 		{
 			name: "large cartesian needs covering set",
 			matchers: map[string][]string{
-				"service": {"api", "db"},
-				"env":     {"prod", "staging"},
+				"service":  {"api", "db"},
+				"env":      {"prod", "staging"},
 				"severity": {"critical", "warning"},
 			},
 			maxCombinations:   4,

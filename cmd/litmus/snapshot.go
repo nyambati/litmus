@@ -14,10 +14,10 @@ import (
 
 // LitmusConfig represents the litmus.yaml configuration.
 type LitmusConfig struct {
-	ConfigFile   string                 `yaml:"config_file"`
-	GlobalLabels map[string]string      `yaml:"global_labels"`
-	Regression   RegressionConfig       `yaml:"regression"`
-	Tests        TestsConfig            `yaml:"tests"`
+	ConfigFile   string            `yaml:"config_file"`
+	GlobalLabels map[string]string `yaml:"global_labels"`
+	Regression   RegressionConfig  `yaml:"regression"`
+	Tests        TestsConfig       `yaml:"tests"`
 }
 
 // RegressionConfig represents regression settings.

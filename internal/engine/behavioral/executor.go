@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prometheus/common/model"
 	alertmgr "github.com/prometheus/alertmanager/types"
+	"github.com/prometheus/common/model"
 	"litmus/internal/engine/pipeline"
 	"litmus/internal/stores"
 	"litmus/internal/types"

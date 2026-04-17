@@ -12,8 +12,8 @@ import (
 
 func TestRouteWalker_FindTerminalPaths(t *testing.T) {
 	tests := []struct {
-		name         string
-		route        *config.Route
+		name          string
+		route         *config.Route
 		wantPathCount int
 		wantReceivers []string
 	}{
@@ -97,10 +97,10 @@ func TestRouteWalker_MatchersCapture(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
-		name          string
-		route         *config.Route
-		wantLabelKey  model.LabelName
-		wantLabelVal  model.LabelValue
+		name         string
+		route        *config.Route
+		wantLabelKey model.LabelName
+		wantLabelVal model.LabelValue
 	}{
 		{
 			name: "match_re matchers captured",

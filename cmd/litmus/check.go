@@ -13,11 +13,11 @@ import (
 
 // CheckResult holds results from validation run.
 type CheckResult struct {
-	Passed      bool                     `json:"passed"`
-	Sanity      SanityResult             `json:"sanity"`
-	Regression  RegressionResult         `json:"regression"`
-	Behavioral  BehavioralResult         `json:"behavioral"`
-	Summary     string                   `json:"summary"`
+	Passed     bool             `json:"passed"`
+	Sanity     SanityResult     `json:"sanity"`
+	Regression RegressionResult `json:"regression"`
+	Behavioral BehavioralResult `json:"behavioral"`
+	Summary    string           `json:"summary"`
 }
 
 // SanityResult holds sanity linter results.
@@ -28,15 +28,15 @@ type SanityResult struct {
 
 // RegressionResult holds regression test results.
 type RegressionResult struct {
-	Passed  bool     `json:"passed"`
-	Tests   int      `json:"tests"`
+	Passed   bool     `json:"passed"`
+	Tests    int      `json:"tests"`
 	Failures []string `json:"failures,omitempty"`
 }
 
 // BehavioralResult holds behavioral test results.
 type BehavioralResult struct {
-	Passed  bool     `json:"passed"`
-	Tests   int      `json:"tests"`
+	Passed   bool     `json:"passed"`
+	Tests    int      `json:"tests"`
 	Failures []string `json:"failures,omitempty"`
 }
 
@@ -80,10 +80,10 @@ func runCheck(format string) error {
 
 	// Compile results
 	result := CheckResult{
-		Passed:      sanityResult.Passed && regressionResult.Passed && behavioralResult.Passed,
-		Sanity:      sanityResult,
-		Regression:  regressionResult,
-		Behavioral:  behavioralResult,
+		Passed:     sanityResult.Passed && regressionResult.Passed && behavioralResult.Passed,
+		Sanity:     sanityResult,
+		Regression: regressionResult,
+		Behavioral: behavioralResult,
 	}
 
 	// Format output

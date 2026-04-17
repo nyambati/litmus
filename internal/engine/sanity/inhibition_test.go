@@ -58,9 +58,9 @@ func TestOrphanReceiverDetector_NoOrphans(t *testing.T) {
 	}
 
 	receivers := map[string]*config.Receiver{
-		"root":      {},
-		"api-team":  {},
-		"db-team":   {},
+		"root":     {},
+		"api-team": {},
+		"db-team":  {},
 	}
 
 	detector := NewOrphanReceiverDetector(root, receivers)

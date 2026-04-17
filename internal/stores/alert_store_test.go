@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prometheus/common/model"
 	"github.com/prometheus/alertmanager/types"
+	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/require"
 )
 
@@ -14,7 +14,7 @@ func TestAlertStore_Put(t *testing.T) {
 
 	alert := &types.Alert{
 		Alert: model.Alert{
-			Labels: model.LabelSet{"service": "api", "severity": "critical"},
+			Labels:   model.LabelSet{"service": "api", "severity": "critical"},
 			StartsAt: time.Now(),
 		},
 	}
@@ -29,7 +29,7 @@ func TestAlertStore_Get(t *testing.T) {
 	now := time.Now()
 	alert := &types.Alert{
 		Alert: model.Alert{
-			Labels: model.LabelSet{"service": "api", "severity": "critical"},
+			Labels:   model.LabelSet{"service": "api", "severity": "critical"},
 			StartsAt: now,
 		},
 	}
@@ -49,7 +49,7 @@ func TestAlertStore_Subscribe(t *testing.T) {
 
 	alert := &types.Alert{
 		Alert: model.Alert{
-			Labels: model.LabelSet{"service": "api"},
+			Labels:   model.LabelSet{"service": "api"},
 			StartsAt: time.Now(),
 		},
 	}
@@ -71,7 +71,7 @@ func TestAlertStore_Reset(t *testing.T) {
 
 	alert := &types.Alert{
 		Alert: model.Alert{
-			Labels: model.LabelSet{"service": "api"},
+			Labels:   model.LabelSet{"service": "api"},
 			StartsAt: time.Now(),
 		},
 	}

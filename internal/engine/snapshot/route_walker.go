@@ -7,8 +7,8 @@ import (
 
 // RoutePath represents a path from root to terminal route with cumulative matchers.
 type RoutePath struct {
-	Receiver string              // Terminal receiver name
-	Matchers []model.LabelSet    // Cumulative matchers from root to leaf
+	Receiver string           // Terminal receiver name
+	Matchers []model.LabelSet // Cumulative matchers from root to leaf
 }
 
 // RouteWalker traverses alertmanager route tree to find terminal paths.

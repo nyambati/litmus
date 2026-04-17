@@ -15,7 +15,7 @@ type SynthesisResult struct {
 
 // SnapshotSynthesizer generates regression test baselines from route paths.
 type SnapshotSynthesizer struct {
-	runner *pipeline.Runner
+	runner   *pipeline.Runner
 	expander *RegexExpander
 	combGen  *LabelCombinationGenerator
 }
