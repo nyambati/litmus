@@ -43,9 +43,10 @@ type BehavioralResult struct {
 // newCheckCmd creates the check command.
 func newCheckCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "check",
-		Short: "Validate alertmanager configuration",
-		Long:  "Runs sanity linter, regression tests, and behavioral unit tests",
+		Use:          "check",
+		Short:        "Validate alertmanager configuration",
+		Long:         "Runs sanity linter, regression tests, and behavioral unit tests",
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			format, _ := cmd.Flags().GetString("format")
 			return runCheck(format)

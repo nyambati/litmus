@@ -14,10 +14,11 @@ import (
 // newInspectCmd creates the inspect command.
 func newInspectCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "inspect <file.mpk>",
-		Short: "Inspect binary regression baseline",
-		Long:  "Loads a MessagePack baseline and displays it as YAML or JSON",
-		Args:  cobra.ExactArgs(1),
+		Use:          "inspect <file.mpk>",
+		Short:        "Inspect binary regression baseline",
+		Long:         "Loads a MessagePack baseline and displays it as YAML or JSON",
+		SilenceUsage: true,
+		Args:         cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			format, _ := cmd.Flags().GetString("format")
 			return runInspect(args[0], format)

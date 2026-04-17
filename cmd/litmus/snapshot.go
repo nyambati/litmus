@@ -41,6 +41,7 @@ func newSnapshotCmd() *cobra.Command {
 			update, _ := cmd.Flags().GetBool("update")
 			return runSnapshot(update)
 		},
+		SilenceUsage: true,
 	}
 
 	cmd.Flags().BoolP("update", "u", false, "Update baseline with current behavior")

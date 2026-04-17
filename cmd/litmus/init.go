@@ -82,9 +82,10 @@ Tests are defined in YAML format with the following structure:
 // newInitCmd creates the init command.
 func newInitCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "init",
-		Short: "Initialize a new litmus workspace",
-		Long:  "Creates litmus.yaml, tests/ directory, and .gitattributes for a new workspace",
+		Use:          "init",
+		Short:        "Initialize a new litmus workspace",
+		Long:         "Creates litmus.yaml, tests/ directory, and .gitattributes for a new workspace",
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runInit()
 		},
