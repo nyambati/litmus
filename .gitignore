@@ -31,7 +31,7 @@ Thumbs.db
 # Test coverage
 coverage.out
 coverage.html
-graphify-out/cache
+graphify-out
 *.local.json
 alertmanager.*
 regressions.litmus*
