@@ -20,6 +20,7 @@ func main() {
 	}
 
 	rootCmd.AddCommand(newInitCmd())
+	rootCmd.AddCommand(newSnapshotCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
