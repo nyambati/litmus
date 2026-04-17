@@ -1,0 +1,77 @@
+direction: right
+
+d2-config: {
+  layout-engine: dagre
+  theme: 200
+}
+
+User: Human Operator {
+  shape: person
+}
+
+CLI: Litmus CLI {
+  Init: litmus init
+  Snapshot: litmus snapshot
+  Check: litmus check
+  Inspect: litmus inspect
+}
+
+InternalEngine: Internal Engine {
+  Snapshot: Snapshot Engine {
+    Synthesis: Label Synthesis
+    Traversal: Tree Traversal
+    Governor: Expansion Governor
+  }
+  
+  Pipeline: Pipeline Runner {
+    Orchestrator: Orchestrator
+  }
+  
+  Sanity: Sanity Linter {
+    ShadowDetection: Shadow Detection
+    Inhibit: Cross-Inhibition Scan
+    Cycle: Cycle Detection
+  }
+}
+
+StateStores: State Stores (In-Memory) {
+  SilenceStore: Silence Store
+  AlertStore: Alert Store
+}
+
+AlertmanagerLibs: Prometheus Alertmanager Libs {
+  Dispatch: dispatch.Route
+  Inhibit: inhibit.Inhibitor
+  Silence: silence.Silencer
+}
+
+FileSystem: File System {
+  Config: alertmanager.yml
+  LitmusYaml: litmus.yaml
+  BaselineMPK: regressions.litmus.mpk
+  BaselineYML: regressions.litmus.yml
+  BUTTests: tests/*.yml
+}
+
+# Relationships
+User -> CLI: Executes Commands
+
+CLI -> InternalEngine.Snapshot: Trigger Snapshot
+CLI -> InternalEngine.Pipeline: Trigger Check
+CLI -> InternalEngine.Sanity: Trigger Linter
+
+InternalEngine.Snapshot -> FileSystem.Config: Read Routing Tree
+InternalEngine.Snapshot -> AlertmanagerLibs.Dispatch: Execute Simulation
+InternalEngine.Snapshot -> FileSystem.BaselineMPK: Write Protected Lockfile
+InternalEngine.Snapshot -> FileSystem.BaselineYML: Write Audit File
+
+InternalEngine.Pipeline -> FileSystem.BUTTests: Load Scenarios
+InternalEngine.Pipeline -> StateStores: Populate with 'state'
+InternalEngine.Pipeline -> AlertmanagerLibs: Orchestrate Simulation
+
+StateStores -> AlertmanagerLibs: Satisfy Interfaces
+
+InternalEngine.Sanity -> FileSystem.Config: Analyze Logic
+InternalEngine.Sanity -> InternalEngine.Snapshot: Cross-Inhibition Scan
+
+FileSystem.LitmusYaml -> CLI: Project Settings
