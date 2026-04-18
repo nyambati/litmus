@@ -35,7 +35,7 @@ vet:
 
 build:
 	@echo "Building litmus..."
-	@go build -o bin/litmus ./cmd/litmus
+	@go build -o bin/litmus .
 
 clean:
 	@echo "Cleaning up..."
