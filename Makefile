@@ -36,10 +36,12 @@ vet:
 build:
 	@echo "Building litmus..."
 	@go build -o bin/litmus .
+lint:
+	golangci-lint run
 
 clean:
 	@echo "Cleaning up..."
 	@rm -f bin/litmus
 	@go clean
 
-all: fmt test vet
+all: fmt test vet lint
