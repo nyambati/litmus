@@ -6,46 +6,52 @@
 
 ```text
 litmus/
+├── main.go                    # CLI entry point
 ├── cmd/
-│   └── litmus/                # CLI entry point (main.go)
+│   ├── root.go                # Root command & registration
+│   ├── init.go
+│   ├── snapshot.go
+│   ├── check.go
+│   ├── diff.go
+│   ├── inspect.go
+│   ├── show.go
+│   └── sync.go
 ├── internal/
 │   ├── engine/                # Core Testing Logic
-│   │   ├── pipeline/          # SHARED: Unified executor (Silencer -> Inhibitor -> Router)
+│   │   ├── pipeline/          # SHARED: Unified executor (Silencer → Inhibitor → Router)
 │   │   ├── behavioral/        # BUT: Human-authored test management & assertions
 │   │   ├── snapshot/          # REGRESSION: Synthesis and lockfile management
-│   │   └── sanity/            # SANITY: Static analysis linter rules
-│   │       ├── shadowed.go
-│   │       ├── inhibition_overlap.go
-│   │       ├── cycles.go
-│   │       └── orphans.go
+│   │   ├── sanity/            # SANITY: Static analysis linter rules
+│   │   └── matching/          # Receiver matching utilities
 │   ├── stores/                # In-memory data providers for the Pipeline
 │   │   ├── silence_store.go   # Implements silence.Silences interface
 │   │   └── alert_store.go     # Implements provider.Alerts interface
-│   ├── types/                 # Shared data structures (The "Dependency Anchor")
-│   │   ├── behavioral.go      # BehavioralTest (BUT) struct
-│   │   └── regression.go      # RegressionTest struct
-│   └── codec/                 # MessagePack and YAML encoding/decoding
-├── pkg/
-│   └── litmus/                # Public Go API (for use as a library)
-├── docs/                      # Specification and documentation
+│   ├── cli/                   # CLI business logic
+│   │   ├── check.go
+│   │   ├── snapshot.go
+│   │   ├── diff.go
+│   │   └── sync.go
+│   ├── config/                # Configuration loading & env expansion
+│   ├── mimir/                 # Grafana Mimir API client
+│   ├── types/                 # Shared data structures (Dependency Anchor)
+│   │   ├── behavioral.go
+│   │   └── regression.go
+│   └── codec/                 # MessagePack and YAML serialization
+├── docs/                      # User documentation
 │   ├── cli/
 │   │   ├── configuration.md   # litmus.yaml schema
-│   │   ├── design.md          # Command design & Lockfile philosophy
-│   │   └── ui_ux.md           # Terminal UI and reporting standards
-│   ├── testing/
-│   │   ├── regression.md      # Regression synthesis & snapshot logic
-│   │   └── behavioral.md      # Behavioral Unit Test (BUT) logic
-│   ├── sanity/
-│   │   └── static_analysis.md # Linter & sanity rules
-│   ├── technical/
-│   │   ├── pipeline_runner.md # Unified Pipeline execution logic
-│   │   └── snapshot_synthesis.md # Snapshot generation logic
-│   ├── archive/               # Historical notes (IDEAS.md)
+│   │   └── user_guide.md      # How to use each command
+│   ├── README.md              # Quick start
+│   ├── INDEX.md               # Documentation index
+│   ├── whitepaper.md          # Vision and motivation
+│   ├── architecture.md        # Design philosophy
 │   ├── backlog.md             # Future enhancements
-│   ├── whitepaper.md          # The vision for deterministic validation
-│   └── architecture.d2        # D2 architecture diagram
+│   ├── project_organization.md # Project structure
+│   └── engineering_standards.md # Coding standards
 ├── go.mod                     # Go module definition
 ├── go.sum
-└── GEMINI.md                  # Agent Engineering Mandates
+├── Makefile                   # Build targets
+├── CLAUDE.md                  # Claude Code instructions
+└── .gitattributes             # Git configuration for binary diffs
 ```
 ...

@@ -6,7 +6,7 @@ Learn how to use Litmus to validate your Alertmanager configuration.
 
 ## Overview
 
-Litmus provides five commands for managing alert configuration validation:
+Litmus provides six commands for managing alert configuration validation:
 
 ```
 litmus init       Initialize workspace
@@ -14,6 +14,7 @@ litmus snapshot   Create/update regression baseline
 litmus check      Validate configuration (for CI/CD)
 litmus diff       Show changes from baseline
 litmus inspect    Read binary regression file (for auditing)
+litmus sync       Push validated config to Grafana Mimir
 ```
 
 ---
@@ -300,6 +301,57 @@ git diff regressions.litmus.mpk
 
 ---
 
+### `litmus sync`
+
+Validate and push alertmanager configuration to Grafana Mimir.
+
+```bash
+litmus sync
+litmus sync --dry-run                              # Validate without pushing
+litmus sync --address https://mimir.example.com   # Override config
+litmus sync --skip-validate                       # Skip sanity checks
+```
+
+**Flags:**
+- `--address` — Mimir API address (overrides config)
+- `--tenant-id` — Mimir tenant ID (overrides config)
+- `--api-key` — Mimir API key (overrides config)
+- `--dry-run` — Validate only, do not push
+- `--skip-validate` — Skip sanity checks before push
+
+**Configuration:**
+Mimir credentials in `.litmus.yaml`:
+```yaml
+mimir:
+  address: "https://mimir.example.com"
+  tenant_id: "anonymous"
+  api_key: "env(MIMIR_API_KEY)"
+```
+
+Or via environment variables:
+```bash
+LITMUS_MIMIR_ADDRESS=https://mimir.example.com \
+LITMUS_MIMIR_TENANT_ID=anonymous \
+LITMUS_MIMIR_API_KEY=secret-key \
+litmus sync
+```
+
+**Output:**
+```
+✓ Alertmanager config synced to https://mimir.example.com
+```
+
+**Use when:**
+- Pushing validated configs to Mimir
+- CI/CD deployment pipelines
+- Testing Mimir integration
+
+**Exit Codes:**
+- `0` — Config synced successfully
+- `1` — Error (config, validation, or push failure)
+
+---
+
 ## Configuration
 
 See [`docs/cli/configuration.md`](configuration.md) for the full `litmus.yaml` schema.
@@ -307,14 +359,17 @@ See [`docs/cli/configuration.md`](configuration.md) for the full `litmus.yaml` s
 ### Minimal Example
 
 ```yaml
-config_file: alertmanager.yaml
+config:
+  directory: config
+  file: alertmanager.yml
+  templates: templates/
 
 global_labels:
   cluster: production
 
 regression:
+  directory: regressions/
   max_samples: 5
-  baseline_path: regressions.litmus.mpk
 
 tests:
   directory: tests/
@@ -322,11 +377,13 @@ tests:
 
 ### Options
 
-- **`config_file`** (required) — Path to alertmanager.yaml
+- **`config.directory`** (default: `config`) — Directory containing alertmanager config
+- **`config.file`** (default: `alertmanager.yml`) — Config filename
+- **`config.templates`** (default: `templates/`) — Templates subdirectory
 - **`global_labels`** (optional) — Labels added to all synthesized alerts
-- **`regression.max_samples`** (optional, default: 5) — Limit label combinations per route
-- **`regression.baseline_path`** (optional, default: `regressions.litmus.mpk`) — Baseline location
-- **`tests.directory`** (optional, default: `tests/`) — Behavioral test directory
+- **`regression.directory`** (default: `regressions/`) — Baseline directory
+- **`regression.max_samples`** (default: 5) — Limit label combinations per route
+- **`tests.directory`** (default: `tests/`) — Behavioral test directory
 
 ---
 

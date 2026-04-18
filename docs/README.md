@@ -105,7 +105,8 @@ Exit codes:
 | `litmus snapshot [--update]` | Create/update regression baseline |
 | `litmus check` | Validate configuration (CI/CD) |
 | `litmus diff` | Show changes from baseline |
-| `litmus inspect <file>` | Read binary regression file |
+| `litmus inspect` | Read binary regression file |
+| `litmus sync` | Push validated config to Grafana Mimir |
 
 ---
 
@@ -114,8 +115,10 @@ Exit codes:
 Create `.litmus.yaml` in your project root:
 
 ```yaml
-# Path to alertmanager config
-config_file: alertmanager.yaml
+config:
+  directory: config           # Alertmanager config directory
+  file: alertmanager.yml      # Config filename
+  templates: templates/       # Templates directory
 
 # Global labels added to all synthesized alerts
 global_labels:
@@ -124,12 +127,18 @@ global_labels:
 
 # Regression settings
 regression:
-  max_samples: 5           # Max label combinations per route
-  baseline_path: regressions.litmus.mpk
+  directory: regressions/     # Baseline directory
+  max_samples: 5              # Max label combinations per route
 
 # Behavioral test settings
 tests:
-  directory: tests/
+  directory: tests/           # Test directory
+
+# Mimir sync configuration (optional)
+mimir:
+  address: "https://mimir.example.com"
+  tenant_id: "anonymous"
+  api_key: "env(MIMIR_API_KEY)"
 ```
 
 For full schema, see `docs/cli/configuration.md`.
