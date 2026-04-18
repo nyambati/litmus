@@ -8,7 +8,7 @@ Welcome to Litmus documentation. Choose your starting point:
 
 ### Getting Started
 - **[README](README.md)** — Quick start guide and feature overview
-- **[User Guide](cli/user_guide.md)** — How to use each command (init, snapshot, check, diff, inspect)
+- **[User Guide](cli/user_guide.md)** — How to use each command (init, snapshot, check, diff, inspect, sync)
 - **[Configuration](cli/configuration.md)** — Complete `litmus.yaml` schema and options
 
 ### Understanding Litmus
@@ -27,17 +27,6 @@ Welcome to Litmus documentation. Choose your starting point:
 
 ### Standards & Practices
 - **[Engineering Standards](engineering_standards.md)** — Coding standards and guidelines
-
----
-
-## Archive (Implementation Details)
-
-The following documents are archived and maintained for reference but are not user-facing:
-
-- `docs/technical/` — Internal implementation details (pipelines, synthesis, stores)
-- `docs/testing/` — Test engine specifications
-- `docs/sanity/` — Linter rule implementations
-- `docs/tickets/` — Issue tracking and decisions
 
 ---
 
@@ -86,12 +75,6 @@ A: Check [Backlog](backlog.md).
 ### Contributor-Facing
 - **project_organization.md** — Project structure
 - **engineering_standards.md** — Coding standards
-
-### Archived
-- **technical/** — Implementation details
-- **testing/** — Test specifications
-- **sanity/** — Linter rules
-- **tickets/** — Issue tracking
 
 ---
 
