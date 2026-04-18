@@ -10,13 +10,15 @@ import (
 
 func TestInitCommand_CreatesFiles(t *testing.T) {
 	tmpDir := t.TempDir()
-	oldCwd, _ := os.Getwd()
-	defer os.Chdir(oldCwd)
-	os.Chdir(tmpDir)
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldCwd) }()
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
 
 	cmd := newInitCmd()
 	cmd.SetArgs([]string{})
-	err := cmd.Execute()
+	err = cmd.Execute()
 
 	require.NoError(t, err)
 	require.FileExists(t, ".litmus.yaml")
@@ -29,13 +31,15 @@ func TestInitCommand_CreatesFiles(t *testing.T) {
 
 func TestInitCommand_LitmusYAML(t *testing.T) {
 	tmpDir := t.TempDir()
-	oldCwd, _ := os.Getwd()
-	defer os.Chdir(oldCwd)
-	os.Chdir(tmpDir)
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldCwd) }()
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
 
 	cmd := newInitCmd()
 	cmd.SetArgs([]string{})
-	err := cmd.Execute()
+	err = cmd.Execute()
 
 	require.NoError(t, err)
 
@@ -50,13 +54,15 @@ func TestInitCommand_LitmusYAML(t *testing.T) {
 
 func TestInitCommand_TestsDirectory(t *testing.T) {
 	tmpDir := t.TempDir()
-	oldCwd, _ := os.Getwd()
-	defer os.Chdir(oldCwd)
-	os.Chdir(tmpDir)
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldCwd) }()
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
 
 	cmd := newInitCmd()
 	cmd.SetArgs([]string{})
-	err := cmd.Execute()
+	err = cmd.Execute()
 
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join("tests", "README.md"))
@@ -64,13 +70,15 @@ func TestInitCommand_TestsDirectory(t *testing.T) {
 
 func TestInitCommand_GitAttributes(t *testing.T) {
 	tmpDir := t.TempDir()
-	oldCwd, _ := os.Getwd()
-	defer os.Chdir(oldCwd)
-	os.Chdir(tmpDir)
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldCwd) }()
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
 
 	cmd := newInitCmd()
 	cmd.SetArgs([]string{})
-	err := cmd.Execute()
+	err = cmd.Execute()
 
 	require.NoError(t, err)
 
@@ -81,13 +89,15 @@ func TestInitCommand_GitAttributes(t *testing.T) {
 
 func TestInitCommand_DoesNotOverwrite(t *testing.T) {
 	tmpDir := t.TempDir()
-	oldCwd, _ := os.Getwd()
-	defer os.Chdir(oldCwd)
-	os.Chdir(tmpDir)
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldCwd) }()
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
 
 	// Create a pre-existing litmus.yaml
 	existingContent := "existing: true\n"
-	err := os.WriteFile(".litmus.yaml", []byte(existingContent), 0644)
+	err = os.WriteFile(".litmus.yaml", []byte(existingContent), 0600)
 	require.NoError(t, err)
 
 	cmd := newInitCmd()

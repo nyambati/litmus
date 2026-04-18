@@ -11,9 +11,11 @@ import (
 
 func TestInspectCommand_YAML(t *testing.T) {
 	tmpDir := t.TempDir()
-	oldCwd, _ := os.Getwd()
-	defer os.Chdir(oldCwd)
-	os.Chdir(tmpDir)
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldCwd) }()
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
 
 	// Create test baseline
 	tests := []*types.RegressionTest{
@@ -25,22 +27,27 @@ func TestInspectCommand_YAML(t *testing.T) {
 		},
 	}
 
-	mpkFile, _ := os.Create("test.mpk")
-	codec.EncodeMsgPack(mpkFile, tests)
-	mpkFile.Close()
+	mpkFile, err := os.Create("test.mpk")
+	require.NoError(t, err)
+	err = codec.EncodeMsgPack(mpkFile, tests)
+	require.NoError(t, err)
+	err = mpkFile.Close()
+	require.NoError(t, err)
 
 	cmd := newInspectCmd()
 	cmd.SetArgs([]string{"test.mpk"})
-	err := cmd.Execute()
+	err = cmd.Execute()
 
 	require.NoError(t, err)
 }
 
 func TestInspectCommand_JSON(t *testing.T) {
 	tmpDir := t.TempDir()
-	oldCwd, _ := os.Getwd()
-	defer os.Chdir(oldCwd)
-	os.Chdir(tmpDir)
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldCwd) }()
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
 
 	// Create test baseline
 	tests := []*types.RegressionTest{
@@ -52,13 +59,16 @@ func TestInspectCommand_JSON(t *testing.T) {
 		},
 	}
 
-	mpkFile, _ := os.Create("test.mpk")
-	codec.EncodeMsgPack(mpkFile, tests)
-	mpkFile.Close()
+	mpkFile, err := os.Create("test.mpk")
+	require.NoError(t, err)
+	err = codec.EncodeMsgPack(mpkFile, tests)
+	require.NoError(t, err)
+	err = mpkFile.Close()
+	require.NoError(t, err)
 
 	cmd := newInspectCmd()
 	cmd.SetArgs([]string{"test.mpk", "--format", "json"})
-	err := cmd.Execute()
+	err = cmd.Execute()
 
 	require.NoError(t, err)
 }

@@ -125,7 +125,7 @@ func RunCheck(format string, showDiff bool) (CheckExitCode, error) {
 		if err != nil {
 			return 1, fmt.Errorf("marshal JSON: %w", err)
 		}
-		fmt.Println(string(data))
+		fmt.Println(string(data)) //nolint:forbidigo
 	} else {
 		PrintCheckResult(result, showDiff)
 	}
@@ -147,7 +147,7 @@ func RunSanityChecks(alertConfig *amconfig.Config) SanityResult {
 	orphan := sanity.NewOrphanReceiverDetector(alertConfig.Route, receiversMap)
 	result.OrphanIssues = orphan.DetectOrphans()
 
-	var rules []*amconfig.InhibitRule
+	rules := make([]*amconfig.InhibitRule, 0, len(alertConfig.InhibitRules))
 	for i := range alertConfig.InhibitRules {
 		rules = append(rules, &alertConfig.InhibitRules[i])
 	}
@@ -221,6 +221,8 @@ func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 }
 
 // PrintCheckResult writes the formatted validation report to stdout.
+//
+//nolint:forbidigo
 func PrintCheckResult(r CheckResult, showDiff bool) {
 	fmt.Printf("Litmus Check: %s\n", r.ConfigPath)
 	fmt.Println(divider)
@@ -235,6 +237,7 @@ func PrintCheckResult(r CheckResult, showDiff bool) {
 
 	// 2. Regressions
 	fmt.Println("2. Regressions (Automated)")
+	//nolint:gocritic
 	if r.Regression.Tests == 0 {
 		fmt.Println("   [SKIP]  No baseline found — run 'litmus snapshot' first")
 	} else if r.Regression.Passed {
@@ -255,7 +258,7 @@ func PrintCheckResult(r CheckResult, showDiff bool) {
 		if showDiff {
 			fmt.Println("\n   Behavioral Delta:")
 			// Generate a temporary diff for the failures
-			var deltas []types.RegressionDelta
+			deltas := make([]types.RegressionDelta, 0, len(r.Regression.Failures))
 			for _, f := range r.Regression.Failures {
 				deltas = append(deltas, types.RegressionDelta{
 					Kind:     types.DeltaModified,
@@ -271,6 +274,7 @@ func PrintCheckResult(r CheckResult, showDiff bool) {
 
 	// 3. Behavioral
 	fmt.Println("3. Behavioral (BUT)")
+	//nolint:gocritic
 	if r.Behavioral.Tests == 0 {
 		fmt.Println("   [SKIP]  No tests found")
 	} else if r.Behavioral.Passed {
@@ -292,11 +296,11 @@ func PrintCheckResult(r CheckResult, showDiff bool) {
 
 func printSanityCategory(okMsg string, issues []string) {
 	if len(issues) == 0 {
-		fmt.Printf("   [OK]    %s\n", okMsg)
+		fmt.Printf("   [OK]    %s\n", okMsg) //nolint:forbidigo
 		return
 	}
 	for _, issue := range issues {
-		fmt.Printf("   [WARN]  %s\n", issue)
+		fmt.Printf("   [WARN]  %s\n", issue) //nolint:forbidigo
 	}
 }
 

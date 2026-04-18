@@ -1,8 +1,9 @@
 package codec
 
 import (
-	"gopkg.in/yaml.v3"
 	"io"
+
+	"gopkg.in/yaml.v3"
 )
 
 // DecodeYAML decodes a YAML stream into the provided interface.

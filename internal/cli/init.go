@@ -9,12 +9,14 @@ import (
 )
 
 // RunInit creates the litmus workspace skeleton in the current directory.
+//
+//nolint:forbidigo
 func RunInit() error {
 	if _, err := os.Stat(".litmus.yaml"); err == nil {
 		return fmt.Errorf(".litmus.yaml already exists in this directory")
 	}
 
-	if err := os.WriteFile(".litmus.yaml", []byte(templates.LitmusYAML), 0644); err != nil {
+	if err := os.WriteFile(".litmus.yaml", []byte(templates.LitmusYAML), 0600); err != nil {
 		return fmt.Errorf("creating .litmus.yaml: %w", err)
 	}
 
@@ -25,11 +27,11 @@ func RunInit() error {
 		}
 	}
 
-	if err := os.WriteFile(filepath.Join("tests", "README.md"), []byte(templates.ReadmeMD), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join("tests", "README.md"), []byte(templates.ReadmeMD), 0600); err != nil {
 		return fmt.Errorf("creating tests/README.md: %w", err)
 	}
 
-	if err := os.WriteFile(".gitattributes", []byte(templates.GitAttributes), 0644); err != nil {
+	if err := os.WriteFile(".gitattributes", []byte(templates.GitAttributes), 0600); err != nil {
 		return fmt.Errorf("creating .gitattributes: %w", err)
 	}
 

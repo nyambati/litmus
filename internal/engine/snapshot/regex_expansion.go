@@ -88,12 +88,12 @@ type LabelCombinationGenerator struct {
 }
 
 // NewLabelCombinationGenerator creates combination generator.
-// Panics if max < 1 to prevent silent degradation.
-func NewLabelCombinationGenerator(max int) *LabelCombinationGenerator {
-	if max < 1 {
+// Panics if maxCombinations < 1 to prevent silent degradation.
+func NewLabelCombinationGenerator(maxCombinations int) *LabelCombinationGenerator {
+	if maxCombinations < 1 {
 		panic("maxCombinations must be >= 1")
 	}
-	return &LabelCombinationGenerator{maxCombinations: max}
+	return &LabelCombinationGenerator{maxCombinations: maxCombinations}
 }
 
 // GenerateCovering generates balanced covering set of label combinations.

@@ -106,4 +106,3 @@ func (ai *alertIterator) Close() {
 func (ai *alertIterator) Err() error {
 	return nil
 }
-

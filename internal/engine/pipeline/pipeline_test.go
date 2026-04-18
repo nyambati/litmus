@@ -59,7 +59,8 @@ func TestPipeline_Execute_Inhibited(t *testing.T) {
 			StartsAt: time.Now(),
 		},
 	}
-	alertStore.Put(inhibitor)
+	err := alertStore.Put(inhibitor)
+	require.NoError(t, err)
 
 	rules := []amconfig.InhibitRule{
 		{
