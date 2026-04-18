@@ -102,6 +102,8 @@ func (ai *alertIterator) Close() {
 }
 
 // Err returns any error encountered during iteration.
+// Always returns nil for alertIterator (implements provider.AlertIterator interface).
 func (ai *alertIterator) Err() error {
 	return nil
 }
+

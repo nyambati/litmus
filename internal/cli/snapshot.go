@@ -46,6 +46,10 @@ func RunSnapshot(update, diff bool) error {
 		return fmt.Errorf("synthesis failed: %w", err)
 	}
 
+	if len(outcomes) == 0 {
+		fmt.Fprintf(os.Stderr, "WARN: synthesis produced zero outcomes; baseline will be empty\n")
+	}
+
 	regTests := buildRegressionTests(outcomes, litmusConfig.GlobalLabels)
 
 	baselinePath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.mpk")

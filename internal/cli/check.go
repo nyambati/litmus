@@ -89,6 +89,10 @@ func RunCheck(format string, showDiff bool) (CheckExitCode, error) {
 		return 1, fmt.Errorf("loading alertmanager config: %w", err)
 	}
 
+	if alertConfig.Route == nil {
+		return 1, fmt.Errorf("alertmanager config has no route defined")
+	}
+
 	router := pipeline.NewRouter(alertConfig.Route)
 
 	sanityResult := RunSanityChecks(alertConfig)

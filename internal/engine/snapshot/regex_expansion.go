@@ -58,7 +58,9 @@ func (re *RegexExpander) ExpandAlternations(pattern string) []string {
 
 	// Character class: [a-z] -> "a"
 	if matches := charRegex.FindStringSubmatch(pattern); matches != nil {
-		return []string{string(matches[1][0])}
+		if len(matches[1]) > 0 {
+			return []string{string(matches[1][0])}
+		}
 	}
 
 	// No expansion: return literal as-is

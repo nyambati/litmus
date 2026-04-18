@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -43,7 +44,8 @@ func LoadConfig() (*LitmusConfig, error) {
 	v.AddConfigPath(".")
 
 	if err := v.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+		var notFoundErr viper.ConfigFileNotFoundError
+		if errors.As(err, &notFoundErr) {
 			fmt.Fprintf(os.Stderr, "WARN: .litmus.yaml not found, using defaults\n")
 		} else {
 			return nil, fmt.Errorf("failed to read config: %w", err)

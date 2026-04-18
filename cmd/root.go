@@ -32,4 +32,5 @@ func init() {
 	rootCmd.AddCommand(newDiffCmd())
 	rootCmd.AddCommand(newCheckCmd())
 	rootCmd.AddCommand(newInspectCmd())
+	rootCmd.AddCommand(newShowCmd())
 }
