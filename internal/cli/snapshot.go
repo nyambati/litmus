@@ -41,7 +41,10 @@ func RunSnapshot(update, diff bool) error {
 	paths := walker.FindTerminalPaths()
 
 	synthesizer := snapshot.NewSnapshotSynthesizer(runner)
-	outcomes := synthesizer.DiscoverOutcomes(ctx, paths)
+	outcomes, err := synthesizer.DiscoverOutcomes(ctx, paths)
+	if err != nil {
+		return fmt.Errorf("synthesis failed: %w", err)
+	}
 
 	regTests := buildRegressionTests(outcomes, litmusConfig.GlobalLabels)
 

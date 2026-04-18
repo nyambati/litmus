@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/nyambati/litmus/internal/engine/matching"
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/stores"
 	"github.com/nyambati/litmus/internal/types"
@@ -91,7 +92,7 @@ func (bte *BehavioralTestExecutor) Execute(ctx context.Context, test *types.Beha
 	}
 
 	if test.Expect.Outcome == "active" && len(test.Expect.Receivers) > 0 {
-		if !receiversMatch(outcome.Receivers, test.Expect.Receivers) {
+		if !matching.SubsetMatch(outcome.Receivers, test.Expect.Receivers) {
 			return &TestResult{
 				Name: test.Name,
 				Pass: false,
@@ -108,18 +109,4 @@ func (bte *BehavioralTestExecutor) Execute(ctx context.Context, test *types.Beha
 		Name: test.Name,
 		Pass: true,
 	}
-}
-
-// receiversMatch checks if actual receivers contain all expected receivers.
-func receiversMatch(actual, expected []string) bool {
-	actualMap := make(map[string]bool)
-	for _, r := range actual {
-		actualMap[r] = true
-	}
-	for _, r := range expected {
-		if !actualMap[r] {
-			return false
-		}
-	}
-	return true
 }

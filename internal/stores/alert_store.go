@@ -33,13 +33,17 @@ func (as *AlertStore) Put(alerts ...*types.Alert) error {
 }
 
 // GetPending returns an iterator over all stored alerts.
+// Creates a snapshot of alerts to prevent races with concurrent Put/Reset calls.
 func (as *AlertStore) GetPending() provider.AlertIterator {
 	as.mu.RLock()
 	defer as.mu.RUnlock()
 
 	alerts := make([]*types.Alert, 0, len(as.alerts))
 	for _, alert := range as.alerts {
-		alerts = append(alerts, alert)
+		// Copy alert pointer to snapshot to avoid stale pointer issues
+		// if the underlying alert is modified or released
+		alertCopy := *alert
+		alerts = append(alerts, &alertCopy)
 	}
 	return newAlertIterator(alerts)
 }
@@ -69,7 +73,7 @@ func newAlertIterator(alerts []*types.Alert) provider.AlertIterator {
 
 // Next returns a channel that yields alerts.
 func (ai *alertIterator) Next() <-chan *types.Alert {
-	ch := make(chan *types.Alert)
+	ch := make(chan *types.Alert, 32)
 	go func() {
 		defer close(ch)
 		for {

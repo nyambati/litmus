@@ -36,7 +36,8 @@ func TestSnapshotSynthesizer_DiscoverOutcomes(t *testing.T) {
 	}
 
 	synth := NewSnapshotSynthesizer(runner)
-	results := synth.DiscoverOutcomes(context.Background(), paths)
+	results, err := synth.DiscoverOutcomes(context.Background(), paths)
+	require.NoError(t, err)
 
 	// Should synthesize outcomes from paths
 	require.GreaterOrEqual(t, len(results), 1)

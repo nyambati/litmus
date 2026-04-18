@@ -43,7 +43,10 @@ func RunDiff() error {
 	paths := walker.FindTerminalPaths()
 
 	synthesizer := snapshot.NewSnapshotSynthesizer(runner)
-	outcomes := synthesizer.DiscoverOutcomes(ctx, paths)
+	outcomes, err := synthesizer.DiscoverOutcomes(ctx, paths)
+	if err != nil {
+		return fmt.Errorf("synthesis failed: %w", err)
+	}
 
 	currentTests := buildRegressionTests(outcomes, litmusConfig.GlobalLabels)
 

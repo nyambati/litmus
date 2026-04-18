@@ -4,6 +4,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/nyambati/litmus/internal/engine/matching"
 	"github.com/nyambati/litmus/internal/types"
 )
 
@@ -17,6 +18,9 @@ func ComputeDiff(oldTests, newTests []*types.RegressionTest) *types.RegressionDi
 
 	// Identify Added and Modified
 	for labelKey, newTest := range newIdx {
+		if len(newTest.Labels) == 0 {
+			continue
+		}
 		oldTest, exists := oldIdx[labelKey]
 		if !exists {
 			diff.Deltas = append(diff.Deltas, types.RegressionDelta{
@@ -27,7 +31,7 @@ func ComputeDiff(oldTests, newTests []*types.RegressionTest) *types.RegressionDi
 			continue
 		}
 
-		if !receiversMatch(newTest.Expected, oldTest.Expected) {
+		if !matching.ExactMatch(newTest.Expected, oldTest.Expected) {
 			diff.Deltas = append(diff.Deltas, types.RegressionDelta{
 				Kind:     types.DeltaModified,
 				Labels:   newTest.Labels[0],
@@ -39,6 +43,9 @@ func ComputeDiff(oldTests, newTests []*types.RegressionTest) *types.RegressionDi
 
 	// Identify Removed
 	for labelKey, oldTest := range oldIdx {
+		if len(oldTest.Labels) == 0 {
+			continue
+		}
 		if _, exists := newIdx[labelKey]; !exists {
 			diff.Deltas = append(diff.Deltas, types.RegressionDelta{
 				Kind:     types.DeltaRemoved,

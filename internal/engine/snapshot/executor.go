@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/nyambati/litmus/internal/engine/matching"
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/stores"
 	"github.com/nyambati/litmus/internal/types"
@@ -40,6 +41,13 @@ func (rte *RegressionTestExecutor) Execute(ctx context.Context, tests []*types.R
 	for _, test := range tests {
 		result := &RegressionResult{Name: test.Name, Pass: true}
 
+		if len(test.Labels) == 0 {
+			result.Pass = false
+			result.Error = "test has no label sets to validate"
+			results = append(results, result)
+			continue
+		}
+
 		for _, labels := range test.Labels {
 			labelSet := make(model.LabelSet)
 			for k, v := range labels {
@@ -54,7 +62,7 @@ func (rte *RegressionTestExecutor) Execute(ctx context.Context, tests []*types.R
 				break
 			}
 
-			if !receiversMatch(outcome.Receivers, test.Expected) {
+			if !matching.ExactMatch(outcome.Receivers, test.Expected) {
 				result.Pass = false
 				result.Labels = labels
 				result.Expected = test.Expected
@@ -67,21 +75,4 @@ func (rte *RegressionTestExecutor) Execute(ctx context.Context, tests []*types.R
 	}
 
 	return results
-}
-
-// receiversMatch checks if actual receivers exactly match expected receivers.
-func receiversMatch(actual, expected []string) bool {
-	if len(actual) != len(expected) {
-		return false
-	}
-	actualMap := make(map[string]bool)
-	for _, r := range actual {
-		actualMap[r] = true
-	}
-	for _, r := range expected {
-		if !actualMap[r] {
-			return false
-		}
-	}
-	return true
 }
