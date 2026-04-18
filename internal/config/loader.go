@@ -66,17 +66,28 @@ func LoadConfig() (*LitmusConfig, error) {
 	return &cfg, nil
 }
 
-// LoadAlertmanagerConfig reads, expands env(VAR) placeholders, and parses the
-// Alertmanager YAML using alertmanager's own loader (applies validation and defaults).
-func LoadAlertmanagerConfig(path string) (*amconfig.Config, error) {
+// ExpandAlertmanagerConfig reads and env-expands alertmanager YAML without parsing.
+// Returns the expanded raw YAML string for use in API payloads.
+func ExpandAlertmanagerConfig(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("reading alertmanager config: %w", err)
+		return "", fmt.Errorf("reading alertmanager config: %w", err)
 	}
 
 	expanded, err := expandEnvVars(string(data))
 	if err != nil {
-		return nil, fmt.Errorf("expanding env vars in alertmanager config: %w", err)
+		return "", fmt.Errorf("expanding env vars in alertmanager config: %w", err)
+	}
+
+	return expanded, nil
+}
+
+// LoadAlertmanagerConfig reads, expands env(VAR) placeholders, and parses the
+// Alertmanager YAML using alertmanager's own loader (applies validation and defaults).
+func LoadAlertmanagerConfig(path string) (*amconfig.Config, error) {
+	expanded, err := ExpandAlertmanagerConfig(path)
+	if err != nil {
+		return nil, err
 	}
 
 	cfg, err := amconfig.Load(expanded)
