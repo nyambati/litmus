@@ -116,12 +116,17 @@ func (c *LitmusConfig) expandEnv() error {
 
 // expandEnvVars replaces env(VAR_NAME) expressions with the corresponding
 // environment variable values. Returns an error if a referenced variable is unset.
+// Fails fast on first error (does not partially substitute).
 func expandEnvVars(s string) (string, error) {
 	if !strings.Contains(s, "env(") {
 		return s, nil
 	}
 	var expandErr error
 	result := envPattern.ReplaceAllStringFunc(s, func(match string) string {
+		// If error already occurred, skip further processing
+		if expandErr != nil {
+			return match
+		}
 		sub := envPattern.FindStringSubmatch(match)
 		if len(sub) < 2 {
 			return match
@@ -133,5 +138,8 @@ func expandEnvVars(s string) (string, error) {
 		}
 		return val
 	})
-	return result, expandErr
+	if expandErr != nil {
+		return "", expandErr
+	}
+	return result, nil
 }

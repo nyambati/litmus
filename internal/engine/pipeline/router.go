@@ -21,7 +21,9 @@ func (r *Router) Match(labels model.LabelSet) []string {
 	routes := r.walk(r.root, labels)
 	receivers := make([]string, 0, len(routes))
 	for _, route := range routes {
-		receivers = append(receivers, route.Receiver)
+		if route.Receiver != "" {
+			receivers = append(receivers, route.Receiver)
+		}
 	}
 	return receivers
 }
