@@ -84,16 +84,6 @@ When `env(VAR)` is encountered, litmus replaces it with the value of the environ
 | `LITMUS_REGRESSION_DIRECTORY` | `regression.directory` | Baseline dir |
 | `LITMUS_TESTS_DIRECTORY` | `tests.directory` | Tests directory |
 
-### Auto-Creation
-
-If `.litmus.yaml` is missing, litmus auto-creates the default structure:
-
-1. Creates `.litmus.yaml` with default values
-2. Creates `config/` directory
-3. Creates `regressions/` directory
-4. Creates `tests/` directory
-5. Creates `.gitattributes`
-
 ## Template File Handling
 
 ### Supported Extensions

@@ -3,9 +3,9 @@ package cli
 import (
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/nyambati/litmus/internal/codec"
@@ -19,7 +19,8 @@ import (
 
 // RunSnapshot captures current routing behavior as a regression baseline.
 // If update is false and a baseline exists, drift causes an error.
-func RunSnapshot(update bool) error {
+// If diff is true, prints a human-readable YAML diff and exits without writing.
+func RunSnapshot(update, diff bool) error {
 	litmusConfig, err := config.LoadConfig()
 	if err != nil {
 		return fmt.Errorf("loading litmus config: %w", err)
@@ -46,11 +47,19 @@ func RunSnapshot(update bool) error {
 
 	baselinePath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.mpk")
 
+	if diff {
+		return previewDiff(baselinePath, regTests)
+	}
+
 	if !update {
 		existing, err := LoadBaseline(baselinePath)
-		if err == nil && existing != nil {
-			if hasChanges(existing, regTests) {
-				return fmt.Errorf("drift detected in routing behavior: use --update to accept changes")
+		if err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("reading existing baseline: %w", err)
+		}
+		if existing != nil {
+			d := snapshot.ComputeDiff(existing, regTests)
+			if len(d.Deltas) > 0 {
+				return fmt.Errorf("drift detected in routing behavior: use --update to accept changes, or 'litmus diff' to inspect")
 			}
 		}
 	}
@@ -83,16 +92,27 @@ func RunSnapshot(update bool) error {
 	return nil
 }
 
+// previewDiff loads the existing mpk baseline and prints a structural diff.
+func previewDiff(baselinePath string, current []*types.RegressionTest) error {
+	existing, err := LoadBaseline(baselinePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("no baseline found at %s — run 'litmus snapshot' first", baselinePath)
+		}
+		return fmt.Errorf("reading baseline: %w", err)
+	}
+
+	diff := snapshot.ComputeDiff(existing, current)
+	PrintDiffReport(diff)
+	return nil
+}
+
 func buildRegressionTests(outcomes []*snapshot.SynthesisResult, globalLabels map[string]string) []*types.RegressionTest {
 	tests := make([]*types.RegressionTest, 0, len(outcomes))
 	for _, outcome := range outcomes {
 		labels := make(map[string]string)
-		for k, v := range globalLabels {
-			labels[k] = v
-		}
-		for k, v := range outcome.Labels {
-			labels[k] = v
-		}
+		maps.Copy(labels, globalLabels)
+		maps.Copy(labels, outcome.Labels)
 		tests = append(tests, &types.RegressionTest{
 			Name:     fmt.Sprintf("Route to %s", strings.Join(outcome.Receivers, ", ")),
 			Labels:   []map[string]string{labels},
@@ -101,61 +121,4 @@ func buildRegressionTests(outcomes []*snapshot.SynthesisResult, globalLabels map
 		})
 	}
 	return tests
-}
-
-// hasChanges detects drift by comparing names, expected receivers, and label sets.
-func hasChanges(existing, current []*types.RegressionTest) bool {
-	if len(existing) != len(current) {
-		return true
-	}
-	existingIdx := make(map[string]*types.RegressionTest, len(existing))
-	for _, e := range existing {
-		existingIdx[e.Name] = e
-	}
-	for _, t := range current {
-		e, ok := existingIdx[t.Name]
-		if !ok {
-			return true
-		}
-		if !receiversEqual(e.Expected, t.Expected) {
-			return true
-		}
-		if !labelSetsEqual(e.Labels, t.Labels) {
-			return true
-		}
-	}
-	return false
-}
-
-func receiversEqual(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	ac := append([]string{}, a...)
-	bc := append([]string{}, b...)
-	sort.Strings(ac)
-	sort.Strings(bc)
-	for i := range ac {
-		if ac[i] != bc[i] {
-			return false
-		}
-	}
-	return true
-}
-
-func labelSetsEqual(a, b []map[string]string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if len(a[i]) != len(b[i]) {
-			return false
-		}
-		for k, v := range a[i] {
-			if b[i][k] != v {
-				return false
-			}
-		}
-	}
-	return true
 }

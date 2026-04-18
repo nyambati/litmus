@@ -29,6 +29,7 @@ func init() {
 	rootCmd.SetVersionTemplate("litmus version {{.Version}}\n")
 	rootCmd.AddCommand(newInitCmd())
 	rootCmd.AddCommand(newSnapshotCmd())
+	rootCmd.AddCommand(newDiffCmd())
 	rootCmd.AddCommand(newCheckCmd())
 	rootCmd.AddCommand(newInspectCmd())
 }

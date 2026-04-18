@@ -16,7 +16,8 @@ func newCheckCmd() *cobra.Command {
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			format, _ := cmd.Flags().GetString("format")
-			code, err := cli.RunCheck(format)
+			diff, _ := cmd.Flags().GetBool("diff")
+			code, err := cli.RunCheck(format, diff)
 			if err != nil {
 				return err
 			}
@@ -28,5 +29,6 @@ func newCheckCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringP("format", "f", "text", "Output format: text or json")
+	cmd.Flags().BoolP("diff", "d", false, "Show detailed behavioral delta for regression failures")
 	return cmd
 }

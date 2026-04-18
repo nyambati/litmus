@@ -14,6 +14,7 @@ import (
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/engine/sanity"
 	"github.com/nyambati/litmus/internal/engine/snapshot"
+	"github.com/nyambati/litmus/internal/types"
 	amconfig "github.com/prometheus/alertmanager/config"
 )
 
@@ -73,7 +74,7 @@ type BehavioralResult struct {
 
 // RunCheck loads config, runs all validation stages, prints results, and returns
 // the exit code the CLI layer should pass to os.Exit (0 = all passed).
-func RunCheck(format string) (CheckExitCode, error) {
+func RunCheck(format string, showDiff bool) (CheckExitCode, error) {
 	start := time.Now()
 	ctx := context.Background()
 
@@ -122,7 +123,7 @@ func RunCheck(format string) (CheckExitCode, error) {
 		}
 		fmt.Println(string(data))
 	} else {
-		PrintCheckResult(result)
+		PrintCheckResult(result, showDiff)
 	}
 
 	return code, nil
@@ -216,7 +217,7 @@ func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 }
 
 // PrintCheckResult writes the formatted validation report to stdout.
-func PrintCheckResult(r CheckResult) {
+func PrintCheckResult(r CheckResult, showDiff bool) {
 	fmt.Printf("Litmus Check: %s\n", r.ConfigPath)
 	fmt.Println(divider)
 	fmt.Println()
@@ -245,6 +246,21 @@ func PrintCheckResult(r CheckResult) {
 				fmt.Printf("  <-- Missing %s", formatMissing(missing))
 			}
 			fmt.Println()
+		}
+
+		if showDiff {
+			fmt.Println("\n   Behavioral Delta:")
+			// Generate a temporary diff for the failures
+			var deltas []types.RegressionDelta
+			for _, f := range r.Regression.Failures {
+				deltas = append(deltas, types.RegressionDelta{
+					Kind:     types.DeltaModified,
+					Labels:   f.Labels,
+					Expected: f.Expected,
+					Actual:   f.Actual,
+				})
+			}
+			PrintDiffReport(&types.RegressionDiff{Deltas: deltas})
 		}
 	}
 	fmt.Println()
