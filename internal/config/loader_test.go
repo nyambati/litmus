@@ -43,7 +43,7 @@ mimir:
   address: "https://mimir.example.com"
   api_key: "env(MY_MIMIR_TOKEN)"
 `
-	err := os.WriteFile(".litmus.yaml", []byte(content), 0644)
+	err := os.WriteFile(".litmus.yaml", []byte(content), 0600)
 	require.NoError(t, err)
 	defer os.Remove(".litmus.yaml")
 
@@ -61,7 +61,7 @@ func TestLoadConfig_EnvSubstitution_Unset(t *testing.T) {
 mimir:
   api_key: "env(MISSING_VAR)"
 `
-	err := os.WriteFile(".litmus.yaml", []byte(content), 0644)
+	err := os.WriteFile(".litmus.yaml", []byte(content), 0600)
 	require.NoError(t, err)
 	defer os.Remove(".litmus.yaml")
 

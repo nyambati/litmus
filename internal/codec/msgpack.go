@@ -1,8 +1,9 @@
 package codec
 
 import (
-	"github.com/vmihailenco/msgpack/v5"
 	"io"
+
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 // DecodeMsgPack decodes a MessagePack stream into the provided interface.

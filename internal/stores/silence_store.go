@@ -42,4 +42,3 @@ func (s *SilenceStore) silenceMatches(silence types.Silence, labels model.LabelS
 	}
 	return true
 }
-

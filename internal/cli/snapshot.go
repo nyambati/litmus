@@ -90,12 +90,12 @@ func RunSnapshot(update, diff bool) error {
 	if err != nil {
 		return fmt.Errorf("marshaling YAML mirror: %w", err)
 	}
-	if err := os.WriteFile(ymlPath, ymlData, 0644); err != nil {
+	if err := os.WriteFile(ymlPath, ymlData, 0600); err != nil {
 		return fmt.Errorf("writing YAML mirror: %w", err)
 	}
 
-	fmt.Printf("✓ Generated baseline: %s\n", baselinePath)
-	fmt.Printf("✓ YAML mirror: %s\n", ymlPath)
+	fmt.Printf("✓ Generated baseline: %s\n", baselinePath) //nolint:forbidigo
+	fmt.Printf("✓ YAML mirror: %s\n", ymlPath)             //nolint:forbidigo
 	return nil
 }
 

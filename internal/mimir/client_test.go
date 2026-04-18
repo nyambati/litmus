@@ -9,13 +9,13 @@ import (
 
 func TestClientPush(t *testing.T) {
 	tests := []struct {
-		name          string
-		statusCode    int
-		tenantID      string
-		apiKey        string
-		checkHeaders  func(*testing.T, *http.Request)
-		shouldErr     bool
-		errContains   string
+		name         string
+		statusCode   int
+		tenantID     string
+		apiKey       string
+		checkHeaders func(*testing.T, *http.Request)
+		shouldErr    bool
+		errContains  string
 	}{
 		{
 			name:       "201 success",
@@ -23,6 +23,7 @@ func TestClientPush(t *testing.T) {
 			tenantID:   "anonymous",
 			apiKey:     "secret",
 			checkHeaders: func(t *testing.T, r *http.Request) {
+				t.Helper()
 				if got := r.Header.Get("X-Scope-OrgID"); got != "anonymous" {
 					t.Errorf("X-Scope-OrgID: got %q, want %q", got, "anonymous")
 				}
@@ -41,6 +42,7 @@ func TestClientPush(t *testing.T) {
 			tenantID:   "anonymous",
 			apiKey:     "",
 			checkHeaders: func(t *testing.T, r *http.Request) {
+				t.Helper()
 				if got := r.Header.Get("X-Scope-OrgID"); got != "anonymous" {
 					t.Errorf("X-Scope-OrgID: got %q, want %q", got, "anonymous")
 				}
@@ -51,22 +53,26 @@ func TestClientPush(t *testing.T) {
 			shouldErr: false,
 		},
 		{
-			name:        "400 bad request",
-			statusCode:  http.StatusBadRequest,
-			tenantID:    "anonymous",
-			apiKey:      "secret",
-			checkHeaders: func(t *testing.T, r *http.Request) {},
-			shouldErr:    true,
-			errContains:  "400",
+			name:       "400 bad request",
+			statusCode: http.StatusBadRequest,
+			tenantID:   "anonymous",
+			apiKey:     "secret",
+			checkHeaders: func(t *testing.T, r *http.Request) {
+				t.Helper()
+			},
+			shouldErr:   true,
+			errContains: "400",
 		},
 		{
-			name:        "500 server error",
-			statusCode:  http.StatusInternalServerError,
-			tenantID:    "anonymous",
-			apiKey:      "secret",
-			checkHeaders: func(t *testing.T, r *http.Request) {},
-			shouldErr:    true,
-			errContains:  "500",
+			name:       "500 server error",
+			statusCode: http.StatusInternalServerError,
+			tenantID:   "anonymous",
+			apiKey:     "secret",
+			checkHeaders: func(t *testing.T, r *http.Request) {
+				t.Helper()
+			},
+			shouldErr:   true,
+			errContains: "500",
 		},
 	}
 
@@ -82,7 +88,7 @@ func TestClientPush(t *testing.T) {
 				tt.checkHeaders(t, r)
 				w.WriteHeader(tt.statusCode)
 				if tt.statusCode != http.StatusCreated {
-					w.Write([]byte("error message"))
+					_, _ = w.Write([]byte("error message"))
 				}
 			}))
 			defer server.Close()
@@ -97,7 +103,7 @@ func TestClientPush(t *testing.T) {
 			if tt.shouldErr {
 				if err == nil {
 					t.Errorf("expected error, got nil")
-				} else if tt.errContains != "" && !contains(err.Error(), tt.errContains) {
+				} else if tt.errContains != "" && !contains(t, err.Error(), tt.errContains) {
 					t.Errorf("error: got %q, want to contain %q", err.Error(), tt.errContains)
 				}
 			} else {
@@ -109,7 +115,8 @@ func TestClientPush(t *testing.T) {
 	}
 }
 
-func contains(s, substr string) bool {
+func contains(t *testing.T, s, substr string) bool {
+	t.Helper()
 	for i := 0; i+len(substr) <= len(s); i++ {
 		if s[i:i+len(substr)] == substr {
 			return true

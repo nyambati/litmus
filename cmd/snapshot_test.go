@@ -10,12 +10,14 @@ import (
 
 func TestSnapshotCommand_GeneratesFiles(t *testing.T) {
 	tmpDir := t.TempDir()
-	oldCwd, _ := os.Getwd()
-	defer os.Chdir(oldCwd)
-	os.Chdir(tmpDir)
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldCwd) }()
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
 
 	// Create minimal litmus.yaml
-	err := os.WriteFile(".litmus.yaml", []byte(`
+	err = os.WriteFile(".litmus.yaml", []byte(`
 config:
   directory: "config"
   file: "alertmanager.yml"
@@ -26,11 +28,12 @@ regression:
   directory: "regressions"
 tests:
   directory: "tests/"
-`), 0644)
+`), 0600)
 	require.NoError(t, err)
 
 	// Create minimal alertmanager.yml
-	os.MkdirAll("config", 0755)
+	err = os.MkdirAll("config", 0755)
+	require.NoError(t, err)
 	err = os.WriteFile("config/alertmanager.yml", []byte(`
 global:
   resolve_timeout: 5m
@@ -38,7 +41,7 @@ route:
   receiver: 'default'
 receivers:
   - name: 'default'
-`), 0644)
+`), 0600)
 	require.NoError(t, err)
 
 	cmd := newSnapshotCmd()
@@ -52,12 +55,14 @@ receivers:
 
 func TestSnapshotCommand_DriftDetection(t *testing.T) {
 	tmpDir := t.TempDir()
-	oldCwd, _ := os.Getwd()
-	defer os.Chdir(oldCwd)
-	os.Chdir(tmpDir)
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldCwd) }()
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
 
 	// Create config
-	err := os.WriteFile(".litmus.yaml", []byte(`
+	err = os.WriteFile(".litmus.yaml", []byte(`
 config:
   directory: "config"
   file: "alertmanager.yml"
@@ -68,10 +73,11 @@ regression:
   directory: "regressions"
 tests:
   directory: "tests/"
-`), 0644)
+`), 0600)
 	require.NoError(t, err)
 
-	os.MkdirAll("config", 0755)
+	err = os.MkdirAll("config", 0755)
+	require.NoError(t, err)
 	err = os.WriteFile("config/alertmanager.yml", []byte(`
 global:
   resolve_timeout: 5m
@@ -79,7 +85,7 @@ route:
   receiver: 'default'
 receivers:
   - name: 'default'
-`), 0644)
+`), 0600)
 	require.NoError(t, err)
 
 	// Generate initial baseline
@@ -101,7 +107,7 @@ route:
 receivers:
   - name: 'default'
   - name: 'api-team'
-`), 0644)
+`), 0600)
 	require.NoError(t, err)
 
 	// Run snapshot again without --update (should fail due to drift)
@@ -115,12 +121,14 @@ receivers:
 
 func TestSnapshotCommand_UpdateFlag(t *testing.T) {
 	tmpDir := t.TempDir()
-	oldCwd, _ := os.Getwd()
-	defer os.Chdir(oldCwd)
-	os.Chdir(tmpDir)
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldCwd) }()
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
 
 	// Create config
-	err := os.WriteFile(".litmus.yaml", []byte(`
+	err = os.WriteFile(".litmus.yaml", []byte(`
 config:
   directory: "config"
   file: "alertmanager.yml"
@@ -131,10 +139,11 @@ regression:
   directory: "regressions"
 tests:
   directory: "tests/"
-`), 0644)
+`), 0600)
 	require.NoError(t, err)
 
-	os.MkdirAll("config", 0755)
+	err = os.MkdirAll("config", 0755)
+	require.NoError(t, err)
 	err = os.WriteFile("config/alertmanager.yml", []byte(`
 global:
   resolve_timeout: 5m
@@ -142,7 +151,7 @@ route:
   receiver: 'default'
 receivers:
   - name: 'default'
-`), 0644)
+`), 0600)
 	require.NoError(t, err)
 
 	// Generate initial baseline
@@ -164,7 +173,7 @@ route:
 receivers:
   - name: 'default'
   - name: 'api-team'
-`), 0644)
+`), 0600)
 	require.NoError(t, err)
 
 	// Run snapshot with --update (should succeed)
@@ -178,13 +187,15 @@ receivers:
 
 func TestSnapshotCommand_MissingConfig(t *testing.T) {
 	tmpDir := t.TempDir()
-	oldCwd, _ := os.Getwd()
-	defer os.Chdir(oldCwd)
-	os.Chdir(tmpDir)
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldCwd) }()
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
 
 	cmd := newSnapshotCmd()
 	cmd.SetArgs([]string{})
-	err := cmd.Execute()
+	err = cmd.Execute()
 
 	// Should fail because config/alertmanager.yml is missing
 	require.Error(t, err)

@@ -90,7 +90,7 @@ func RunSync(address, tenantID, apiKey string, skipValidate, dryRun bool) error 
 
 	// Dry run: skip actual push
 	if dryRun {
-		fmt.Println("Dry run: validation passed, skipping push")
+		fmt.Println("Dry run: validation passed, skipping push") //nolint:forbidigo
 		return nil
 	}
 
@@ -105,6 +105,6 @@ func RunSync(address, tenantID, apiKey string, skipValidate, dryRun bool) error 
 		return fmt.Errorf("pushing to mimir: %w", err)
 	}
 
-	fmt.Printf("✓ Alertmanager config synced to %s\n", litmusConfig.Mimir.Address)
+	fmt.Printf("✓ Alertmanager config synced to %s\n", litmusConfig.Mimir.Address) //nolint:forbidigo
 	return nil
 }

@@ -9,12 +9,14 @@ import (
 
 func TestCheckCommand_Success(t *testing.T) {
 	tmpDir := t.TempDir()
-	oldCwd, _ := os.Getwd()
-	defer os.Chdir(oldCwd)
-	os.Chdir(tmpDir)
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldCwd) }()
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
 
 	// Setup minimal config
-	err := os.WriteFile(".litmus.yaml", []byte(`
+	err = os.WriteFile(".litmus.yaml", []byte(`
 config:
   directory: "config"
   file: "alertmanager.yml"
@@ -25,10 +27,11 @@ regression:
   directory: "regressions"
 tests:
   directory: "tests/"
-`), 0644)
+`), 0600)
 	require.NoError(t, err)
 
-	os.MkdirAll("config", 0755)
+	err = os.MkdirAll("config", 0755)
+	require.NoError(t, err)
 	err = os.WriteFile("config/alertmanager.yml", []byte(`
 global:
   resolve_timeout: 5m
@@ -36,10 +39,11 @@ route:
   receiver: 'default'
 receivers:
   - name: 'default'
-`), 0644)
+`), 0600)
 	require.NoError(t, err)
 
-	os.MkdirAll("tests", 0755)
+	err = os.MkdirAll("tests", 0755)
+	require.NoError(t, err)
 
 	cmd := newCheckCmd()
 	cmd.SetArgs([]string{})
@@ -50,26 +54,30 @@ receivers:
 
 func TestCheckCommand_MissingConfig(t *testing.T) {
 	tmpDir := t.TempDir()
-	oldCwd, _ := os.Getwd()
-	defer os.Chdir(oldCwd)
-	os.Chdir(tmpDir)
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldCwd) }()
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
 
 	// Should fail because config/alertmanager.yml is missing (even with default litmus config)
 	cmd := newCheckCmd()
 	cmd.SetArgs([]string{})
-	err := cmd.Execute()
+	err = cmd.Execute()
 
 	require.Error(t, err)
 }
 
 func TestCheckCommand_TextOutput(t *testing.T) {
 	tmpDir := t.TempDir()
-	oldCwd, _ := os.Getwd()
-	defer os.Chdir(oldCwd)
-	os.Chdir(tmpDir)
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldCwd) }()
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
 
 	// Setup minimal config
-	err := os.WriteFile(".litmus.yaml", []byte(`
+	err = os.WriteFile(".litmus.yaml", []byte(`
 config:
   directory: "config"
   file: "alertmanager.yml"
@@ -80,10 +88,11 @@ regression:
   directory: "regressions"
 tests:
   directory: "tests/"
-`), 0644)
+`), 0600)
 	require.NoError(t, err)
 
-	os.MkdirAll("config", 0755)
+	err = os.MkdirAll("config", 0755)
+	require.NoError(t, err)
 	err = os.WriteFile("config/alertmanager.yml", []byte(`
 global:
   resolve_timeout: 5m
@@ -91,10 +100,11 @@ route:
   receiver: 'default'
 receivers:
   - name: 'default'
-`), 0644)
+`), 0600)
 	require.NoError(t, err)
 
-	os.MkdirAll("tests", 0755)
+	err = os.MkdirAll("tests", 0755)
+	require.NoError(t, err)
 
 	cmd := newCheckCmd()
 	cmd.SetArgs([]string{"--format", "text"})

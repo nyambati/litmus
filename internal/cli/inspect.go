@@ -19,13 +19,13 @@ func RunInspect(filePath, format string) error {
 		if err != nil {
 			return fmt.Errorf("marshaling JSON: %w", err)
 		}
-		fmt.Println(string(data))
+		fmt.Println(string(data)) //nolint:forbidigo
 	} else {
 		data, err := yaml.Marshal(tests)
 		if err != nil {
 			return fmt.Errorf("marshaling YAML: %w", err)
 		}
-		fmt.Println(string(data))
+		fmt.Println(string(data)) //nolint:forbidigo
 	}
 
 	return nil

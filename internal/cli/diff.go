@@ -66,6 +66,8 @@ func RunDiff() error {
 }
 
 // PrintDiffReport outputs a color-coded structural delta.
+//
+//nolint:forbidigo
 func PrintDiffReport(diff *types.RegressionDiff) {
 	if len(diff.Deltas) == 0 {
 		fmt.Println("No behavioral changes detected.")

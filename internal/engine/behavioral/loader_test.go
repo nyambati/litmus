@@ -36,7 +36,7 @@ expect:
 
 	tmpDir := t.TempDir()
 	testFile := filepath.Join(tmpDir, "test.yml")
-	err := os.WriteFile(testFile, []byte(testYAML), 0644)
+	err := os.WriteFile(testFile, []byte(testYAML), 0600)
 	require.NoError(t, err)
 
 	loader := NewBehavioralTestLoader()
@@ -92,7 +92,7 @@ expect:
 
 	for _, tc := range tests {
 		testFile := filepath.Join(tmpDir, tc.name)
-		err := os.WriteFile(testFile, []byte(tc.yaml), 0644)
+		err := os.WriteFile(testFile, []byte(tc.yaml), 0600)
 		require.NoError(t, err)
 	}
 
