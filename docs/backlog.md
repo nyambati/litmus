@@ -1,6 +1,10 @@
 # Backlog: Future Enhancements
 
-This document tracks high-value features and research areas for `litmus` that are currently excluded from the MVP to maintain focus on core routing and suppression logic.
+This document tracks high-value features and research areas for `litmus` that are planned for future releases.
+
+## Completed
+
+- ✅ **`litmus diff` command** — Compare current configuration against regression baseline (v0.2.0)
 
 ## 1. Negative Matcher Synthesis Paradox
 *   **The Problem:** Routes defined *only* with `!=` or `!~` matchers have no positive labels to synthesize, making automated regression testing difficult for these branches.
@@ -18,3 +22,31 @@ This document tracks high-value features and research areas for `litmus` that ar
 *   **The Problem:** Large organizations struggle with massive, monolithic `alertmanager.yml` files that cause Git merge conflicts and make team-based ownership difficult.
 *   **The Goal:** Support for **Configuration Fragments**. Teams define their own routes and receivers in isolated files (e.g., `teams/database.yml`). 
 *   **The Mechanism:** Litmus would "assemble" these fragments into a virtual routing tree for validation. This enables **Cross-Impact Detection**, where Litmus can warn a team if their local change has accidentally shadowed or inhibited another team's alerts in the global tree.
+
+## 5. JSON Output Format
+*   **The Problem:** CI/CD systems often need machine-readable output for better integration and reporting.
+*   **The Goal:** Add `--json` flag to `litmus check` and other commands to emit JSON-formatted results.
+*   **Use Cases:** Slack notifications, GitHub status checks, metric reporting.
+
+## 6. Baseline History & Rollback
+*   **The Problem:** If a baseline update is reverted, users must re-run `litmus snapshot --update` to restore it.
+*   **The Goal:** Support for baseline versioning, allowing rollback to previous baselines without re-synthesis.
+*   **Mechanism:** Keep timestamped baselines in `.litmus/history/` with a pointer to the current baseline.
+
+## 7. Watch Mode
+*   **The Problem:** During development, users must manually re-run `litmus check` after each change.
+*   **The Goal:** Implement `litmus check --watch` to automatically re-validate on file changes.
+*   **Benefits:** Fast feedback loop, similar to `go test -watch` or `jest --watch`.
+
+## 8. Label Cardinality Analysis
+*   **The Problem:** Routes with high-cardinality labels (e.g., `service_name` with 1000+ values) can cause synthesis to timeout or consume excessive memory.
+*   **The Goal:** Add `litmus analyze` command to report label cardinality and identify problematic routes.
+*   **Recommendation:** Suggest route refactoring (use regex instead of direct matches).
+
+## 9. Integration Tests for Popular Notification Channels
+*   **The Problem:** Templates can fail at runtime due to missing labels, but this only shows up in production.
+*   **The Goal:** Add built-in tests for common receivers (Slack, PagerDuty, Webhook, Email) to validate that routes provide required labels.
+
+## 10. Alertmanager Versions Matrix
+*   **The Problem:** Alertmanager behavior changes across versions (e.g., new matcher syntax in 0.24).
+*   **The Goal:** Allow specifying target Alertmanager version in `litmus.yaml` and warn about version-specific features.
