@@ -39,4 +39,6 @@ docs/superpowers/
 *.litmus.yml
 *.mpk.yml
 tests
-config
+config/*.yml
+config/*.yaml
+config/templates
