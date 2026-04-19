@@ -9,6 +9,7 @@
 bin/
 dist/
 ui/dist/
+!ui/dist/.gitkeep
 
 # Go workspace file
 go.work
