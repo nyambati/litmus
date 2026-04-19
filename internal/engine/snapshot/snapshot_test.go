@@ -50,9 +50,9 @@ func TestSnapshotSynthesizer_DiscoverOutcomes(t *testing.T) {
 	}
 }
 
-func TestRegressionTest_Roundtrip(t *testing.T) {
-	// Create a regression test
-	regTest := &types.RegressionTest{
+func TestTestCase_Regression_Roundtrip(t *testing.T) {
+	tc := &types.TestCase{
+		Type: "regression",
 		Name: "Route to api-team",
 		Labels: []map[string]string{
 			{"service": "api", "severity": "critical"},
@@ -61,8 +61,8 @@ func TestRegressionTest_Roundtrip(t *testing.T) {
 		Tags:     []string{"regression"},
 	}
 
-	// Verify fields are populated
-	require.Equal(t, "Route to api-team", regTest.Name)
-	require.Len(t, regTest.Expected, 1)
-	require.Contains(t, regTest.Expected, "api-team")
+	require.Equal(t, "Route to api-team", tc.Name)
+	require.Equal(t, "regression", tc.Type)
+	require.Len(t, tc.Expected, 1)
+	require.Contains(t, tc.Expected, "api-team")
 }

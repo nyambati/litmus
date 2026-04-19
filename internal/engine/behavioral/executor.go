@@ -14,13 +14,6 @@ import (
 	"github.com/prometheus/common/model"
 )
 
-// TestResult holds execution result for a behavioral test.
-type TestResult struct {
-	Name  string `json:"name"`
-	Pass  bool   `json:"pass"`
-	Error string `json:"error,omitempty"`
-}
-
 // BehavioralTestExecutor executes behavioral tests through the pipeline.
 type BehavioralTestExecutor struct {
 	inhibitRules []amconfig.InhibitRule
@@ -31,8 +24,8 @@ func NewBehavioralTestExecutor(inhibitRules []amconfig.InhibitRule) *BehavioralT
 	return &BehavioralTestExecutor{inhibitRules: inhibitRules}
 }
 
-// Execute runs a behavioral test through the pipeline and verifies assertions.
-func (bte *BehavioralTestExecutor) Execute(ctx context.Context, test *types.BehavioralTest, router *pipeline.Router) *TestResult {
+// Execute runs a unit TestCase through the pipeline and verifies assertions.
+func (bte *BehavioralTestExecutor) Execute(ctx context.Context, test *types.TestCase, router *pipeline.Router) *types.TestResult {
 	var silences []types.Silence
 	var activeAlerts []types.AlertSample
 	if test.State != nil {
@@ -55,8 +48,9 @@ func (bte *BehavioralTestExecutor) Execute(ctx context.Context, test *types.Beha
 			},
 		}
 		if err := alertStore.Put(alertmgrAlert); err != nil {
-			return &TestResult{
+			return &types.TestResult{
 				Name:  test.Name,
+				Type:  test.Type,
 				Pass:  false,
 				Error: fmt.Sprintf("seeding active alert: %v", err),
 			}
@@ -65,6 +59,15 @@ func (bte *BehavioralTestExecutor) Execute(ctx context.Context, test *types.Beha
 
 	runner := pipeline.NewRunner(silenceStore, alertStore, router, bte.inhibitRules)
 
+	if test.Alert == nil {
+		return &types.TestResult{
+			Name:  test.Name,
+			Type:  test.Type,
+			Pass:  false,
+			Error: "test has no alert defined",
+		}
+	}
+
 	labelSet := make(model.LabelSet)
 	for k, v := range test.Alert.Labels {
 		labelSet[model.LabelName(k)] = model.LabelValue(v)
@@ -72,16 +75,27 @@ func (bte *BehavioralTestExecutor) Execute(ctx context.Context, test *types.Beha
 
 	outcome, err := runner.Execute(ctx, labelSet)
 	if err != nil {
-		return &TestResult{
+		return &types.TestResult{
 			Name:  test.Name,
+			Type:  test.Type,
 			Pass:  false,
 			Error: fmt.Sprintf("pipeline execution failed: %v", err),
 		}
 	}
 
+	if test.Expect == nil {
+		return &types.TestResult{
+			Name:  test.Name,
+			Type:  test.Type,
+			Pass:  false,
+			Error: "test has no expect defined",
+		}
+	}
+
 	if outcome.Status != test.Expect.Outcome {
-		return &TestResult{
+		return &types.TestResult{
 			Name: test.Name,
+			Type: test.Type,
 			Pass: false,
 			Error: fmt.Sprintf(
 				"Expected outcome: %q\n \t   - Actual outcome: %q",
@@ -93,8 +107,9 @@ func (bte *BehavioralTestExecutor) Execute(ctx context.Context, test *types.Beha
 
 	if test.Expect.Outcome == "active" && len(test.Expect.Receivers) > 0 {
 		if !matching.SubsetMatch(outcome.Receivers, test.Expect.Receivers) {
-			return &TestResult{
+			return &types.TestResult{
 				Name: test.Name,
+				Type: test.Type,
 				Pass: false,
 				Error: fmt.Sprintf(
 					"Expected receivers: %v\n \t   - Actual receivers: %v",
@@ -105,8 +120,9 @@ func (bte *BehavioralTestExecutor) Execute(ctx context.Context, test *types.Beha
 		}
 	}
 
-	return &TestResult{
+	return &types.TestResult{
 		Name: test.Name,
+		Type: test.Type,
 		Pass: true,
 	}
 }

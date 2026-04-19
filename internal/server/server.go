@@ -145,7 +145,7 @@ func RunUIServer(port int, dev bool) error {
 				if test.Name == name {
 					result := executor.Execute(context.Background(), test, router)
 					w.Header().Set("Content-Type", "application/json")
-					_ = json.NewEncoder(w).Encode([]*behavioral.TestResult{result})
+					_ = json.NewEncoder(w).Encode([]*types.TestResult{result})
 					return
 				}
 			}
@@ -153,7 +153,7 @@ func RunUIServer(port int, dev bool) error {
 			return
 		}
 
-		results := make([]*behavioral.TestResult, 0, len(tests))
+		results := make([]*types.TestResult, 0, len(tests))
 		for _, test := range tests {
 			results = append(results, executor.Execute(context.Background(), test, router))
 		}
@@ -254,29 +254,8 @@ func RunUIServer(port int, dev bool) error {
 		executor := snapshot.NewRegressionTestExecutor()
 		raw := executor.Execute(context.Background(), tests, router)
 
-		type regressionRunResult struct {
-			Name     string            `json:"name"`
-			Pass     bool              `json:"pass"`
-			Error    string            `json:"error,omitempty"`
-			Labels   map[string]string `json:"labels,omitempty"`
-			Expected []string          `json:"expected,omitempty"`
-			Actual   []string          `json:"actual,omitempty"`
-		}
-
-		results := make([]*regressionRunResult, 0, len(raw))
-		for _, res := range raw {
-			results = append(results, &regressionRunResult{
-				Name:     res.Name,
-				Pass:     res.Pass,
-				Error:    res.Error,
-				Labels:   res.Labels,
-				Expected: res.Expected,
-				Actual:   res.Actual,
-			})
-		}
-
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(results)
+		_ = json.NewEncoder(w).Encode(raw)
 	}))
 
 	regressionMpkPath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.mpk")
@@ -574,14 +553,14 @@ func openBrowser(url string) {
 }
 
 // loadBaseline reads a msgpack regression baseline from disk.
-func loadBaseline(path string) ([]*types.RegressionTest, error) {
+func loadBaseline(path string) ([]*types.TestCase, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = file.Close() }()
 
-	var tests []*types.RegressionTest
+	var tests []*types.TestCase
 	if err := codec.DecodeMsgPack(file, &tests); err != nil {
 		return nil, err
 	}
@@ -589,13 +568,13 @@ func loadBaseline(path string) ([]*types.RegressionTest, error) {
 }
 
 // loadBaselineYAML reads a YAML regression baseline from disk.
-func loadBaselineYAML(path string) ([]*types.RegressionTest, error) {
+func loadBaselineYAML(path string) ([]*types.TestCase, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var tests []*types.RegressionTest
+	var tests []*types.TestCase
 	if err := yaml.Unmarshal(data, &tests); err != nil {
 		return nil, err
 	}

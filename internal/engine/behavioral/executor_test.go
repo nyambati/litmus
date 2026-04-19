@@ -14,17 +14,18 @@ import (
 func TestBehavioralTestExecutor_Execute_Active(t *testing.T) {
 	executor := NewBehavioralTestExecutor(nil)
 
-	test := &types.BehavioralTest{
+	test := &types.TestCase{
 		Name: "Alert routes to api-team",
+		Type: "unit",
 		Tags: []string{"routing"},
 		State: &types.SystemState{
 			ActiveAlerts: []types.AlertSample{},
 			Silences:     []types.Silence{},
 		},
-		Alert: types.AlertSample{
+		Alert: &types.AlertSample{
 			Labels: map[string]string{"service": "api"},
 		},
-		Expect: types.BehavioralExpect{
+		Expect: &types.BehavioralExpect{
 			Outcome:   "active",
 			Receivers: []string{"api-team"},
 		},
@@ -39,8 +40,9 @@ func TestBehavioralTestExecutor_Execute_Active(t *testing.T) {
 func TestBehavioralTestExecutor_Execute_Silenced(t *testing.T) {
 	executor := NewBehavioralTestExecutor(nil)
 
-	test := &types.BehavioralTest{
+	test := &types.TestCase{
 		Name: "Alert is silenced during maintenance",
+		Type: "unit",
 		Tags: []string{"silencing"},
 		State: &types.SystemState{
 			ActiveAlerts: []types.AlertSample{},
@@ -51,10 +53,10 @@ func TestBehavioralTestExecutor_Execute_Silenced(t *testing.T) {
 				},
 			},
 		},
-		Alert: types.AlertSample{
+		Alert: &types.AlertSample{
 			Labels: map[string]string{"service": "api"},
 		},
-		Expect: types.BehavioralExpect{
+		Expect: &types.BehavioralExpect{
 			Outcome: "silenced",
 		},
 	}
@@ -67,8 +69,9 @@ func TestBehavioralTestExecutor_Execute_Silenced(t *testing.T) {
 func TestBehavioralTestExecutor_Execute_Silenced_Mismatch(t *testing.T) {
 	executor := NewBehavioralTestExecutor(nil)
 
-	test := &types.BehavioralTest{
+	test := &types.TestCase{
 		Name: "Alert should be silenced but is not",
+		Type: "unit",
 		Tags: []string{"silencing"},
 		State: &types.SystemState{
 			ActiveAlerts: []types.AlertSample{},
@@ -78,10 +81,10 @@ func TestBehavioralTestExecutor_Execute_Silenced_Mismatch(t *testing.T) {
 				},
 			},
 		},
-		Alert: types.AlertSample{
+		Alert: &types.AlertSample{
 			Labels: map[string]string{"service": "api"},
 		},
-		Expect: types.BehavioralExpect{
+		Expect: &types.BehavioralExpect{
 			Outcome: "silenced",
 		},
 	}
@@ -102,8 +105,9 @@ func TestBehavioralTestExecutor_Execute_Inhibited(t *testing.T) {
 	}
 	executor := NewBehavioralTestExecutor(rules)
 
-	test := &types.BehavioralTest{
+	test := &types.TestCase{
 		Name: "Alert is inhibited by critical alert",
+		Type: "unit",
 		Tags: []string{"inhibition"},
 		State: &types.SystemState{
 			ActiveAlerts: []types.AlertSample{
@@ -113,10 +117,10 @@ func TestBehavioralTestExecutor_Execute_Inhibited(t *testing.T) {
 			},
 			Silences: []types.Silence{},
 		},
-		Alert: types.AlertSample{
+		Alert: &types.AlertSample{
 			Labels: map[string]string{"service": "api", "severity": "warning"},
 		},
-		Expect: types.BehavioralExpect{
+		Expect: &types.BehavioralExpect{
 			Outcome: "inhibited",
 		},
 	}
@@ -129,17 +133,18 @@ func TestBehavioralTestExecutor_Execute_Inhibited(t *testing.T) {
 func TestBehavioralTestExecutor_Execute_Receivers_Mismatch(t *testing.T) {
 	executor := NewBehavioralTestExecutor(nil)
 
-	test := &types.BehavioralTest{
+	test := &types.TestCase{
 		Name: "Alert should route to specific receivers",
+		Type: "unit",
 		Tags: []string{"routing"},
 		State: &types.SystemState{
 			ActiveAlerts: []types.AlertSample{},
 			Silences:     []types.Silence{},
 		},
-		Alert: types.AlertSample{
+		Alert: &types.AlertSample{
 			Labels: map[string]string{"service": "api"},
 		},
-		Expect: types.BehavioralExpect{
+		Expect: &types.BehavioralExpect{
 			Outcome:   "active",
 			Receivers: []string{"wrong-team"},
 		},
@@ -154,17 +159,18 @@ func TestBehavioralTestExecutor_Execute_Receivers_Mismatch(t *testing.T) {
 func TestBehavioralTestExecutor_Execute_OutcomeOnly(t *testing.T) {
 	executor := NewBehavioralTestExecutor(nil)
 
-	test := &types.BehavioralTest{
+	test := &types.TestCase{
 		Name: "Alert is active",
+		Type: "unit",
 		Tags: []string{"routing"},
 		State: &types.SystemState{
 			ActiveAlerts: []types.AlertSample{},
 			Silences:     []types.Silence{},
 		},
-		Alert: types.AlertSample{
+		Alert: &types.AlertSample{
 			Labels: map[string]string{"service": "api"},
 		},
-		Expect: types.BehavioralExpect{
+		Expect: &types.BehavioralExpect{
 			Outcome: "active",
 		},
 	}
@@ -172,4 +178,44 @@ func TestBehavioralTestExecutor_Execute_OutcomeOnly(t *testing.T) {
 	router := pipeline.NewRouter(&amconfig.Route{Receiver: "api-team"})
 	result := executor.Execute(context.Background(), test, router)
 	require.True(t, result.Pass)
+}
+
+func TestBehavioralTestExecutor_Execute_NilState(t *testing.T) {
+	executor := NewBehavioralTestExecutor(nil)
+
+	test := &types.TestCase{
+		Name: "Alert with no state defaults to empty env",
+		Type: "unit",
+		Alert: &types.AlertSample{
+			Labels: map[string]string{"service": "api"},
+		},
+		Expect: &types.BehavioralExpect{
+			Outcome:   "active",
+			Receivers: []string{"api-team"},
+		},
+	}
+
+	router := pipeline.NewRouter(&amconfig.Route{Receiver: "api-team"})
+	result := executor.Execute(context.Background(), test, router)
+	require.True(t, result.Pass)
+}
+
+func TestBehavioralTestExecutor_Execute_ResultType(t *testing.T) {
+	executor := NewBehavioralTestExecutor(nil)
+
+	test := &types.TestCase{
+		Name:  "type preserved in result",
+		Type:  "unit",
+		Alert: &types.AlertSample{Labels: map[string]string{"service": "api"}},
+		Expect: &types.BehavioralExpect{
+			Outcome:   "active",
+			Receivers: []string{"api-team"},
+		},
+	}
+
+	router := pipeline.NewRouter(&amconfig.Route{Receiver: "api-team"})
+	result := executor.Execute(context.Background(), test, router)
+
+	require.Equal(t, "unit", result.Type)
+	require.Equal(t, test.Name, result.Name)
 }

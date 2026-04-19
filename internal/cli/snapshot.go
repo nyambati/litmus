@@ -100,7 +100,7 @@ func RunSnapshot(update, diff bool) error {
 }
 
 // previewDiff loads the existing mpk baseline and prints a structural diff.
-func previewDiff(baselinePath string, current []*types.RegressionTest) error {
+func previewDiff(baselinePath string, current []*types.TestCase) error {
 	existing, err := LoadBaseline(baselinePath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -114,13 +114,14 @@ func previewDiff(baselinePath string, current []*types.RegressionTest) error {
 	return nil
 }
 
-func buildRegressionTests(outcomes []*snapshot.SynthesisResult, globalLabels map[string]string) []*types.RegressionTest {
-	tests := make([]*types.RegressionTest, 0, len(outcomes))
+func buildRegressionTests(outcomes []*snapshot.SynthesisResult, globalLabels map[string]string) []*types.TestCase {
+	tests := make([]*types.TestCase, 0, len(outcomes))
 	for _, outcome := range outcomes {
 		labels := make(map[string]string)
 		maps.Copy(labels, globalLabels)
 		maps.Copy(labels, outcome.Labels)
-		tests = append(tests, &types.RegressionTest{
+		tests = append(tests, &types.TestCase{
+			Type:     "regression",
 			Name:     fmt.Sprintf("Route to %s", strings.Join(outcome.Receivers, ", ")),
 			Labels:   []map[string]string{labels},
 			Expected: outcome.Receivers,
