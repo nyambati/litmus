@@ -28,7 +28,7 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const API = "http://localhost:8080";
+const API = import.meta.env.DEV ? "http://localhost:8080" : "";
 
 // --- Persistence ---
 

@@ -4,13 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"net/http"
+	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strings"
+	"time"
 
 	"github.com/nyambati/litmus/internal/config"
 	"github.com/nyambati/litmus/internal/engine/behavioral"
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/engine/snapshot"
+	embeddedui "github.com/nyambati/litmus/ui"
 	amconfig "github.com/prometheus/alertmanager/config"
 	"github.com/prometheus/common/model"
 )
@@ -361,8 +367,33 @@ func RunUIServer(port int, dev bool) error {
 		w.Write([]byte("OK"))
 	})
 
+	// Serve embedded UI in production mode
+	if !dev {
+		distFS, err := fs.Sub(embeddedui.FS, "dist")
+		if err != nil {
+			return fmt.Errorf("loading embedded UI: %w", err)
+		}
+		fileServer := http.FileServer(http.FS(distFS))
+		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			// Serve index.html for all non-asset routes (SPA fallback)
+			if !strings.Contains(r.URL.Path, ".") {
+				r.URL.Path = "/"
+			}
+			fileServer.ServeHTTP(w, r)
+		})
+	}
+
 	addr := fmt.Sprintf(":%d", port)
-	fmt.Printf("Starting Litmus UI backend on http://localhost%s\n", addr)
+	url := fmt.Sprintf("http://localhost%s", addr)
+	fmt.Printf("Litmus UI running at %s\n", url)
+
+	if !dev {
+		go func() {
+			time.Sleep(150 * time.Millisecond)
+			openBrowser(url)
+		}()
+	}
+
 	return http.ListenAndServe(addr, mux)
 }
 
@@ -502,4 +533,17 @@ func routeMatches(route *amconfig.Route, labels model.LabelSet) bool {
 		}
 	}
 	return true
+}
+
+func openBrowser(url string) {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = exec.Command("open", url)
+	case "windows":
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+	default:
+		cmd = exec.Command("xdg-open", url)
+	}
+	_ = cmd.Start()
 }

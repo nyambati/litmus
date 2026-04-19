@@ -1,4 +1,4 @@
-.PHONY: help install-hooks test fmt vet build clean
+.PHONY: help install-hooks test fmt vet build build-ui clean
 
 help:
 	@echo "Litmus - Alertmanager Validator"
@@ -8,7 +8,8 @@ help:
 	@echo "  test            Run tests"
 	@echo "  fmt             Format code with go fmt"
 	@echo "  vet             Run go vet"
-	@echo "  build           Build litmus binary"
+	@echo "  build-ui        Build the React UI (outputs to ui/dist/)"
+	@echo "  build           Build UI then litmus binary (embeds UI)"
 	@echo "  clean           Clean build artifacts"
 	@echo "  help            Show this help message"
 
@@ -33,15 +34,21 @@ vet:
 	@echo "Running go vet..."
 	@go vet ./...
 
-build:
+build-ui:
+	@echo "Building UI..."
+	@cd ui && npm run build
+
+build: build-ui
 	@echo "Building litmus..."
 	@go build -o bin/litmus .
+
 lint:
 	golangci-lint run
 
 clean:
 	@echo "Cleaning up..."
 	@rm -f bin/litmus
+	@rm -rf ui/dist
 	@go clean
 
 all: fmt test vet lint
