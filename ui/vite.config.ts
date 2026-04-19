@@ -9,6 +9,10 @@ export default defineConfig({
     tailwindcss(),
   ],
   base: "/",
+  build: {
+    outDir: "../internal/ui/dist",
+    emptyOutDir: true,
+  },
   server: {
     proxy: {
       "/api": "http://localhost:8080",

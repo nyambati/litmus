@@ -17,7 +17,7 @@ import (
 	"github.com/nyambati/litmus/internal/engine/behavioral"
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/engine/snapshot"
-	embeddedui "github.com/nyambati/litmus/ui"
+	embeddedui "github.com/nyambati/litmus/internal/ui"
 	amconfig "github.com/prometheus/alertmanager/config"
 	"github.com/prometheus/common/model"
 )
