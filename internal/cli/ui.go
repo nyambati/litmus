@@ -17,10 +17,16 @@ import (
 	"github.com/nyambati/litmus/internal/engine/behavioral"
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/engine/snapshot"
-	embeddedui "github.com/nyambati/litmus/internal/ui"
 	amconfig "github.com/prometheus/alertmanager/config"
 	"github.com/prometheus/common/model"
 )
+
+var staticFS fs.FS
+
+// SetStaticFS registers the embedded UI filesystem before the server starts.
+func SetStaticFS(f fs.FS) {
+	staticFS = f
+}
 
 // RouteNode represents a node in the route tree with evaluation details.
 type RouteNode struct {
@@ -369,12 +375,8 @@ func RunUIServer(port int, dev bool) error {
 	})
 
 	// Serve embedded UI in production mode
-	if !dev {
-		distFS, err := fs.Sub(embeddedui.FS, "dist")
-		if err != nil {
-			return fmt.Errorf("loading embedded UI: %w", err)
-		}
-		fileServer := http.FileServer(http.FS(distFS))
+	if !dev && staticFS != nil {
+		fileServer := http.FileServer(http.FS(staticFS))
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			// Static assets have a file extension — let the file server handle them.
 			// Everything else (SPA routes including "/") gets index.html.
@@ -382,7 +384,7 @@ func RunUIServer(port int, dev bool) error {
 				fileServer.ServeHTTP(w, r)
 				return
 			}
-			f, err := distFS.Open("index.html")
+			f, err := staticFS.Open("index.html")
 			if err != nil {
 				http.Error(w, "UI not found", http.StatusNotFound)
 				return

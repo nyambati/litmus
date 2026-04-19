@@ -48,7 +48,7 @@ lint:
 clean:
 	@echo "Cleaning up..."
 	@rm -f bin/litmus
-	@rm -rf internal/ui/dist
+	@rm -rf ui/dist
 	@go clean
 
 all: fmt test vet lint

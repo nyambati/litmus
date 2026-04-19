@@ -8,7 +8,7 @@
 *.out
 bin/
 dist/
-internal/ui/dist/
+ui/dist/
 
 # Go workspace file
 go.work

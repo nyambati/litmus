@@ -10,7 +10,7 @@ export default defineConfig({
   ],
   base: "/",
   build: {
-    outDir: "../internal/ui/dist",
+    outDir: "dist",
     emptyOutDir: true,
   },
   server: {
