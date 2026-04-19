@@ -1,4 +1,4 @@
-package cli
+package server
 
 import (
 	"context"
@@ -6,19 +6,24 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log"
 	"net/http"
+	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"runtime"
 	"time"
 
+	"github.com/nyambati/litmus/internal/codec"
 	"github.com/nyambati/litmus/internal/config"
 	"github.com/nyambati/litmus/internal/engine/behavioral"
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/engine/snapshot"
+	"github.com/nyambati/litmus/internal/types"
 	amconfig "github.com/prometheus/alertmanager/config"
 	"github.com/prometheus/common/model"
+	"gopkg.in/yaml.v3"
 )
 
 var staticFS fs.FS
@@ -63,6 +68,8 @@ type ConfigResponse struct {
 }
 
 // RunUIServer starts the Litmus UI backend.
+//
+//nolint:gocyclo
 func RunUIServer(port int, dev bool) error {
 	litmusConfig, err := config.LoadConfig()
 	if err != nil {
@@ -95,7 +102,7 @@ func RunUIServer(port int, dev bool) error {
 			Ready:      true,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 
 	mux.HandleFunc("/api/v1/tests", withCORS(func(w http.ResponseWriter, r *http.Request) {
@@ -107,7 +114,7 @@ func RunUIServer(port int, dev bool) error {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(tests)
+		_ = json.NewEncoder(w).Encode(tests)
 	}))
 
 	mux.HandleFunc("/api/v1/tests/run", withCORS(func(w http.ResponseWriter, r *http.Request) {
@@ -138,7 +145,7 @@ func RunUIServer(port int, dev bool) error {
 				if test.Name == name {
 					result := executor.Execute(context.Background(), test, router)
 					w.Header().Set("Content-Type", "application/json")
-					json.NewEncoder(w).Encode([]*behavioral.TestResult{result})
+					_ = json.NewEncoder(w).Encode([]*behavioral.TestResult{result})
 					return
 				}
 			}
@@ -152,7 +159,7 @@ func RunUIServer(port int, dev bool) error {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(results)
+		_ = json.NewEncoder(w).Encode(results)
 	}))
 
 	mux.HandleFunc("/api/v1/evaluate", withCORS(func(w http.ResponseWriter, r *http.Request) {
@@ -193,20 +200,20 @@ func RunUIServer(port int, dev bool) error {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 
 	regressionYAMLPath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.yml")
 
 	mux.HandleFunc("/api/v1/regressions", withCORS(func(w http.ResponseWriter, r *http.Request) {
-		tests, err := LoadBaselineYAML(regressionYAMLPath)
+		tests, err := loadBaselineYAML(regressionYAMLPath)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Loading regressions: %v", err), http.StatusInternalServerError)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(tests)
+		_ = json.NewEncoder(w).Encode(tests)
 	}))
 
 	mux.HandleFunc("/api/v1/regressions/run", withCORS(func(w http.ResponseWriter, r *http.Request) {
@@ -221,7 +228,7 @@ func RunUIServer(port int, dev bool) error {
 			return
 		}
 
-		tests, err := LoadBaselineYAML(regressionYAMLPath)
+		tests, err := loadBaselineYAML(regressionYAMLPath)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Loading regressions: %v", err), http.StatusInternalServerError)
 			return
@@ -269,7 +276,7 @@ func RunUIServer(port int, dev bool) error {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(results)
+		_ = json.NewEncoder(w).Encode(results)
 	}))
 
 	regressionMpkPath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.mpk")
@@ -282,7 +289,7 @@ func RunUIServer(port int, dev bool) error {
 		}
 
 		// mpk is the true baseline; yml reflects the current alertmanager state
-		baseline, err := LoadBaseline(regressionMpkPath)
+		baseline, err := loadBaseline(regressionMpkPath)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Loading baseline: %v", err), http.StatusInternalServerError)
 			return
@@ -318,7 +325,7 @@ func RunUIServer(port int, dev bool) error {
 		for _, res := range raw {
 			if res.Pass {
 				resp.Passed++
-			}  else {
+			} else {
 				resp.Drifted++
 			}
 
@@ -366,12 +373,12 @@ func RunUIServer(port int, dev bool) error {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 
 	mux.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	})
 
 	// Serve embedded UI in production mode
@@ -397,7 +404,7 @@ func RunUIServer(port int, dev bool) error {
 
 	addr := fmt.Sprintf(":%d", port)
 	url := fmt.Sprintf("http://localhost%s", addr)
-	fmt.Printf("Litmus UI running at %s\n", url)
+	log.Printf("Litmus UI running at %s", url)
 
 	if !dev {
 		go func() {
@@ -406,7 +413,13 @@ func RunUIServer(port int, dev bool) error {
 		}()
 	}
 
-	return http.ListenAndServe(addr, mux)
+	server := &http.Server{
+		Addr:         addr,
+		Handler:      mux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+	return server.ListenAndServe()
 }
 
 func traceRoute(route *amconfig.Route, labels model.LabelSet) *RouteNode {
@@ -558,4 +571,33 @@ func openBrowser(url string) {
 		cmd = exec.Command("xdg-open", url)
 	}
 	_ = cmd.Start()
+}
+
+// loadBaseline reads a msgpack regression baseline from disk.
+func loadBaseline(path string) ([]*types.RegressionTest, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = file.Close() }()
+
+	var tests []*types.RegressionTest
+	if err := codec.DecodeMsgPack(file, &tests); err != nil {
+		return nil, err
+	}
+	return tests, nil
+}
+
+// loadBaselineYAML reads a YAML regression baseline from disk.
+func loadBaselineYAML(path string) ([]*types.RegressionTest, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var tests []*types.RegressionTest
+	if err := yaml.Unmarshal(data, &tests); err != nil {
+		return nil, err
+	}
+	return tests, nil
 }

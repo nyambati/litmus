@@ -5,7 +5,7 @@ import (
 	"io/fs"
 
 	"github.com/nyambati/litmus/cmd"
-	"github.com/nyambati/litmus/internal/cli"
+	"github.com/nyambati/litmus/internal/server"
 )
 
 //go:embed ui/dist/*
@@ -13,6 +13,6 @@ var staticFiles embed.FS
 
 func main() {
 	publicFS, _ := fs.Sub(staticFiles, "ui/dist")
-	cli.SetStaticFS(publicFS)
+	server.SetStaticFS(publicFS)
 	cmd.Execute()
 }

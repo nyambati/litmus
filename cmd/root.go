@@ -34,5 +34,5 @@ func init() {
 	rootCmd.AddCommand(newInspectCmd())
 	rootCmd.AddCommand(newShowCmd())
 	rootCmd.AddCommand(newSyncCmd())
-	rootCmd.AddCommand(newUiCmd())
+	rootCmd.AddCommand(newServeCmd())
 }

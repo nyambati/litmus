@@ -1,20 +1,20 @@
 package cmd
 
 import (
-	"github.com/nyambati/litmus/internal/cli"
+	"github.com/nyambati/litmus/internal/server"
 	"github.com/spf13/cobra"
 )
 
-// newUiCmd creates the ui command.
-func newUiCmd() *cobra.Command {
+// newServeCmd creates the serve command.
+func newServeCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "ui",
+		Use:   "serve",
 		Short: "Start the Litmus web interface",
 		Long:  "Starts a web server providing a visual interface for route exploration and test management",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			port, _ := cmd.Flags().GetInt("port")
 			dev, _ := cmd.Flags().GetBool("dev")
-			return cli.RunUIServer(port, dev)
+			return server.RunUIServer(port, dev)
 		},
 	}
 
