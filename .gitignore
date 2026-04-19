@@ -43,3 +43,4 @@ config/*.yml
 config/*.yaml
 config/templates
 node_modules
+litmus

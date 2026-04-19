@@ -3,7 +3,7 @@
 
 config:
   directory: config # Alertmanager config directory
-  file: alertmanager.yml # Config filename
+  file: alertmanager.yaml # Config filename
   templates: templates/ # Templates directory (relative to config.directory)
 
 # Global Test Labels: These labels are automatically added to

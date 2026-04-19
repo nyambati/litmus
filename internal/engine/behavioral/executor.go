@@ -16,9 +16,9 @@ import (
 
 // TestResult holds execution result for a behavioral test.
 type TestResult struct {
-	Name  string
-	Pass  bool
-	Error string
+	Name  string `json:"name"`
+	Pass  bool   `json:"pass"`
+	Error string `json:"error,omitempty"`
 }
 
 // BehavioralTestExecutor executes behavioral tests through the pipeline.
