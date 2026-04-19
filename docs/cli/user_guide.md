@@ -6,7 +6,7 @@ Learn how to use Litmus to validate your Alertmanager configuration.
 
 ## Overview
 
-Litmus provides six commands for managing alert configuration validation:
+Litmus provides seven commands for managing alert configuration validation:
 
 ```
 litmus init       Initialize workspace
@@ -15,6 +15,7 @@ litmus check      Validate configuration (for CI/CD)
 litmus diff       Show changes from baseline
 litmus inspect    Read binary regression file (for auditing)
 litmus sync       Push validated config to Grafana Mimir
+litmus serve      Launch the web UI
 ```
 
 ---
@@ -192,7 +193,12 @@ Capture current configuration as baseline.
 litmus snapshot
 litmus snapshot --update   # Force update (overwrite existing baseline)
 litmus snapshot -u         # Short form
+litmus snapshot --diff     # Preview what would change without writing
 ```
+
+**Flags:**
+- `-u, --update` — Accept new behavior and overwrite existing baseline
+- `-d, --diff` — Print the routing diff and exit without writing
 
 **Output:**
 - `regressions.litmus.mpk` — Binary baseline
@@ -217,14 +223,62 @@ Validate configuration against baseline and tests.
 
 ```bash
 litmus check
+litmus check --format json       # Machine-readable output
+litmus check --diff              # Show routing delta for regression failures
 ```
+
+**Flags:**
+- `-f, --format` — Output format: `text` (default) or `json`
+- `-d, --diff` — Print a routing delta report alongside any regression failures
 
 **Runs:**
 1. Static analysis (sanity checks)
 2. Regression validation (baseline comparison)
 3. Behavioral tests (custom scenarios)
 
-**Output:** System health report (see example above)
+**Text output:** System health report (see example above)
+
+**JSON output schema:**
+```json
+{
+  "passed": true,
+  "config_path": "config/alertmanager.yaml",
+  "sanity": {
+    "passed": true,
+    "shadowed_issues": [],
+    "orphan_issues": [],
+    "inhibition_issues": []
+  },
+  "regression": {
+    "passed": true,
+    "tests": 139,
+    "pass_count": 139,
+    "failures": [
+      {
+        "name": "Route to team-oncall",
+        "type": "regression",
+        "labels": { "severity": "critical", "team": "db" },
+        "expected": ["db-oncall"],
+        "actual": ["default"]
+      }
+    ]
+  },
+  "behavioral": {
+    "passed": true,
+    "tests": 5,
+    "pass_count": 5,
+    "failures": [
+      {
+        "name": "Critical alert reaches on-call",
+        "type": "unit",
+        "error": "expected receivers [db-oncall], got [default]"
+      }
+    ]
+  },
+  "duration_ns": 412000000,
+  "exit_code": 0
+}
+```
 
 **Exit Codes:**
 - `0` — All validation passed
@@ -273,17 +327,21 @@ litmus diff
 
 ### `litmus inspect`
 
-Read a binary regression file as human-readable YAML.
+Read a binary regression file as human-readable YAML or JSON.
 
 ```bash
 litmus inspect regressions.litmus.mpk
+litmus inspect regressions.litmus.mpk --format json   # JSON output
 
-# Output entire file
+# Page through output
 litmus inspect regressions.litmus.mpk | less
 
 # Compare with git
 git show HEAD:regressions.litmus.yml | diff - <(litmus inspect regressions.litmus.mpk)
 ```
+
+**Flags:**
+- `-f, --format` — Output format: `yaml` (default) or `json`
 
 **Use when:**
 - Auditing regression changes
@@ -298,6 +356,31 @@ git config diff.litmus_inspect.textconv "litmus inspect"
 # Now `git diff` automatically handles .mpk files
 git diff regressions.litmus.mpk
 ```
+
+---
+
+### `litmus serve`
+
+Launch the Litmus web UI for interactive route exploration and test management.
+
+```bash
+litmus serve                  # Start on :8080
+litmus serve --port 3000      # Custom port
+litmus serve --dev            # Development mode (hot-reload, verbose logging)
+```
+
+**Flags:**
+- `-p, --port` — Port to listen on (default: `8080`)
+- `--dev` — Enable development mode
+
+**Pages:**
+- **Explorer** — Enter alert labels and trace the routing path live
+- **Lab** — Run unit and regression tests interactively
+- **Regression** — Compare current routing against the snapshot baseline
+- **Route Inspector** — Visualize the full route tree
+- **Sanity** — Run static analysis checks
+
+Open `http://localhost:8080` after starting.
 
 ---
 
@@ -526,6 +609,24 @@ validate_alerts:
 #!/bin/bash
 # .git/hooks/pre-commit
 litmus check || exit 1
+```
+
+### Shell Completion
+
+Litmus supports tab completion for bash, zsh, fish, and PowerShell.
+
+```bash
+# Bash
+litmus completion bash | sudo tee /etc/bash_completion.d/litmus
+
+# Zsh
+litmus completion zsh > "${fpath[1]}/_litmus"
+
+# Fish
+litmus completion fish > ~/.config/fish/completions/litmus.fish
+
+# PowerShell
+litmus completion powershell | Out-String | Invoke-Expression
 ```
 
 ---

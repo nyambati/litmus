@@ -5,6 +5,7 @@ This document tracks high-value features and research areas for `litmus` that ar
 ## Completed
 
 - ✅ **`litmus diff` command** — Compare current configuration against regression baseline (v0.2.0)
+- ✅ **JSON Output Format** — `litmus check --format json` emits machine-readable results; `litmus inspect --format json` for baselines
 
 ## 1. Negative Matcher Synthesis Paradox
 *   **The Problem:** Routes defined *only* with `!=` or `!~` matchers have no positive labels to synthesize, making automated regression testing difficult for these branches.
@@ -23,10 +24,8 @@ This document tracks high-value features and research areas for `litmus` that ar
 *   **The Goal:** Support for **Configuration Fragments**. Teams define their own routes and receivers in isolated files (e.g., `teams/database.yml`). 
 *   **The Mechanism:** Litmus would "assemble" these fragments into a virtual routing tree for validation. This enables **Cross-Impact Detection**, where Litmus can warn a team if their local change has accidentally shadowed or inhibited another team's alerts in the global tree.
 
-## 5. JSON Output Format
-*   **The Problem:** CI/CD systems often need machine-readable output for better integration and reporting.
-*   **The Goal:** Add `--json` flag to `litmus check` and other commands to emit JSON-formatted results.
-*   **Use Cases:** Slack notifications, GitHub status checks, metric reporting.
+## ~~5. JSON Output Format~~ ✅ Done
+*   Implemented as `litmus check --format json` and `litmus inspect --format json`. See `docs/cli/user_guide.md` for schema.
 
 ## 6. Baseline History & Rollback
 *   **The Problem:** If a baseline update is reverted, users must re-run `litmus snapshot --update` to restore it.
@@ -50,3 +49,43 @@ This document tracks high-value features and research areas for `litmus` that ar
 ## 10. Alertmanager Versions Matrix
 *   **The Problem:** Alertmanager behavior changes across versions (e.g., new matcher syntax in 0.24).
 *   **The Goal:** Allow specifying target Alertmanager version in `litmus.yaml` and warn about version-specific features.
+
+## 11. Alert Grouping Assertions
+*   **The Problem:** `group_by` behavior is untested — routes may silently mis-group alerts, causing notification storms or missed batching.
+*   **The Goal:** Extend behavioral unit tests to assert that alerts with specific labels are grouped correctly under a given route.
+
+## 12. Inhibition Simulation in Unit Tests
+*   **The Problem:** Inhibition rules can only be verified end-to-end today; no unit test syntax exists to assert "alert A suppresses alert B."
+*   **The Goal:** Add an `inhibits:` assertion block to behavioral tests so users can write isolated inhibition scenarios without a full pipeline run.
+
+## 13. Timing Assertions (group_wait / group_interval / repeat_interval)
+*   **The Problem:** Notification timing semantics (`group_wait`, `group_interval`, `repeat_interval`) are invisible to current tests.
+*   **The Goal:** Allow unit tests to assert the effective timing values on a matched route path, catching silent timing regressions.
+
+## 14. Test Tagging and Selective Runs
+*   **The Problem:** Running all tests on every change is slow in large configs; users need a way to run only critical paths.
+*   **The Goal:** Support `litmus check --tags=critical` to filter which behavioral/regression tests are executed, using the existing `tags:` field.
+
+## 15. Named Snapshots (Multi-Environment Baselines)
+*   **The Problem:** A single baseline can't represent multiple environments (staging, prod, canary).
+*   **The Goal:** Support named snapshots via `litmus snapshot --name=prod`, storing baselines as `regressions.prod.mpk` and enabling `litmus check --baseline=prod`.
+
+## 16. Route Tree Visualizer (UI)
+*   **The Problem:** The full Alertmanager route hierarchy is hard to reason about as plain YAML.
+*   **The Goal:** Add an interactive collapsible tree view in the UI showing the full route hierarchy with matcher details, receiver labels, and which behavioral tests cover each branch.
+
+## 17. Test Coverage Metric
+*   **The Problem:** No visibility into which route branches are exercised by existing behavioral tests.
+*   **The Goal:** Add a `litmus coverage` command (and UI panel) reporting % of terminal route paths covered by at least one behavioral test, with a list of uncovered branches.
+
+## 18. Config Diff View (UI)
+*   **The Problem:** When the alertmanager config changes, it's hard to see what routing impact the change has.
+*   **The Goal:** Side-by-side before/after diff in the UI showing which routes were added, removed, or modified, alongside the regression delta.
+
+## 19. Dead Receiver Detection
+*   **The Problem:** The current orphan check detects receivers not referenced by any route. The inverse — routes that are unreachable due to being shadowed earlier — is a separate class of bug.
+*   **The Goal:** Extend sanity checks to flag routes that can never be reached given the matchers of their ancestors (complements the existing shadowed-route detector).
+
+## 20. Git Hook / CI Integration Mode
+*   **The Problem:** Manual `litmus check` runs are easy to forget before merging config changes.
+*   **The Goal:** Add `litmus install-hook` to register a pre-commit/pre-push git hook, and emit GitHub Actions annotation format (`::error file=...`) for inline PR feedback.
