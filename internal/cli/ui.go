@@ -8,9 +8,9 @@ import (
 	"io/fs"
 	"net/http"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/nyambati/litmus/internal/config"
@@ -376,25 +376,20 @@ func RunUIServer(port int, dev bool) error {
 		}
 		fileServer := http.FileServer(http.FS(distFS))
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			// Check if the path maps to a real file in the embedded FS.
-			// If not (SPA route), serve index.html so React Router takes over.
-			clean := strings.TrimPrefix(r.URL.Path, "/")
-			if clean == "" {
-				clean = "index.html"
-			}
-			if _, err := fs.Stat(distFS, clean); err != nil {
-				// Not a real file — SPA fallback
-				f, err := distFS.Open("index.html")
-				if err != nil {
-					http.Error(w, "UI not found", http.StatusNotFound)
-					return
-				}
-				defer f.Close()
-				w.Header().Set("Content-Type", "text/html; charset=utf-8")
-				http.ServeContent(w, r, "index.html", time.Time{}, f.(io.ReadSeeker))
+			// Static assets have a file extension — let the file server handle them.
+			// Everything else (SPA routes including "/") gets index.html.
+			if path.Ext(r.URL.Path) != "" {
+				fileServer.ServeHTTP(w, r)
 				return
 			}
-			fileServer.ServeHTTP(w, r)
+			f, err := distFS.Open("index.html")
+			if err != nil {
+				http.Error(w, "UI not found", http.StatusNotFound)
+				return
+			}
+			defer f.Close()
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			http.ServeContent(w, r, "index.html", time.Time{}, f.(io.ReadSeeker))
 		})
 	}
 
