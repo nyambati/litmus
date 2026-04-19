@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/fs"
 	"net/http"
 	"os/exec"
@@ -375,9 +376,23 @@ func RunUIServer(port int, dev bool) error {
 		}
 		fileServer := http.FileServer(http.FS(distFS))
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			// Serve index.html for all non-asset routes (SPA fallback)
-			if !strings.Contains(r.URL.Path, ".") {
-				r.URL.Path = "/"
+			// Check if the path maps to a real file in the embedded FS.
+			// If not (SPA route), serve index.html so React Router takes over.
+			clean := strings.TrimPrefix(r.URL.Path, "/")
+			if clean == "" {
+				clean = "index.html"
+			}
+			if _, err := fs.Stat(distFS, clean); err != nil {
+				// Not a real file — SPA fallback
+				f, err := distFS.Open("index.html")
+				if err != nil {
+					http.Error(w, "UI not found", http.StatusNotFound)
+					return
+				}
+				defer f.Close()
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				http.ServeContent(w, r, "index.html", time.Time{}, f.(io.ReadSeeker))
+				return
 			}
 			fileServer.ServeHTTP(w, r)
 		})
