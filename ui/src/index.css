@@ -1,18 +1,33 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Roboto+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Instrument Sans', system-ui, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #0f172a;
-
+  color-scheme: dark;
+  color: #d9d9d9;
+  background-color: #181b1f;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  --gf-body: #181b1f;
+  --gf-panel: #1f2128;
+  --gf-elevated: #22252b;
+  --gf-sidebar: #111217;
+  --gf-border-subtle: #2c3235;
+  --gf-border-strong: #34383e;
+  --gf-text-primary: #d9d9d9;
+  --gf-text-secondary: #8e9193;
+  --gf-orange: #f46800;
+  --gf-orange-hover: #ff7f2a;
+  --gf-green: #73bf69;
+  --gf-yellow: #f5a623;
+  --gf-red: #f2495c;
+  --gf-blue: #5794f2;
+  --gf-purple: #b877d9;
 }
 
 body {
@@ -20,8 +35,58 @@ body {
   display: flex;
   min-width: 320px;
   min-height: 100vh;
+  background-color: var(--gf-body);
 }
 
 #root {
   width: 100%;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #34383e; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #4a5060; }
+
+/* Grafana-style focus ring */
+*:focus-visible {
+  outline: 2px solid var(--gf-orange);
+  outline-offset: 2px;
+}
+
+/* Underline tab style */
+.gf-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--gf-border-subtle);
+}
+
+.gf-tab {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gf-text-secondary);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  background: transparent;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  white-space: nowrap;
+}
+
+.gf-tab:hover {
+  color: var(--gf-text-primary);
+}
+
+.gf-tab.active {
+  color: var(--gf-text-primary);
+  border-bottom-color: var(--gf-orange);
+}
+
+/* Roboto Mono applied to monospace contexts */
+code, .font-mono, [class*="font-mono"] {
+  font-family: 'Roboto Mono', 'Courier New', monospace;
 }

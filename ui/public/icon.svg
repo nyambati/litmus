@@ -1,13 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <!-- Background gradient: warm dark center -->
     <radialGradient id="bg" cx="50%" cy="50%" r="65%">
       <stop offset="0%"  stop-color="#221208"/>
       <stop offset="100%" stop-color="#130b04"/>
     </radialGradient>
-    <!-- Glow filter for the waveform -->
+    <!-- Ambient warm bloom behind waveform -->
+    <radialGradient id="bloom" cx="50%" cy="50%" r="40%">
+      <stop offset="0%"  stop-color="#f46800" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#f46800" stop-opacity="0"/>
+    </radialGradient>
     <filter id="glow" x="-30%" y="-60%" width="160%" height="220%">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur"/>
       <feMerge>
         <feMergeNode in="blur"/>
         <feMergeNode in="blur"/>
@@ -16,15 +19,18 @@
     </filter>
   </defs>
 
-  <!-- Background rounded square -->
+  <!-- Background -->
   <rect width="512" height="512" rx="108" ry="108" fill="url(#bg)"/>
 
-  <!-- Subtle inner highlight on top edge -->
+  <!-- Ambient glow overlay -->
+  <rect width="512" height="512" rx="108" ry="108" fill="url(#bloom)"/>
+
+  <!-- Border highlight -->
   <rect width="512" height="512" rx="108" ry="108"
         fill="none"
-        stroke="#f46800" stroke-width="1.5" stroke-opacity="0.12"/>
+        stroke="#f46800" stroke-width="1.5" stroke-opacity="0.15"/>
 
-  <!-- ECG waveform with glow -->
+  <!-- ECG waveform -->
   <polyline
     filter="url(#glow)"
     points="
