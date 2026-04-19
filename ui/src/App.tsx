@@ -30,6 +30,31 @@ function cn(...inputs: ClassValue[]) {
 
 const API = "http://localhost:8080";
 
+// --- Persistence ---
+
+function loadCache<T>(key: string): { data: T; ts: number } | null {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveCache<T>(key: string, data: T) {
+  try {
+    localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() }));
+  } catch {}
+}
+
+function formatAge(ts: number): string {
+  const secs = Math.floor((Date.now() - ts) / 1000);
+  if (secs < 60) return "just now";
+  if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
+  if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
+  return `${Math.floor(secs / 86400)}d ago`;
+}
+
 // --- Components ---
 
 const Sidebar = () => {
@@ -102,27 +127,32 @@ const StatsSidebar = ({ children }: { children?: React.ReactNode }) => (
 
 const ExplorerPage = ({
   onEvaluate,
+  onQuerySaved,
+  labels,
+  setLabels,
+  runTrigger,
 }: {
   onEvaluate: (receivers: string[]) => void;
+  onQuerySaved: (query: string, receivers: string[]) => void;
+  labels: string;
+  setLabels: (v: string) => void;
+  runTrigger: number;
 }) => {
-  const [labels, setLabels] = useState('severity="critical", team="database"');
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  const runEvaluation = async () => {
+  const runEvaluation = async (overrideLabels?: string) => {
     setLoading(true);
     try {
       let labelMap: Record<string, string> = {};
-      const trimmed = labels.trim();
+      const src = (overrideLabels ?? labels).trim();
 
-      if (trimmed.startsWith("{")) {
-        labelMap = JSON.parse(trimmed);
+      if (src.startsWith("{")) {
+        labelMap = JSON.parse(src);
       } else {
         // Support both comma-separated and newline-separated
         // and both "=" and ":" delimiters
-        const pairs = trimmed.includes(",")
-          ? trimmed.split(",")
-          : trimmed.split("\n");
+        const pairs = src.includes(",") ? src.split(",") : src.split("\n");
         pairs.forEach((pair) => {
           const delimiter = pair.includes("=") ? "=" : ":";
           const [k, v] = pair
@@ -140,6 +170,7 @@ const ExplorerPage = ({
       const data = await resp.json();
       setResult(data);
       onEvaluate(data.receivers || []);
+      onQuerySaved(overrideLabels ?? labels, data.receivers || []);
     } catch (err) {
       console.error("Evaluation failed:", err);
       alert("Failed to parse labels. Use k=v,k=v or JSON.");
@@ -147,6 +178,10 @@ const ExplorerPage = ({
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (runTrigger > 0) runEvaluation(labels);
+  }, [runTrigger]);
 
   const renderPath = (
     node: any,
@@ -335,7 +370,7 @@ const ExplorerPage = ({
               Clear
             </button>
             <button
-              onClick={runEvaluation}
+              onClick={() => runEvaluation()}
               disabled={loading}
               className="px-6 py-1.5 text-xs font-bold bg-blue-600 text-white rounded-md hover:bg-blue-500 disabled:opacity-50 transition-all shadow-lg shadow-blue-900/40 active:scale-95 flex items-center gap-2"
             >
@@ -692,7 +727,9 @@ const LabPage = ({
   onTestsRun: (passed: number, failed: number) => void;
 }) => {
   const [tests, setTests] = useState<any[]>([]);
-  const [results, setResults] = useState<Record<string, any>>({});
+  const _labCache = loadCache<Record<string, any>>("litmus:lab:results");
+  const [results, setResults] = useState<Record<string, any>>(_labCache?.data ?? {});
+  const [lastRunTs, setLastRunTs] = useState<number | null>(_labCache?.ts ?? null);
   const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState(false);
   const [runningTest, setRunningTest] = useState<string | null>(null);
@@ -745,8 +782,10 @@ const LabPage = ({
       data.forEach((res: any) => {
         next[res.name] = res;
       });
+      saveCache("litmus:lab:results", next);
       return next;
     });
+    setLastRunTs(Date.now());
   };
 
   const runAllTests = async () => {
@@ -784,8 +823,10 @@ const LabPage = ({
           else failed++;
         });
         onTestsRun(passed, failed);
+        saveCache("litmus:lab:results", merged);
         return merged;
       });
+      setLastRunTs(Date.now());
     } catch (err) {
       console.error("Failed to run tests:", err);
     } finally {
@@ -839,6 +880,7 @@ const LabPage = ({
             <p className="text-slate-500 text-sm mt-1">
               {filteredTests.length} of {tests.length} tests
               {filter === "unit" ? " · from tests/" : filter === "regression" ? " · from regressions/" : ""}
+              {lastRunTs && <span className="text-slate-600"> · last run {formatAge(lastRunTs)}</span>}
             </p>
           </div>
           <button
@@ -959,7 +1001,9 @@ const RegressionPage = ({
 }: {
   onDiffRun?: (total: number, drifted: number) => void;
 }) => {
-  const [diff, setDiff] = useState<DiffResult | null>(null);
+  const _diffCache = loadCache<DiffResult>("litmus:regression:diff");
+  const [diff, setDiff] = useState<DiffResult | null>(_diffCache?.data ?? null);
+  const [lastRunTs, setLastRunTs] = useState<number | null>(_diffCache?.ts ?? null);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<"drifted" | "passing">("drifted");
 
@@ -969,6 +1013,8 @@ const RegressionPage = ({
       const resp = await fetch(`${API}/api/v1/diff`);
       const data: DiffResult = await resp.json();
       setDiff(data);
+      setLastRunTs(Date.now());
+      saveCache("litmus:regression:diff", data);
       onDiffRun?.(data.total, data.drifted);
     } catch (err) {
       console.error("Failed to run diff:", err);
@@ -978,7 +1024,7 @@ const RegressionPage = ({
   };
 
   useEffect(() => {
-    runDiff();
+    if (!_diffCache) runDiff();
   }, []);
 
   const visibleResults =
@@ -1000,6 +1046,7 @@ const RegressionPage = ({
               {diff
                 ? `${diff.total} baseline tests — ${diff.drifted} drifted`
                 : "Run diff to compare current routing against baseline"}
+              {lastRunTs && <span className="text-slate-600"> · last run {formatAge(lastRunTs)}</span>}
             </p>
           </div>
           <button
@@ -1363,16 +1410,55 @@ const AppLayout = ({
   </div>
 );
 
+interface QueryHistoryEntry {
+  query: string;
+  receivers: string[];
+  ts: number;
+}
+
+const HISTORY_KEY = "litmus:explorer:history";
+const HISTORY_MAX = 20;
+
 function App() {
   const [matchedReceivers, setMatchedReceivers] = useState<string[]>([]);
-  const [testResults, setTestResults] = useState<{
-    passed: number;
-    failed: number;
-  }>({ passed: 0, failed: 0 });
-  const [diffStats, setDiffStats] = useState<{
-    total: number;
-    drifted: number;
-  } | null>(null);
+
+  // Explorer query history
+  const [queryHistory, setQueryHistory] = useState<QueryHistoryEntry[]>(
+    () => loadCache<QueryHistoryEntry[]>(HISTORY_KEY)?.data ?? [],
+  );
+  const [explorerLabels, setExplorerLabels] = useState(
+    'severity="critical", team="database"',
+  );
+  const [explorerRunTrigger, setExplorerRunTrigger] = useState(0);
+
+  const saveQuery = (query: string, receivers: string[]) => {
+    setQueryHistory((prev) => {
+      const deduped = prev.filter((e) => e.query !== query);
+      const next = [{ query, receivers, ts: Date.now() }, ...deduped].slice(
+        0,
+        HISTORY_MAX,
+      );
+      saveCache(HISTORY_KEY, next);
+      return next;
+    });
+  };
+
+  const loadHistoryEntry = (entry: QueryHistoryEntry) => {
+    setExplorerLabels(entry.query);
+    setExplorerRunTrigger((n) => n + 1);
+  };
+  const _labCache = loadCache<Record<string, any>>("litmus:lab:results");
+  const [testResults, setTestResults] = useState<{ passed: number; failed: number }>(() => {
+    if (!_labCache?.data) return { passed: 0, failed: 0 };
+    let passed = 0; let failed = 0;
+    Object.values(_labCache.data).forEach((r: any) => { if (r.pass) passed++; else failed++; });
+    return { passed, failed };
+  });
+
+  const _diffCache = loadCache<DiffResult>("litmus:regression:diff");
+  const [diffStats, setDiffStats] = useState<{ total: number; drifted: number } | null>(
+    _diffCache?.data ? { total: _diffCache.data.total, drifted: _diffCache.data.drifted } : null,
+  );
 
   return (
     <Router>
@@ -1429,10 +1515,69 @@ function App() {
                       </p>
                     </div>
                   </div>
+
+                  {/* Query History */}
+                  {queryHistory.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between mb-3 pt-2 border-t border-slate-800">
+                        <p className="text-slate-500 text-xs uppercase font-bold tracking-widest">
+                          Recent Queries
+                        </p>
+                        <button
+                          onClick={() => {
+                            setQueryHistory([]);
+                            saveCache(HISTORY_KEY, []);
+                          }}
+                          className="text-slate-600 hover:text-slate-400 text-xs transition-colors"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                      <div className="space-y-2">
+                        {queryHistory.map((entry, i) => (
+                          <button
+                            key={i}
+                            onClick={() => loadHistoryEntry(entry)}
+                            className="w-full text-left p-3 rounded-xl bg-slate-800/40 border border-slate-800 hover:border-slate-600 hover:bg-slate-800/80 transition-all group"
+                          >
+                            <p className="font-mono text-xs text-slate-300 truncate group-hover:text-white transition-colors">
+                              {entry.query}
+                            </p>
+                            <div className="flex items-center justify-between mt-1.5">
+                              <div className="flex gap-1 flex-wrap">
+                                {entry.receivers.slice(0, 2).map((r) => (
+                                  <span
+                                    key={r}
+                                    className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono"
+                                  >
+                                    {r}
+                                  </span>
+                                ))}
+                                {entry.receivers.length > 2 && (
+                                  <span className="text-[10px] text-slate-600">
+                                    +{entry.receivers.length - 2}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-slate-600 shrink-0 ml-1">
+                                {formatAge(entry.ts)}
+                              </span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               }
             >
-              <ExplorerPage onEvaluate={setMatchedReceivers} />
+              <ExplorerPage
+                onEvaluate={setMatchedReceivers}
+                onQuerySaved={saveQuery}
+                labels={explorerLabels}
+                setLabels={setExplorerLabels}
+                runTrigger={explorerRunTrigger}
+              />
             </AppLayout>
           }
         />
