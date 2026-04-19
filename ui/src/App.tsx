@@ -513,7 +513,7 @@ const TestCaseShell = ({
   </div>
 );
 
-interface UnitTestCaseProps {
+interface TestCaseProps {
   test: any;
   result?: any;
   isRunning: boolean;
@@ -527,7 +527,7 @@ const UnitTestCase = ({
   isRunning,
   globalRunning,
   onRun,
-}: UnitTestCaseProps) => {
+}: TestCaseProps) => {
   const outcome = test.expect?.outcome;
   const receivers = test.expect?.receivers || [];
   const alertLabels = test.alert?.labels || {};
@@ -612,21 +612,13 @@ const UnitTestCase = ({
   );
 };
 
-interface RegressionTestCaseProps {
-  test: any;
-  result?: any;
-  isRunning: boolean;
-  globalRunning: boolean;
-  onRun: () => void;
-}
-
 const RegressionTestCase = ({
   test,
   result,
   isRunning,
   globalRunning,
   onRun,
-}: RegressionTestCaseProps) => {
+}: TestCaseProps) => {
   const labelSets: Record<string, string>[] = test.labels || [];
   const expected: string[] = test.expected || [];
 
@@ -719,6 +711,13 @@ const RegressionTestCase = ({
   );
 };
 
+const TestCaseCard = (props: TestCaseProps) =>
+  props.test.type === "regression" ? (
+    <RegressionTestCase {...props} />
+  ) : (
+    <UnitTestCase {...props} />
+  );
+
 type FilterType = "all" | "unit" | "regression";
 
 const LabPage = ({
@@ -759,14 +758,7 @@ const LabPage = ({
         );
 
       const unitTests = unitData.map((t) => ({ ...t, type: "unit" }));
-      // Go serializes RegressionTest with capitalized field names (no json tags)
-      const regressionTests = regressionData.map((t) => ({
-        type: "regression",
-        name: t.Name,
-        tags: t.Tags || [],
-        labels: t.Labels || [],
-        expected: t.Expected || [],
-      }));
+      const regressionTests = regressionData.map((t) => ({ ...t, type: "regression" }));
 
       setTests([...unitTests, ...regressionTests]);
     } catch (err) {
@@ -926,36 +918,16 @@ const LabPage = ({
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredTests.map((test, testIdx) => {
-              const res = results[test.name];
-              const isRunning = runningTest === test.name;
-              const testType = getTestType(test) as "unit" | "regression";
-              const key = `${test.name}-${testIdx}`;
-
-              if (testType === "regression") {
-                return (
-                  <RegressionTestCase
-                    key={key}
-                    test={test}
-                    result={res}
-                    isRunning={isRunning}
-                    globalRunning={running}
-                    onRun={() => runSingleTest(test.name, "regression")}
-                  />
-                );
-              }
-
-              return (
-                <UnitTestCase
-                  key={key}
-                  test={test}
-                  result={res}
-                  isRunning={isRunning}
-                  globalRunning={running}
-                  onRun={() => runSingleTest(test.name, "unit")}
-                />
-              );
-            })}
+            {filteredTests.map((test, testIdx) => (
+              <TestCaseCard
+                key={`${test.name}-${testIdx}`}
+                test={test}
+                result={results[test.name]}
+                isRunning={runningTest === test.name}
+                globalRunning={running}
+                onRun={() => runSingleTest(test.name, getTestType(test))}
+              />
+            ))}
           </div>
         )}
       </main>

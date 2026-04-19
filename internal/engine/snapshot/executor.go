@@ -11,16 +11,6 @@ import (
 	"github.com/prometheus/common/model"
 )
 
-// RegressionResult holds execution result for a single regression test.
-type RegressionResult struct {
-	Name     string
-	Pass     bool
-	Error    string
-	Labels   map[string]string // failing label set; nil on pass
-	Expected []string
-	Actual   []string
-}
-
 // RegressionTestExecutor executes regression tests through the pipeline.
 type RegressionTestExecutor struct{}
 
@@ -29,17 +19,16 @@ func NewRegressionTestExecutor() *RegressionTestExecutor {
 	return &RegressionTestExecutor{}
 }
 
-// Execute runs regression tests against the router.
-// Regression tests are expected to match exactly the receivers.
-func (rte *RegressionTestExecutor) Execute(ctx context.Context, tests []*types.RegressionTest, router *pipeline.Router) []*RegressionResult {
-	results := make([]*RegressionResult, 0, len(tests))
+// Execute runs regression TestCases against the router.
+func (rte *RegressionTestExecutor) Execute(ctx context.Context, tests []*types.TestCase, router *pipeline.Router) []*types.TestResult {
+	results := make([]*types.TestResult, 0, len(tests))
 
 	silenceStore := stores.NewSilenceStore(nil)
 	alertStore := stores.NewAlertStore()
 	runner := pipeline.NewRunner(silenceStore, alertStore, router, nil)
 
 	for _, test := range tests {
-		result := &RegressionResult{Name: test.Name, Pass: true}
+		result := &types.TestResult{Name: test.Name, Type: test.Type, Pass: true}
 
 		if len(test.Labels) == 0 {
 			result.Pass = false

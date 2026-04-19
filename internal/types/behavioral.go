@@ -1,15 +1,5 @@
 package types
 
-// BehavioralTest represents a human-authored "Intent" scenario.
-type BehavioralTest struct {
-	Name   string           `json:"name" msgpack:"name" yaml:"name"`
-	Type   string           `json:"type,omitempty" msgpack:"type,omitempty" yaml:"type,omitempty"`
-	Tags   []string         `json:"tags,omitempty" msgpack:"tags" yaml:"tags"`
-	State  *SystemState     `json:"state,omitempty" msgpack:"state,omitempty" yaml:"state,omitempty"`
-	Alert  AlertSample      `json:"alert" msgpack:"alert" yaml:"alert"`
-	Expect BehavioralExpect `json:"expect" msgpack:"expect" yaml:"expect"`
-}
-
 // SystemState represents the environment for suppression testing.
 type SystemState struct {
 	ActiveAlerts []AlertSample `json:"active_alerts,omitempty" msgpack:"active_alerts" yaml:"active_alerts"`

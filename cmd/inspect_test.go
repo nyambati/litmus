@@ -17,9 +17,9 @@ func TestInspectCommand_YAML(t *testing.T) {
 	err = os.Chdir(tmpDir)
 	require.NoError(t, err)
 
-	// Create test baseline
-	tests := []*types.RegressionTest{
+	tests := []*types.TestCase{
 		{
+			Type:     "regression",
 			Name:     "Test 1",
 			Labels:   []map[string]string{{"service": "api"}},
 			Expected: []string{"api-team"},
@@ -49,9 +49,9 @@ func TestInspectCommand_JSON(t *testing.T) {
 	err = os.Chdir(tmpDir)
 	require.NoError(t, err)
 
-	// Create test baseline
-	tests := []*types.RegressionTest{
+	tests := []*types.TestCase{
 		{
+			Type:     "regression",
 			Name:     "Test 1",
 			Labels:   []map[string]string{{"service": "api"}},
 			Expected: []string{"api-team"},

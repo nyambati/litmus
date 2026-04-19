@@ -42,34 +42,30 @@ type SanityResult struct {
 	InhibitionIssues []string `json:"inhibition_issues,omitempty"`
 }
 
-// RegressionFailure holds structured detail for a single regression failure.
-type RegressionFailure struct {
+// TestFailure holds structured detail for a single test failure.
+type TestFailure struct {
 	Name     string            `json:"name"`
-	Labels   map[string]string `json:"labels"`
-	Expected []string          `json:"expected"`
-	Actual   []string          `json:"actual"`
+	Type     string            `json:"type"`
+	Error    string            `json:"error,omitempty"`
+	Labels   map[string]string `json:"labels,omitempty"`
+	Expected []string          `json:"expected,omitempty"`
+	Actual   []string          `json:"actual,omitempty"`
 }
 
 // RegressionResult holds regression test results.
 type RegressionResult struct {
-	Passed    bool                `json:"passed"`
-	Tests     int                 `json:"tests"`
-	PassCount int                 `json:"pass_count"`
-	Failures  []RegressionFailure `json:"failures,omitempty"`
-}
-
-// BehavioralFailure holds structured detail for a single behavioral test failure.
-type BehavioralFailure struct {
-	Name  string `json:"name"`
-	Error string `json:"error"`
+	Passed    bool          `json:"passed"`
+	Tests     int           `json:"tests"`
+	PassCount int           `json:"pass_count"`
+	Failures  []TestFailure `json:"failures,omitempty"`
 }
 
 // BehavioralResult holds behavioral test results.
 type BehavioralResult struct {
-	Passed    bool                `json:"passed"`
-	Tests     int                 `json:"tests"`
-	PassCount int                 `json:"pass_count"`
-	Failures  []BehavioralFailure `json:"failures,omitempty"`
+	Passed    bool          `json:"passed"`
+	Tests     int           `json:"tests"`
+	PassCount int           `json:"pass_count"`
+	Failures  []TestFailure `json:"failures,omitempty"`
 }
 
 // RunCheck loads config, runs all validation stages, prints results, and returns
@@ -179,8 +175,9 @@ func RunRegressionTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 			result.PassCount++
 		} else {
 			result.Passed = false
-			result.Failures = append(result.Failures, RegressionFailure{
+			result.Failures = append(result.Failures, TestFailure{
 				Name:     res.Name,
+				Type:     res.Type,
 				Labels:   res.Labels,
 				Expected: res.Expected,
 				Actual:   res.Actual,
@@ -210,8 +207,9 @@ func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 			result.PassCount++
 		} else {
 			result.Passed = false
-			result.Failures = append(result.Failures, BehavioralFailure{
+			result.Failures = append(result.Failures, TestFailure{
 				Name:  res.Name,
+				Type:  res.Type,
 				Error: res.Error,
 			})
 		}

@@ -8,9 +8,9 @@ import (
 	"github.com/nyambati/litmus/internal/types"
 )
 
-// ComputeDiff compares two sets of regression tests and identifies deltas.
+// ComputeDiff compares two sets of regression TestCases and identifies deltas.
 // Tests are matched by their first label set (assuming canonical synthesis).
-func ComputeDiff(oldTests, newTests []*types.RegressionTest) *types.RegressionDiff {
+func ComputeDiff(oldTests, newTests []*types.TestCase) *types.RegressionDiff {
 	diff := &types.RegressionDiff{Deltas: []types.RegressionDelta{}}
 
 	oldIdx := indexByLabels(oldTests)
@@ -59,13 +59,12 @@ func ComputeDiff(oldTests, newTests []*types.RegressionTest) *types.RegressionDi
 }
 
 // indexByLabels creates a map keyed by a canonical string representation of labels.
-func indexByLabels(tests []*types.RegressionTest) map[string]*types.RegressionTest {
-	idx := make(map[string]*types.RegressionTest)
+func indexByLabels(tests []*types.TestCase) map[string]*types.TestCase {
+	idx := make(map[string]*types.TestCase)
 	for _, t := range tests {
 		if len(t.Labels) == 0 {
 			continue
 		}
-		// We use the first label set as the primary key for the route path
 		key := labelKey(t.Labels[0])
 		idx[key] = t
 	}

@@ -17,29 +17,33 @@ func NewBehavioralTestLoader() *BehavioralTestLoader {
 	return &BehavioralTestLoader{}
 }
 
-// LoadFromFile loads a single behavioral test from a YAML file.
-func (btl *BehavioralTestLoader) LoadFromFile(path string) (*types.BehavioralTest, error) {
+// LoadFromFile loads a single unit TestCase from a YAML file.
+func (btl *BehavioralTestLoader) LoadFromFile(path string) (*types.TestCase, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("reading file: %w", err)
 	}
 
-	var test types.BehavioralTest
+	var test types.TestCase
 	if err := yaml.Unmarshal(data, &test); err != nil {
 		return nil, fmt.Errorf("parsing YAML: %w", err)
+	}
+
+	if test.Type == "" {
+		test.Type = "unit"
 	}
 
 	return &test, nil
 }
 
-// LoadFromDirectory loads all behavioral tests from YAML files in a directory.
-func (btl *BehavioralTestLoader) LoadFromDirectory(dir string) ([]*types.BehavioralTest, error) {
+// LoadFromDirectory loads all unit TestCases from YAML files in a directory.
+func (btl *BehavioralTestLoader) LoadFromDirectory(dir string) ([]*types.TestCase, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, fmt.Errorf("reading directory: %w", err)
 	}
 
-	var allTests []*types.BehavioralTest
+	var allTests []*types.TestCase
 
 	for _, entry := range entries {
 		if entry.IsDir() {

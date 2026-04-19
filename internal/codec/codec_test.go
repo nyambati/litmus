@@ -8,9 +8,10 @@ import (
 	"github.com/nyambati/litmus/internal/types"
 )
 
-func TestRegressionTestRoundTrip(t *testing.T) {
-	test := types.RegressionTest{
+func TestTestCaseRoundTrip_Regression(t *testing.T) {
+	test := types.TestCase{
 		Name: "Test Regression",
+		Type: "regression",
 		Labels: []map[string]string{
 			{"service": "mysql", "env": "prod"},
 		},
@@ -24,7 +25,7 @@ func TestRegressionTestRoundTrip(t *testing.T) {
 			t.Fatalf("Failed to encode YAML: %v", err)
 		}
 
-		var decoded types.RegressionTest
+		var decoded types.TestCase
 		if err := DecodeYAML(&buf, &decoded); err != nil {
 			t.Fatalf("Failed to decode YAML: %v", err)
 		}
@@ -40,7 +41,7 @@ func TestRegressionTestRoundTrip(t *testing.T) {
 			t.Fatalf("Failed to encode MsgPack: %v", err)
 		}
 
-		var decoded types.RegressionTest
+		var decoded types.TestCase
 		if err := DecodeMsgPack(&buf, &decoded); err != nil {
 			t.Fatalf("Failed to decode MsgPack: %v", err)
 		}
@@ -51,20 +52,21 @@ func TestRegressionTestRoundTrip(t *testing.T) {
 	})
 }
 
-func TestBehavioralTestRoundTrip(t *testing.T) {
-	test := types.BehavioralTest{
+func TestTestCaseRoundTrip_Unit(t *testing.T) {
+	test := types.TestCase{
 		Name: "Test Behavioral",
+		Type: "unit",
 		Tags: []string{"unit"},
 		State: &types.SystemState{
 			ActiveAlerts: []types.AlertSample{
 				{Labels: map[string]string{"alertname": "NodeDown"}},
 			},
-			Silences: []types.Silence{}, // Ensure initialized
+			Silences: []types.Silence{},
 		},
-		Alert: types.AlertSample{
+		Alert: &types.AlertSample{
 			Labels: map[string]string{"alertname": "HighLatency"},
 		},
-		Expect: types.BehavioralExpect{
+		Expect: &types.BehavioralExpect{
 			Outcome: "inhibited",
 		},
 	}
@@ -75,12 +77,11 @@ func TestBehavioralTestRoundTrip(t *testing.T) {
 			t.Fatalf("Failed to encode YAML: %v", err)
 		}
 
-		var decoded types.BehavioralTest
+		var decoded types.TestCase
 		if err := DecodeYAML(&buf, &decoded); err != nil {
 			t.Fatalf("Failed to decode YAML: %v", err)
 		}
 
-		// Use a manual comparison for pointers if reflect.DeepEqual is problematic
 		if test.Name != decoded.Name || !reflect.DeepEqual(test.Tags, decoded.Tags) {
 			t.Errorf("Top level mismatch.\nExpected: %+v\nGot:      %+v", test, decoded)
 		}

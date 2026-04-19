@@ -4,12 +4,14 @@ import (
 	"testing"
 
 	"github.com/nyambati/litmus/internal/types"
+	"github.com/stretchr/testify/require"
 )
 
 func TestComputeDiff_Added(t *testing.T) {
-	oldTests := []*types.RegressionTest{}
-	newTests := []*types.RegressionTest{
+	oldTests := []*types.TestCase{}
+	newTests := []*types.TestCase{
 		{
+			Type:     "regression",
 			Name:     "Route to team-a",
 			Labels:   []map[string]string{{"team": "a"}},
 			Expected: []string{"receiver-a"},
@@ -17,43 +19,38 @@ func TestComputeDiff_Added(t *testing.T) {
 	}
 
 	diff := ComputeDiff(oldTests, newTests)
-	if len(diff.Deltas) != 1 {
-		t.Fatalf("expected 1 delta, got %d", len(diff.Deltas))
-	}
-	if diff.Deltas[0].Kind != types.DeltaAdded {
-		t.Errorf("expected DeltaAdded, got %v", diff.Deltas[0].Kind)
-	}
+	require.Len(t, diff.Deltas, 1)
+	require.Equal(t, types.DeltaAdded, diff.Deltas[0].Kind)
 }
 
 func TestComputeDiff_Removed(t *testing.T) {
-	oldTests := []*types.RegressionTest{
+	oldTests := []*types.TestCase{
 		{
+			Type:     "regression",
 			Name:     "Route to team-a",
 			Labels:   []map[string]string{{"team": "a"}},
 			Expected: []string{"receiver-a"},
 		},
 	}
-	newTests := []*types.RegressionTest{}
+	newTests := []*types.TestCase{}
 
 	diff := ComputeDiff(oldTests, newTests)
-	if len(diff.Deltas) != 1 {
-		t.Fatalf("expected 1 delta, got %d", len(diff.Deltas))
-	}
-	if diff.Deltas[0].Kind != types.DeltaRemoved {
-		t.Errorf("expected DeltaRemoved, got %v", diff.Deltas[0].Kind)
-	}
+	require.Len(t, diff.Deltas, 1)
+	require.Equal(t, types.DeltaRemoved, diff.Deltas[0].Kind)
 }
 
 func TestComputeDiff_Modified(t *testing.T) {
-	oldTests := []*types.RegressionTest{
+	oldTests := []*types.TestCase{
 		{
+			Type:     "regression",
 			Name:     "Route to team-a",
 			Labels:   []map[string]string{{"team": "a"}},
 			Expected: []string{"receiver-a"},
 		},
 	}
-	newTests := []*types.RegressionTest{
+	newTests := []*types.TestCase{
 		{
+			Type:     "regression",
 			Name:     "Route to team-a-new",
 			Labels:   []map[string]string{{"team": "a"}},
 			Expected: []string{"receiver-a-new"},
@@ -61,54 +58,66 @@ func TestComputeDiff_Modified(t *testing.T) {
 	}
 
 	diff := ComputeDiff(oldTests, newTests)
-	if len(diff.Deltas) != 1 {
-		t.Fatalf("expected 1 delta, got %d", len(diff.Deltas))
+	require.Len(t, diff.Deltas, 1)
+	require.Equal(t, types.DeltaModified, diff.Deltas[0].Kind)
+	require.Equal(t, "receiver-a", diff.Deltas[0].Expected[0])
+	require.Equal(t, "receiver-a-new", diff.Deltas[0].Actual[0])
+}
+
+func TestComputeDiff_Unchanged(t *testing.T) {
+	tests := []*types.TestCase{
+		{
+			Type:     "regression",
+			Name:     "Route to team-a",
+			Labels:   []map[string]string{{"team": "a"}},
+			Expected: []string{"receiver-a"},
+		},
 	}
-	if diff.Deltas[0].Kind != types.DeltaModified {
-		t.Errorf("expected DeltaModified, got %v", diff.Deltas[0].Kind)
-	}
-	if diff.Deltas[0].Expected[0] != "receiver-a" {
-		t.Errorf("expected Expected='receiver-a', got %v", diff.Deltas[0].Expected)
-	}
-	if diff.Deltas[0].Actual[0] != "receiver-a-new" {
-		t.Errorf("expected Actual='receiver-a-new', got %v", diff.Deltas[0].Actual)
-	}
+
+	diff := ComputeDiff(tests, tests)
+	require.Empty(t, diff.Deltas)
 }
 
 func TestComputeDiff_Mixed(t *testing.T) {
-	oldTests := []*types.RegressionTest{
+	oldTests := []*types.TestCase{
 		{
+			Type:     "regression",
 			Name:     "Route 1",
 			Labels:   []map[string]string{{"team": "a"}},
 			Expected: []string{"receiver-a"},
 		},
 		{
+			Type:     "regression",
 			Name:     "Route 2",
 			Labels:   []map[string]string{{"team": "b"}},
 			Expected: []string{"receiver-b"},
 		},
 		{
+			Type:     "regression",
 			Name:     "Route 3",
 			Labels:   []map[string]string{{"team": "c"}},
 			Expected: []string{"receiver-c"},
 		},
 	}
-	newTests := []*types.RegressionTest{
+	newTests := []*types.TestCase{
 		// Route 1: removed
 		// Route 2: modified
 		{
+			Type:     "regression",
 			Name:     "Route 2 Modified",
 			Labels:   []map[string]string{{"team": "b"}},
 			Expected: []string{"receiver-b-new"},
 		},
 		// Route 3: unchanged
 		{
+			Type:     "regression",
 			Name:     "Route 3",
 			Labels:   []map[string]string{{"team": "c"}},
 			Expected: []string{"receiver-c"},
 		},
 		// Route 4: added
 		{
+			Type:     "regression",
 			Name:     "Route 4",
 			Labels:   []map[string]string{{"team": "d"}},
 			Expected: []string{"receiver-d"},
@@ -116,23 +125,14 @@ func TestComputeDiff_Mixed(t *testing.T) {
 	}
 
 	diff := ComputeDiff(oldTests, newTests)
-	if len(diff.Deltas) != 3 {
-		t.Fatalf("expected 3 deltas (1 removed, 1 modified, 1 added), got %d", len(diff.Deltas))
-	}
+	require.Len(t, diff.Deltas, 3)
 
-	// Count each kind
 	kinds := make(map[types.DeltaKind]int)
 	for _, delta := range diff.Deltas {
 		kinds[delta.Kind]++
 	}
 
-	if kinds[types.DeltaRemoved] != 1 {
-		t.Errorf("expected 1 removed, got %d", kinds[types.DeltaRemoved])
-	}
-	if kinds[types.DeltaModified] != 1 {
-		t.Errorf("expected 1 modified, got %d", kinds[types.DeltaModified])
-	}
-	if kinds[types.DeltaAdded] != 1 {
-		t.Errorf("expected 1 added, got %d", kinds[types.DeltaAdded])
-	}
+	require.Equal(t, 1, kinds[types.DeltaRemoved])
+	require.Equal(t, 1, kinds[types.DeltaModified])
+	require.Equal(t, 1, kinds[types.DeltaAdded])
 }
