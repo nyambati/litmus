@@ -8,6 +8,8 @@
 *.out
 bin/
 dist/
+ui/dist/
+!ui/dist/.gitkeep
 
 # Go workspace file
 go.work
@@ -42,3 +44,5 @@ tests
 config/*.yml
 config/*.yaml
 config/templates
+node_modules
+litmus
