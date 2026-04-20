@@ -15,6 +15,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/nyambati/litmus/internal/cli"
 	"github.com/nyambati/litmus/internal/codec"
 	"github.com/nyambati/litmus/internal/config"
 	"github.com/nyambati/litmus/internal/engine/behavioral"
@@ -203,6 +204,79 @@ func RunUIServer(port int, dev bool) error {
 		_ = json.NewEncoder(w).Encode(resp)
 	}))
 
+	mux.HandleFunc("/api/v1/suggest", withCORS(func(w http.ResponseWriter, r *http.Request) {
+		alertConfig, err := config.LoadAlertmanagerConfig(alertConfigPath)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Loading alertmanager config: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		labelMap := make(map[string]map[string]struct{})
+		addSuggestion := func(k, v string) {
+			if _, ok := labelMap[k]; !ok {
+				labelMap[k] = make(map[string]struct{})
+			}
+			if v != "" {
+				labelMap[k][v] = struct{}{}
+			}
+		}
+
+		var walkRoute func(*amconfig.Route)
+		walkRoute = func(route *amconfig.Route) {
+			if route == nil {
+				return
+			}
+			for k, v := range route.Match {
+				addSuggestion(k, v)
+			}
+			for k := range route.MatchRE {
+				addSuggestion(k, "")
+			}
+			for _, m := range route.Matchers {
+				// For matchers, we can at least get the label name.
+				// If it's a simple equality matcher, we could get the value.
+				addSuggestion(m.Name, "")
+			}
+			for _, child := range route.Routes {
+				walkRoute(child)
+			}
+		}
+		walkRoute(alertConfig.Route)
+
+		// Also collect from existing tests
+		loader := behavioral.NewBehavioralTestLoader()
+		tests, _ := loader.LoadFromDirectory(litmusConfig.Tests.Directory)
+		for _, test := range tests {
+			for k, v := range test.Alert.Labels {
+				addSuggestion(k, v)
+			}
+		}
+
+		type suggestResponse struct {
+			Labels []string            `json:"labels"`
+			Values map[string][]string `json:"values"`
+		}
+
+		resp := suggestResponse{
+			Labels: make([]string, 0, len(labelMap)),
+			Values: make(map[string][]string),
+		}
+
+		for k, vSet := range labelMap {
+			resp.Labels = append(resp.Labels, k)
+			values := make([]string, 0, len(vSet))
+			for v := range vSet {
+				values = append(values, v)
+			}
+			if len(values) > 0 {
+				resp.Values[k] = values
+			}
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+
 	regressionYAMLPath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.yml")
 
 	mux.HandleFunc("/api/v1/regressions", withCORS(func(w http.ResponseWriter, r *http.Request) {
@@ -353,6 +427,26 @@ func RunUIServer(port int, dev bool) error {
 
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(resp)
+	}))
+
+	mux.HandleFunc("/api/v1/snapshot", withCORS(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		update := r.URL.Query().Get("update") == "true"
+		
+		// Note: Using cli.RunSnapshot directly. 
+		// This logic could be moved to a shared package if we want to avoid server depending on cli.
+		// For now it's internal.
+		if err := cli.RunSnapshot(update, false); err != nil {
+			http.Error(w, fmt.Sprintf("Snapshot failed: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("OK"))
 	}))
 
 	mux.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
