@@ -71,7 +71,7 @@ type BehavioralResult struct {
 
 // RunCheck loads config, runs all validation stages, prints results, and returns
 // the exit code the CLI layer should pass to os.Exit (0 = all passed).
-func RunCheck(format string, showDiff bool) (CheckExitCode, error) {
+func RunCheck(format string, showDiff bool, tags []string) (CheckExitCode, error) {
 	start := time.Now()
 	ctx := context.Background()
 
@@ -93,8 +93,8 @@ func RunCheck(format string, showDiff bool) (CheckExitCode, error) {
 	router := pipeline.NewRouter(alertConfig.Route)
 
 	sanityResult := RunSanityChecks(alertConfig)
-	regressionResult := RunRegressionTests(ctx, litmusConfig, router)
-	behavioralResult := RunBehavioralTests(ctx, litmusConfig, router, alertConfig.InhibitRules)
+	regressionResult := RunRegressionTests(ctx, litmusConfig, router, tags)
+	behavioralResult := RunBehavioralTests(ctx, litmusConfig, router, alertConfig.InhibitRules, tags)
 
 	passed := sanityResult.Passed && regressionResult.Passed && behavioralResult.Passed
 
@@ -159,7 +159,7 @@ func RunSanityChecks(alertConfig *amconfig.Config) SanityResult {
 }
 
 // RunRegressionTests executes the regression baseline against the current router.
-func RunRegressionTests(ctx context.Context, litmusConfig *config.LitmusConfig, router *pipeline.Router) RegressionResult {
+func RunRegressionTests(ctx context.Context, litmusConfig *config.LitmusConfig, router *pipeline.Router, tags []string) RegressionResult {
 	result := RegressionResult{Passed: true}
 
 	baselinePath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.mpk")
@@ -171,6 +171,7 @@ func RunRegressionTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 		return result
 	}
 
+	baseline = filterByTags(baseline, tags)
 	result.Tests = len(baseline)
 	executor := snapshot.NewRegressionTestExecutor()
 
@@ -193,7 +194,7 @@ func RunRegressionTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 }
 
 // RunBehavioralTests loads and executes all behavioral unit tests.
-func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, router *pipeline.Router, inhibitRules []amconfig.InhibitRule) BehavioralResult {
+func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, router *pipeline.Router, inhibitRules []amconfig.InhibitRule, tags []string) BehavioralResult {
 	result := BehavioralResult{Passed: true}
 
 	loader := behavioral.NewBehavioralTestLoader()
@@ -205,6 +206,7 @@ func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 		return result
 	}
 
+	tests = filterByTags(tests, tags)
 	result.Tests = len(tests)
 	executor := behavioral.NewBehavioralTestExecutor(inhibitRules)
 
@@ -223,6 +225,29 @@ func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 	}
 
 	return result
+}
+
+// filterByTags filters test cases to only those with matching tags.
+// If tags is empty, all tests are returned. Uses OR semantics: a test
+// is included if it has at least one tag in the filter list.
+func filterByTags(tests []*types.TestCase, tags []string) []*types.TestCase {
+	if len(tags) == 0 {
+		return tests
+	}
+	tagSet := make(map[string]struct{}, len(tags))
+	for _, t := range tags {
+		tagSet[t] = struct{}{}
+	}
+	var out []*types.TestCase
+	for _, tc := range tests {
+		for _, tag := range tc.Tags {
+			if _, ok := tagSet[tag]; ok {
+				out = append(out, tc)
+				break
+			}
+		}
+	}
+	return out
 }
 
 // PrintCheckResult writes the formatted validation report to stdout.

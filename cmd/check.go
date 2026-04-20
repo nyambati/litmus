@@ -17,7 +17,8 @@ func newCheckCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			format, _ := cmd.Flags().GetString("format")
 			diff, _ := cmd.Flags().GetBool("diff")
-			code, err := cli.RunCheck(format, diff)
+			tags, _ := cmd.Flags().GetStringSlice("tags")
+			code, err := cli.RunCheck(format, diff, tags)
 			if err != nil {
 				return err
 			}
@@ -30,5 +31,6 @@ func newCheckCmd() *cobra.Command {
 
 	cmd.Flags().StringP("format", "f", "text", "Output format: text or json")
 	cmd.Flags().BoolP("diff", "d", false, "Show detailed behavioral delta for regression failures")
+	cmd.Flags().StringSliceP("tags", "t", nil, "run only tests matching these tags (comma-separated)")
 	return cmd
 }
