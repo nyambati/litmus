@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { cn } from "../../utils/persistence";
 
 interface Suggestions {
@@ -41,9 +41,12 @@ export const Autocomplete = ({
     filter = rest.join(delimiter).trim().replace(/^["']/, "");
   }
 
-  const list = type === "label" 
-    ? suggestions.labels.filter(l => l.startsWith(filter))
-    : (suggestions.values[activeLabel] || []).filter(v => v.startsWith(filter));
+  const list =
+    type === "label"
+      ? suggestions.labels.filter((l) => l.startsWith(filter))
+      : (suggestions.values[activeLabel] || []).filter((v) =>
+          v.startsWith(filter),
+        );
 
   useEffect(() => {
     setActiveIndex(0);
@@ -53,10 +56,12 @@ export const Autocomplete = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setActiveIndex(prev => (prev + 1) % Math.max(1, list.length));
+        setActiveIndex((prev) => (prev + 1) % Math.max(1, list.length));
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        setActiveIndex(prev => (prev - 1 + list.length) % Math.max(1, list.length));
+        setActiveIndex(
+          (prev) => (prev - 1 + list.length) % Math.max(1, list.length),
+        );
       } else if (e.key === "Enter" || e.key === "Tab") {
         if (list.length > 0) {
           e.preventDefault();
@@ -74,7 +79,7 @@ export const Autocomplete = ({
   if (list.length === 0) return null;
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className="absolute bottom-full mb-1 left-0 z-50 w-64 max-h-48 overflow-y-auto bg-[#1f2128] border border-[#34383e] rounded shadow-xl py-1"
     >
@@ -88,9 +93,9 @@ export const Autocomplete = ({
           key={item}
           className={cn(
             "w-full text-left px-3 py-1.5 text-xs font-mono transition-colors",
-            i === activeIndex 
-              ? "bg-[#f46800] text-white" 
-              : "text-[#d9d9d9] hover:bg-[#ffffff08]"
+            i === activeIndex
+              ? "bg-[#f46800] text-white"
+              : "text-[#d9d9d9] hover:bg-[#ffffff08]",
           )}
           onClick={() => onSelect(item)}
         >

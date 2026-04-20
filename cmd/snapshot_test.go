@@ -53,7 +53,7 @@ receivers:
 	require.FileExists(t, filepath.Join("regressions", "regressions.litmus.yml"))
 }
 
-func TestSnapshotCommand_DriftDetection(t *testing.T) {
+func TestSnapshotCommand_DriftDetection_Graceful(t *testing.T) {
 	tmpDir := t.TempDir()
 	oldCwd, err := os.Getwd()
 	require.NoError(t, err)
@@ -110,9 +110,74 @@ receivers:
 `), 0600)
 	require.NoError(t, err)
 
-	// Run snapshot again without --update (should fail due to drift)
+	// Run snapshot again without --strict (should succeed with warning)
 	cmd = newSnapshotCmd()
 	cmd.SetArgs([]string{})
+	err = cmd.Execute()
+
+	require.NoError(t, err)
+}
+
+func TestSnapshotCommand_Strict_DriftDetection(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldCwd) }()
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	// Create config
+	err = os.WriteFile(".litmus.yaml", []byte(`
+config:
+  directory: "config"
+  file: "alertmanager.yml"
+global_labels:
+  severity: "warning"
+regression:
+  max_samples: 5
+  directory: "regressions"
+tests:
+  directory: "tests/"
+`), 0600)
+	require.NoError(t, err)
+
+	err = os.MkdirAll("config", 0755)
+	require.NoError(t, err)
+	err = os.WriteFile("config/alertmanager.yml", []byte(`
+global:
+  resolve_timeout: 5m
+route:
+  receiver: 'default'
+receivers:
+  - name: 'default'
+`), 0600)
+	require.NoError(t, err)
+
+	// Generate initial baseline
+	cmd := newSnapshotCmd()
+	cmd.SetArgs([]string{})
+	err = cmd.Execute()
+	require.NoError(t, err)
+
+	// Modify alertmanager config
+	err = os.WriteFile("config/alertmanager.yml", []byte(`
+global:
+  resolve_timeout: 5m
+route:
+  receiver: 'default'
+  routes:
+    - receiver: 'api-team'
+      match:
+        service: 'api'
+receivers:
+  - name: 'default'
+  - name: 'api-team'
+`), 0600)
+	require.NoError(t, err)
+
+	// Run snapshot with --strict (should fail due to drift)
+	cmd = newSnapshotCmd()
+	cmd.SetArgs([]string{"--strict"})
 	err = cmd.Execute()
 
 	require.Error(t, err)

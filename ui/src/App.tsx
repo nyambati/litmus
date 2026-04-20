@@ -41,7 +41,7 @@ function App() {
   const [queryHistory, setQueryHistory] = useState<QueryHistoryEntry[]>(
     () => loadCache<QueryHistoryEntry[]>(HISTORY_KEY)?.data ?? [],
   );
-  const [explorerLabels, setExplorerLabels] = useState();
+  const [explorerLabels, setExplorerLabels] = useState("");
   const [explorerRunTrigger, setExplorerRunTrigger] = useState(0);
 
   const saveQuery = (query: string, receivers: string[]) => {
