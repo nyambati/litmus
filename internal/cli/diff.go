@@ -48,7 +48,7 @@ func RunDiff() error {
 		return fmt.Errorf("synthesis failed: %w", err)
 	}
 
-	currentTests := buildRegressionTests(outcomes, litmusConfig.GlobalLabels)
+	currentTests := BuildRegressionTests(outcomes, litmusConfig.GlobalLabels)
 
 	baselinePath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.mpk")
 	existingTests, err := LoadBaseline(baselinePath)

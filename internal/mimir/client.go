@@ -65,7 +65,10 @@ func (c *Client) Push(ctx context.Context, payload PushPayload) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("mimir API returned %d (failed to read response: %w)", resp.StatusCode, err)
+		}
 		return fmt.Errorf("mimir API returned %d: %s", resp.StatusCode, string(respBody))
 	}
 

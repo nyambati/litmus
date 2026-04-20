@@ -31,7 +31,7 @@ func (r *Router) Match(labels model.LabelSet) []string {
 // walk implements the Alertmanager routing algorithm recursively.
 // Returns the matched leaf routes (or this route as fallback).
 func (r *Router) walk(route *config.Route, labels model.LabelSet) []*config.Route {
-	if !routeMatches(route, labels) {
+	if !RouteMatches(route, labels) {
 		return nil
 	}
 
@@ -52,9 +52,9 @@ func (r *Router) walk(route *config.Route, labels model.LabelSet) []*config.Rout
 	return matched
 }
 
-// routeMatches checks all three matcher formats against the label set.
+// RouteMatches checks all three matcher formats against the label set.
 // An empty matcher set matches everything (e.g. root route).
-func routeMatches(route *config.Route, labels model.LabelSet) bool {
+func RouteMatches(route *config.Route, labels model.LabelSet) bool {
 	for k, v := range route.Match {
 		if string(labels[model.LabelName(k)]) != v {
 			return false

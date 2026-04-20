@@ -18,9 +18,10 @@ import (
 )
 
 // RunSnapshot captures current routing behavior as a regression baseline.
-// If update is false and a baseline exists, drift causes an error.
-// If diff is true, prints a human-readable YAML diff and exits without writing.
-func RunSnapshot(update, diff bool) error {
+// If update is false and a baseline exists, drift is checked.
+// In strict mode, drift causes an error and prints a diff.
+// Otherwise, drift only prints a warning and does not block the snapshot creation.
+func RunSnapshot(update, strict bool) error {
 	litmusConfig, err := config.LoadConfig()
 	if err != nil {
 		return fmt.Errorf("loading litmus config: %w", err)
@@ -50,23 +51,24 @@ func RunSnapshot(update, diff bool) error {
 		fmt.Fprintf(os.Stderr, "WARN: synthesis produced zero outcomes; baseline will be empty\n")
 	}
 
-	regTests := buildRegressionTests(outcomes, litmusConfig.GlobalLabels)
+	regTests := BuildRegressionTests(outcomes, litmusConfig.GlobalLabels)
 
 	baselinePath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.mpk")
 
-	if diff {
-		return previewDiff(baselinePath, regTests)
+	existing, err := LoadBaseline(baselinePath)
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("reading existing baseline: %w", err)
 	}
 
-	if !update {
-		existing, err := LoadBaseline(baselinePath)
-		if err != nil && !os.IsNotExist(err) {
-			return fmt.Errorf("reading existing baseline: %w", err)
-		}
-		if existing != nil {
-			d := snapshot.ComputeDiff(existing, regTests)
-			if len(d.Deltas) > 0 {
-				return fmt.Errorf("drift detected in routing behavior: use --update to accept changes, or 'litmus diff' to inspect")
+	if existing != nil {
+		d := snapshot.ComputeDiff(existing, regTests)
+		if len(d.Deltas) > 0 {
+			if strict {
+				PrintDiffReport(d)
+				return fmt.Errorf("drift detected in routing behavior")
+			}
+			if !update {
+				fmt.Fprintf(os.Stderr, "WARN: drift detected in routing behavior; run with --update to accept changes, or 'litmus diff' to inspect\n")
 			}
 		}
 	}
@@ -75,46 +77,37 @@ func RunSnapshot(update, diff bool) error {
 		return fmt.Errorf("creating regression directory: %w", err)
 	}
 
-	mpkFile, err := os.Create(baselinePath)
-	if err != nil {
-		return fmt.Errorf("creating baseline file: %w", err)
-	}
-	defer mpkFile.Close()
+	// Protect mpk baseline: only write if it doesn't exist OR update is explicit
+	if existing == nil || update {
+		mpkFile, err := os.Create(baselinePath)
+		if err != nil {
+			return fmt.Errorf("creating baseline file: %w", err)
+		}
+		defer mpkFile.Close()
 
-	if err := codec.EncodeMsgPack(mpkFile, regTests); err != nil {
-		return fmt.Errorf("writing baseline: %w", err)
+		if err := codec.EncodeMsgPack(mpkFile, regTests); err != nil {
+			return fmt.Errorf("writing baseline: %w", err)
+		}
 	}
 
+	// Mirror is not protected; always reflects current state
 	ymlPath := strings.Replace(baselinePath, "mpk", "yml", 1)
 	ymlData, err := yaml.Marshal(regTests)
 	if err != nil {
 		return fmt.Errorf("marshaling YAML mirror: %w", err)
 	}
+
 	if err := os.WriteFile(ymlPath, ymlData, 0600); err != nil {
 		return fmt.Errorf("writing YAML mirror: %w", err)
 	}
 
-	fmt.Printf("✓ Generated baseline: %s\n", baselinePath) //nolint:forbidigo
-	fmt.Printf("✓ YAML mirror: %s\n", ymlPath)             //nolint:forbidigo
+	fmt.Println("✓ Snapshot processed successfully") //nolint:forbidigo
+
 	return nil
 }
 
-// previewDiff loads the existing mpk baseline and prints a structural diff.
-func previewDiff(baselinePath string, current []*types.TestCase) error {
-	existing, err := LoadBaseline(baselinePath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("no baseline found at %s — run 'litmus snapshot' first", baselinePath)
-		}
-		return fmt.Errorf("reading baseline: %w", err)
-	}
-
-	diff := snapshot.ComputeDiff(existing, current)
-	PrintDiffReport(diff)
-	return nil
-}
-
-func buildRegressionTests(outcomes []*snapshot.SynthesisResult, globalLabels map[string]string) []*types.TestCase {
+// BuildRegressionTests converts synthesis outcomes into executable regression test cases.
+func BuildRegressionTests(outcomes []*snapshot.SynthesisResult, globalLabels map[string]string) []*types.TestCase {
 	tests := make([]*types.TestCase, 0, len(outcomes))
 	for _, outcome := range outcomes {
 		labels := make(map[string]string)

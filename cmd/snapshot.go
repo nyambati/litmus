@@ -14,12 +14,12 @@ func newSnapshotCmd() *cobra.Command {
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			update, _ := cmd.Flags().GetBool("update")
-			diff, _ := cmd.Flags().GetBool("diff")
-			return cli.RunSnapshot(update, diff)
+			strict, _ := cmd.Flags().GetBool("strict")
+			return cli.RunSnapshot(update, strict)
 		},
 	}
 
 	cmd.Flags().BoolP("update", "u", false, "Update baseline with current behavior")
-	cmd.Flags().BoolP("diff", "d", false, "Show diff between existing baseline and current routing")
+	cmd.Flags().BoolP("strict", "s", false, "Fail and show diff if drift is detected (useful for CI)")
 	return cmd
 }
