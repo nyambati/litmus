@@ -1,18 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  RefreshCw,
-  GitCompare,
-  CheckCircle2,
-  AlertTriangle,
-  ShieldCheck,
-  Tag,
-  ArrowRight,
-  ChevronDown,
-  Wand2,
-  Save,
-  Play,
-  X,
-} from "lucide-react";
+import { CheckCircle2, AlertTriangle, ShieldCheck, Tag, ArrowRight, ChevronDown, Save, Play, X } from "lucide-react";
 import { cn, API, loadCache, saveCache } from "../../utils/persistence";
 import { GfSpinner } from "../ui/Spinner";
 import { StatusBadge } from "../ui/Status";
@@ -47,7 +34,7 @@ export interface DiffResult {
   results: Array<{
     name: string;
     pass: boolean;
-    error?: string;
+    kind?: string;
     labels?: Record<string, string>;
     expected?: string[];
     route_path?: RouteStep[];
@@ -56,7 +43,7 @@ export interface DiffResult {
   }>;
 }
 
-type ActionType = "analyze" | "update" | "diff";
+type ActionType = "analyze" | "update";
 
 export const RegressionPage = ({
   onDiffRun,
@@ -69,9 +56,10 @@ export const RegressionPage = ({
     _diffCache?.ts ?? null,
   );
   const [loading, setLoading] = useState(false);
-  const [filter, setFilter] = useState<"drifted" | "passing">("drifted");
-  const [activeAction, setActiveAction] = useState<ActionType>("diff");
+  const [filter, setFilter] = useState<"all" | "passing">("all");
+  const [activeAction, setActiveAction] = useState<ActionType>("analyze");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [notification, setNotification] = useState<{
     type: "success" | "error";
     message: string;
@@ -84,7 +72,7 @@ export const RegressionPage = ({
     }
   }, [notification]);
 
-  const runDiff = async (silent = false) => {
+  const runAnalyse = async (silent = false) => {
     setLoading(true);
     if (!silent) setNotification(null);
     try {
@@ -98,11 +86,11 @@ export const RegressionPage = ({
       if (!silent) {
         setNotification({
           type: "success",
-          message: "Drift analysis completed",
+          message: "Routing analysis completed",
         });
       }
     } catch (err) {
-      console.error("Failed to run diff:", err);
+      console.error("Failed to run analysis:", err);
       setNotification({
         type: "error",
         message: `Analysis failed: ${err}`,
@@ -113,31 +101,32 @@ export const RegressionPage = ({
   };
 
   const handleAction = async () => {
-    if (activeAction === "diff") {
-      runDiff();
+    if (activeAction === "analyze") {
+      runAnalyse();
       return;
     }
+    setShowConfirm(true);
+  };
 
+  const performUpdate = async () => {
+    setShowConfirm(false);
     setLoading(true);
     setNotification(null);
     try {
-      const isUpdate = activeAction === "update";
-      const resp = await fetch(`${API}/api/v1/snapshot?update=${isUpdate}`, {
+      const resp = await fetch(`${API}/api/v1/snapshot?update=true`, {
         method: "POST",
       });
       if (!resp.ok) throw new Error(await resp.text());
 
       setNotification({
         type: "success",
-        message: isUpdate
-          ? "Baseline updated successfully"
-          : "Analysis completed",
+        message: "Baseline updated successfully",
       });
 
-      // After snapshot/update, we should run diff to see the current state
-      await runDiff(true);
+      // After update, refresh analysis to show clean state
+      await runAnalyse(true);
     } catch (err) {
-      console.error(`Failed to ${activeAction}:`, err);
+      console.error(`Failed to update baseline:`, err);
       setNotification({
         type: "error",
         message: String(err),
@@ -148,31 +137,27 @@ export const RegressionPage = ({
   };
 
   useEffect(() => {
-    if (!_diffCache) runDiff(true);
+    if (!_diffCache) runAnalyse(true);
   }, []);
 
   const visibleResults =
-    diff?.results.filter((r) => (filter === "drifted" ? !r.pass : r.pass)) ??
-    [];
+    diff?.results.filter((r) => {
+      if (filter === "all") return r.pass === false || r.kind !== "passing";
+      return r.pass === true;
+    }) ?? [];
 
   const actions = [
     {
-      id: "diff" as const,
-      label: "Diff",
-      icon: RefreshCw,
-      desc: "Compare against baseline",
-    },
-    {
       id: "analyze" as const,
-      label: "Analyze",
-      icon: Wand2,
-      desc: "Generate new baseline (dry run)",
+      label: "Analyse",
+      icon: Play,
+      desc: "Compare current routing with baseline",
     },
     {
       id: "update" as const,
-      label: "Update",
+      label: "Update Baseline",
       icon: Save,
-      desc: "Update baseline with changes",
+      desc: "Accept changes and update baseline",
     },
   ];
 
@@ -183,6 +168,43 @@ export const RegressionPage = ({
     <div className="flex-1 flex flex-col h-screen min-h-0 bg-[#181b1f]">
       <Header title="Regression" subtitle="Baseline Comparison" />
       <main className="flex-1 p-6 overflow-y-auto">
+        {/* Confirm Modal */}
+        {showConfirm && (
+          <>
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-[100]" onClick={() => setShowConfirm(false)} />
+            <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-[#1f2128] border border-[#34383e] rounded shadow-2xl z-[101] overflow-hidden animate-in zoom-in-95 duration-200">
+              <div className="px-6 py-4 border-b border-[#34383e] flex items-center justify-between bg-[#111217]">
+                <h3 className="text-[#d9d9d9] font-semibold flex items-center gap-2">
+                  <Save size={16} className="text-[#f46800]" />
+                  Update Baseline
+                </h3>
+                <button onClick={() => setShowConfirm(false)} className="text-[#8e9193] hover:text-[#d9d9d9] transition-colors">
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="px-6 py-5">
+                <p className="text-[#d9d9d9] text-sm leading-relaxed">
+                  Are you sure you want to update the regression baseline? This will overwrite the current baseline with the detected routing behavior.
+                </p>
+                <div className="mt-6 flex items-center justify-end gap-3">
+                  <button 
+                    onClick={() => setShowConfirm(false)}
+                    className="px-4 py-[7px] rounded border border-[#34383e] text-[#d9d9d9] text-sm font-medium hover:bg-[#ffffff08] transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={performUpdate}
+                    className="px-4 py-[7px] rounded bg-[#f46800] hover:bg-[#ff7f2a] text-white text-sm font-semibold transition-colors"
+                  >
+                    Confirm Update
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
         {/* Notifications */}
         {notification && (
           <div
@@ -234,7 +256,7 @@ export const RegressionPage = ({
                 {loading ? (
                   <GfSpinner size="sm" />
                 ) : (
-                  <Play size={12} fill="currentColor" />
+                  <currentAction.icon size={12} fill={currentAction.id === "analyze" ? "currentColor" : "none"} />
                 )}
                 {loading ? "Processing…" : currentAction.label}
               </button>
@@ -307,16 +329,16 @@ export const RegressionPage = ({
         {/* Idle */}
         {!loading && !diff && (
           <EmptyState
-            icon={GitCompare}
+            icon={Play}
             title="No baseline comparison run"
             description="Run an analysis to compare current routing against the snapshot baseline"
             action={
               <PrimaryButton
                 onClick={handleAction}
                 loading={loading}
-                icon={<currentAction.icon size={12} />}
+                icon={<Play size={12} fill="currentColor" />}
               >
-                {currentAction.label}
+                Analyse
               </PrimaryButton>
             }
           />
@@ -340,8 +362,8 @@ export const RegressionPage = ({
             <FilterTabs
               tabs={[
                 {
-                  label: "Drifted",
-                  value: "drifted" as const,
+                  label: "All Changes",
+                  value: "all" as const,
                   count: diff.drifted,
                 },
                 {
@@ -358,7 +380,7 @@ export const RegressionPage = ({
             <div className="space-y-2">
               {visibleResults.length === 0 && (
                 <div className="py-8 text-center text-[#8e9193] text-sm">
-                  No {filter} results
+                  {filter === "all" ? "No changes detected" : "No passing results"}
                 </div>
               )}
               {visibleResults.map((result, i) => (
@@ -366,7 +388,11 @@ export const RegressionPage = ({
                   key={`${result.name}-${i}`}
                   className={cn(
                     "bg-[#1f2128] border border-[#2c3235] border-l-[3px] rounded-sm overflow-hidden",
-                    result.pass ? "border-l-[#73bf69]" : "border-l-[#f5a623]",
+                    result.pass 
+                      ? "border-l-[#73bf69]" 
+                      : result.kind === "added" 
+                        ? "border-l-[#5794f2]" 
+                        : "border-l-[#f5a623]",
                   )}
                 >
                   {/* Row header */}
@@ -374,13 +400,27 @@ export const RegressionPage = ({
                     <div className="shrink-0">
                       {result.pass ? (
                         <CheckCircle2 size={14} className="text-[#73bf69]" />
+                      ) : result.kind === "added" ? (
+                        <div className="w-3.5 h-3.5 rounded-full bg-[#5794f2]" />
                       ) : (
                         <AlertTriangle size={14} className="text-[#f5a623]" />
                       )}
                     </div>
-                    <p className="flex-1 text-[#d9d9d9] text-sm font-medium truncate">
-                      {result.name}
-                    </p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-[#d9d9d9] text-sm font-medium truncate">
+                          {result.name}
+                        </p>
+                        {result.kind && !result.pass && (
+                          <span className={cn(
+                            "text-[10px] font-bold uppercase tracking-tighter px-1 rounded-[2px]",
+                            result.kind === "added" ? "bg-[#5794f2]/20 text-[#5794f2]" : "bg-[#f5a623]/20 text-[#f5a623]"
+                          )}>
+                            {result.kind}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                     <StatusBadge pass={result.pass} drifted={!result.pass} />
                   </div>
 
@@ -404,15 +444,19 @@ export const RegressionPage = ({
                         )}
 
                       {/* Expected → Actual */}
-                      {result.expected && (
+                      {(result.expected || result.actual) && (
                         <div className="flex items-center gap-2 flex-wrap font-mono text-xs">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-[11px] text-[#8e9193]/50 uppercase tracking-wider font-sans font-bold">
                               baseline
                             </span>
-                            {result.expected.map((r) => (
-                              <ReceiverChip key={r} name={r} variant="blue" />
-                            ))}
+                            {result.expected && result.expected.length > 0 ? (
+                              result.expected.map((r) => (
+                                <ReceiverChip key={r} name={r} variant="blue" />
+                              ))
+                            ) : (
+                                <span className="text-[#8e9193]/40 italic text-[11px]">none</span>
+                            )}
                           </div>
                           <ArrowRight
                             size={13}
@@ -422,8 +466,8 @@ export const RegressionPage = ({
                             <span className="text-[11px] text-[#8e9193]/50 uppercase tracking-wider font-sans font-bold">
                               current
                             </span>
-                            {(result.actual || []).length > 0 ? (
-                              (result.actual || []).map((r) => (
+                            {result.actual && result.actual.length > 0 ? (
+                              result.actual.map((r) => (
                                 <ReceiverChip
                                   key={r}
                                   name={r}
@@ -536,12 +580,6 @@ export const RegressionPage = ({
                             </div>
                           ))}
                         </div>
-                      )}
-
-                      {result.error && !result.expected && (
-                        <p className="font-mono text-xs text-[#f2495c]/80">
-                          {result.error}
-                        </p>
                       )}
                     </div>
                   )}

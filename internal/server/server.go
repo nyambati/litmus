@@ -21,6 +21,7 @@ import (
 	"github.com/nyambati/litmus/internal/engine/behavioral"
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/engine/snapshot"
+	"github.com/nyambati/litmus/internal/stores"
 	"github.com/nyambati/litmus/internal/types"
 	amconfig "github.com/prometheus/alertmanager/config"
 	"github.com/prometheus/common/model"
@@ -341,21 +342,34 @@ func RunUIServer(port int, dev bool) error {
 			return
 		}
 
-		// mpk is the true baseline; yml reflects the current alertmanager state
-		baseline, err := loadBaseline(regressionMpkPath)
+		// 1. Synthesize current routing behavior into tests
+		router := pipeline.NewRouter(alertConfig.Route)
+		runner := pipeline.NewRunner(stores.NewSilenceStore(nil), stores.NewAlertStore(), router, nil)
+		walker := snapshot.NewRouteWalker(alertConfig.Route)
+		paths := walker.FindTerminalPaths()
+
+		synthesizer := snapshot.NewSnapshotSynthesizer(runner)
+		outcomes, err := synthesizer.DiscoverOutcomes(context.Background(), paths)
 		if err != nil {
+			http.Error(w, fmt.Sprintf("Synthesis failed: %v", err), http.StatusInternalServerError)
+			return
+		}
+		currentTests := cli.BuildRegressionTests(outcomes, litmusConfig.GlobalLabels)
+
+		// 2. Load existing baseline
+		baseline, err := loadBaseline(regressionMpkPath)
+		if err != nil && !os.IsNotExist(err) {
 			http.Error(w, fmt.Sprintf("Loading baseline: %v", err), http.StatusInternalServerError)
 			return
 		}
 
-		router := pipeline.NewRouter(alertConfig.Route)
-		executor := snapshot.NewRegressionTestExecutor()
-		raw := executor.Execute(context.Background(), baseline, router)
+		// 3. Compute structural diff
+		diff := snapshot.ComputeDiff(baseline, currentTests)
 
 		type deltaResult struct {
 			Name       string            `json:"name"`
 			Pass       bool              `json:"pass"`
-			Error      string            `json:"error,omitempty"`
+			Kind       string            `json:"kind,omitempty"`
 			Labels     map[string]string `json:"labels,omitempty"`
 			Expected   []string          `json:"expected,omitempty"`
 			Actual     []string          `json:"actual,omitempty"`
@@ -371,59 +385,81 @@ func RunUIServer(port int, dev bool) error {
 		}
 
 		resp := diffResponse{
-			Total:   len(raw),
-			Results: make([]*deltaResult, 0, len(raw)),
+			Total:   len(currentTests),
+			Results: make([]*deltaResult, 0),
 		}
 
-		for _, res := range raw {
-			if res.Pass {
-				resp.Passed++
-			} else {
-				resp.Drifted++
-			}
+		driftedMap := make(map[string]bool)
 
+		// Map deltas to results
+		for _, delta := range diff.Deltas {
 			dr := &deltaResult{
-				Name:     res.Name,
-				Pass:     res.Pass,
-				Error:    res.Error,
-				Labels:   res.Labels,
-				Expected: res.Expected,
-				Actual:   res.Actual,
+				Name:     fmt.Sprintf("%s route", delta.Kind),
+				Pass:     false,
+				Kind:     string(delta.Kind),
+				Labels:   delta.Labels,
+				Expected: delta.Expected,
+				Actual:   delta.Actual,
 			}
 
-			// For drifted tests, trace current route and identify why expected routes no longer match
-			if !res.Pass && res.Labels != nil {
+			// Trace route for modified/added to show path
+			if delta.Kind != types.DeltaRemoved {
 				labelSet := make(model.LabelSet)
-				for k, v := range res.Labels {
+				for k, v := range delta.Labels {
 					labelSet[model.LabelName(k)] = model.LabelValue(v)
 				}
-
 				dr.RoutePath = flattenMatchedPath(traceRoute(alertConfig.Route, labelSet))
 
-				for _, expectedReceiver := range res.Expected {
-					routes := findRoutesByReceiver(alertConfig.Route, expectedReceiver)
-					if len(routes) == 0 {
-						dr.WhyDrifted = append(dr.WhyDrifted, RouteDrift{
-							Receiver: expectedReceiver,
-							Found:    false,
-						})
-						continue
-					}
-					for _, route := range routes {
-						mismatches := identifyMatcherFailures(route, labelSet)
-						if len(mismatches) > 0 {
+				// Mark as drifted using label key (similar to diff.go logic)
+				driftedMap[snapshot.LabelKey(delta.Labels)] = true
+
+				// For modified, try to identify why it drifted from expected
+				if delta.Kind == types.DeltaModified {
+					for _, expectedReceiver := range delta.Expected {
+						routes := findRoutesByReceiver(alertConfig.Route, expectedReceiver)
+						if len(routes) == 0 {
 							dr.WhyDrifted = append(dr.WhyDrifted, RouteDrift{
-								Receiver:   expectedReceiver,
-								Found:      true,
-								Mismatches: mismatches,
+								Receiver: expectedReceiver,
+								Found:    false,
 							})
+							continue
+						}
+						for _, route := range routes {
+							mismatches := identifyMatcherFailures(route, labelSet)
+							if len(mismatches) > 0 {
+								dr.WhyDrifted = append(dr.WhyDrifted, RouteDrift{
+									Receiver:   expectedReceiver,
+									Found:      true,
+									Mismatches: mismatches,
+								})
+							}
 						}
 					}
 				}
 			}
 
 			resp.Results = append(resp.Results, dr)
+			resp.Drifted++
 		}
+
+		// Add passing tests (unchanged ones)
+		for _, test := range currentTests {
+			if len(test.Labels) == 0 {
+				continue
+			}
+			key := snapshot.LabelKey(test.Labels[0])
+			if !driftedMap[key] {
+				resp.Results = append(resp.Results, &deltaResult{
+					Name:   test.Name,
+					Pass:   true,
+					Kind:   "passing",
+					Labels: test.Labels[0],
+					Actual: test.Expected,
+				})
+			}
+		}
+
+		resp.Passed = resp.Total - resp.Drifted
 
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(resp)
@@ -436,8 +472,8 @@ func RunUIServer(port int, dev bool) error {
 		}
 
 		update := r.URL.Query().Get("update") == "true"
-		
-		// Note: Using cli.RunSnapshot directly. 
+
+		// Note: Using cli.RunSnapshot directly.
 		// This logic could be moved to a shared package if we want to avoid server depending on cli.
 		// For now it's internal.
 		if err := cli.RunSnapshot(update, false); err != nil {

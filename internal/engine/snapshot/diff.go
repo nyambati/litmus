@@ -17,11 +17,11 @@ func ComputeDiff(oldTests, newTests []*types.TestCase) *types.RegressionDiff {
 	newIdx := indexByLabels(newTests)
 
 	// Identify Added and Modified
-	for labelKey, newTest := range newIdx {
+	for lKey, newTest := range newIdx {
 		if len(newTest.Labels) == 0 {
 			continue
 		}
-		oldTest, exists := oldIdx[labelKey]
+		oldTest, exists := oldIdx[lKey]
 		if !exists {
 			diff.Deltas = append(diff.Deltas, types.RegressionDelta{
 				Kind:   types.DeltaAdded,
@@ -42,11 +42,11 @@ func ComputeDiff(oldTests, newTests []*types.TestCase) *types.RegressionDiff {
 	}
 
 	// Identify Removed
-	for labelKey, oldTest := range oldIdx {
+	for lKey, oldTest := range oldIdx {
 		if len(oldTest.Labels) == 0 {
 			continue
 		}
-		if _, exists := newIdx[labelKey]; !exists {
+		if _, exists := newIdx[lKey]; !exists {
 			diff.Deltas = append(diff.Deltas, types.RegressionDelta{
 				Kind:     types.DeltaRemoved,
 				Labels:   oldTest.Labels[0],
@@ -65,14 +65,14 @@ func indexByLabels(tests []*types.TestCase) map[string]*types.TestCase {
 		if len(t.Labels) == 0 {
 			continue
 		}
-		key := labelKey(t.Labels[0])
+		key := LabelKey(t.Labels[0])
 		idx[key] = t
 	}
 	return idx
 }
 
-// labelKey produces a stable string key for a label map.
-func labelKey(m map[string]string) string {
+// LabelKey produces a stable string key for a label map.
+func LabelKey(m map[string]string) string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)

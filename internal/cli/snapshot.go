@@ -50,7 +50,7 @@ func RunSnapshot(update, diff bool) error {
 		fmt.Fprintf(os.Stderr, "WARN: synthesis produced zero outcomes; baseline will be empty\n")
 	}
 
-	regTests := buildRegressionTests(outcomes, litmusConfig.GlobalLabels)
+	regTests := BuildRegressionTests(outcomes, litmusConfig.GlobalLabels)
 
 	baselinePath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.mpk")
 
@@ -114,7 +114,8 @@ func previewDiff(baselinePath string, current []*types.TestCase) error {
 	return nil
 }
 
-func buildRegressionTests(outcomes []*snapshot.SynthesisResult, globalLabels map[string]string) []*types.TestCase {
+// BuildRegressionTests converts synthesis outcomes into executable regression test cases.
+func BuildRegressionTests(outcomes []*snapshot.SynthesisResult, globalLabels map[string]string) []*types.TestCase {
 	tests := make([]*types.TestCase, 0, len(outcomes))
 	for _, outcome := range outcomes {
 		labels := make(map[string]string)
