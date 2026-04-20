@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/nyambati/litmus/internal/cli"
-	"github.com/nyambati/litmus/internal/codec"
 	"github.com/nyambati/litmus/internal/config"
 	"github.com/nyambati/litmus/internal/engine/behavioral"
 	"github.com/nyambati/litmus/internal/engine/pipeline"
@@ -25,7 +24,6 @@ import (
 	"github.com/nyambati/litmus/internal/types"
 	amconfig "github.com/prometheus/alertmanager/config"
 	"github.com/prometheus/common/model"
-	"gopkg.in/yaml.v3"
 )
 
 var staticFS fs.FS
@@ -104,7 +102,9 @@ func RunUIServer(port int, dev bool) error {
 			Ready:      true,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(resp)
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			log.Printf("failed to encode config response: %v", err)
+		}
 	}))
 
 	mux.HandleFunc("/api/v1/tests", withCORS(func(w http.ResponseWriter, r *http.Request) {
@@ -116,7 +116,9 @@ func RunUIServer(port int, dev bool) error {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(tests)
+		if err := json.NewEncoder(w).Encode(tests); err != nil {
+			log.Printf("failed to encode tests response: %v", err)
+		}
 	}))
 
 	mux.HandleFunc("/api/v1/tests/run", withCORS(func(w http.ResponseWriter, r *http.Request) {
@@ -147,7 +149,9 @@ func RunUIServer(port int, dev bool) error {
 				if test.Name == name {
 					result := executor.Execute(context.Background(), test, router)
 					w.Header().Set("Content-Type", "application/json")
-					_ = json.NewEncoder(w).Encode([]*types.TestResult{result})
+					if err := json.NewEncoder(w).Encode([]*types.TestResult{result}); err != nil {
+						log.Printf("failed to encode test result: %v", err)
+					}
 					return
 				}
 			}
@@ -161,7 +165,9 @@ func RunUIServer(port int, dev bool) error {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(results)
+		if err := json.NewEncoder(w).Encode(results); err != nil {
+			log.Printf("failed to encode test results: %v", err)
+		}
 	}))
 
 	mux.HandleFunc("/api/v1/evaluate", withCORS(func(w http.ResponseWriter, r *http.Request) {
@@ -202,7 +208,9 @@ func RunUIServer(port int, dev bool) error {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(resp)
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			log.Printf("failed to encode eval response: %v", err)
+		}
 	}))
 
 	mux.HandleFunc("/api/v1/suggest", withCORS(func(w http.ResponseWriter, r *http.Request) {
@@ -246,8 +254,14 @@ func RunUIServer(port int, dev bool) error {
 
 		// Also collect from existing tests
 		loader := behavioral.NewBehavioralTestLoader()
-		tests, _ := loader.LoadFromDirectory(litmusConfig.Tests.Directory)
+		tests, err := loader.LoadFromDirectory(litmusConfig.Tests.Directory)
+		if err != nil {
+			log.Printf("warning: failed to load tests for suggestions: %v", err)
+		}
 		for _, test := range tests {
+			if test.Alert == nil {
+				continue
+			}
 			for k, v := range test.Alert.Labels {
 				addSuggestion(k, v)
 			}
@@ -275,20 +289,24 @@ func RunUIServer(port int, dev bool) error {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(resp)
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			log.Printf("failed to encode suggestions response: %v", err)
+		}
 	}))
 
 	regressionYAMLPath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.yml")
 
 	mux.HandleFunc("/api/v1/regressions", withCORS(func(w http.ResponseWriter, r *http.Request) {
-		tests, err := loadBaselineYAML(regressionYAMLPath)
+		tests, err := cli.LoadBaselineYAML(regressionYAMLPath)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Loading regressions: %v", err), http.StatusInternalServerError)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(tests)
+		if err := json.NewEncoder(w).Encode(tests); err != nil {
+			log.Printf("failed to encode regressions response: %v", err)
+		}
 	}))
 
 	mux.HandleFunc("/api/v1/regressions/run", withCORS(func(w http.ResponseWriter, r *http.Request) {
@@ -303,7 +321,7 @@ func RunUIServer(port int, dev bool) error {
 			return
 		}
 
-		tests, err := loadBaselineYAML(regressionYAMLPath)
+		tests, err := cli.LoadBaselineYAML(regressionYAMLPath)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Loading regressions: %v", err), http.StatusInternalServerError)
 			return
@@ -330,7 +348,9 @@ func RunUIServer(port int, dev bool) error {
 		raw := executor.Execute(context.Background(), tests, router)
 
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(raw)
+		if err := json.NewEncoder(w).Encode(raw); err != nil {
+			log.Printf("failed to encode regression results: %v", err)
+		}
 	}))
 
 	regressionMpkPath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.mpk")
@@ -357,7 +377,7 @@ func RunUIServer(port int, dev bool) error {
 		currentTests := cli.BuildRegressionTests(outcomes, litmusConfig.GlobalLabels)
 
 		// 2. Load existing baseline
-		baseline, err := loadBaseline(regressionMpkPath)
+		baseline, err := cli.LoadBaseline(regressionMpkPath)
 		if err != nil && !os.IsNotExist(err) {
 			http.Error(w, fmt.Sprintf("Loading baseline: %v", err), http.StatusInternalServerError)
 			return
@@ -462,7 +482,9 @@ func RunUIServer(port int, dev bool) error {
 		resp.Passed = resp.Total - resp.Drifted
 
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(resp)
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			log.Printf("failed to encode diff response: %v", err)
+		}
 	}))
 
 	mux.HandleFunc("/api/v1/snapshot", withCORS(func(w http.ResponseWriter, r *http.Request) {
@@ -482,12 +504,16 @@ func RunUIServer(port int, dev bool) error {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("OK"))
+		if _, err := w.Write([]byte("OK")); err != nil {
+			log.Printf("failed to write response: %v", err)
+		}
 	}))
 
 	mux.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("OK"))
+		if _, err := w.Write([]byte("OK")); err != nil {
+			log.Printf("failed to write response: %v", err)
+		}
 	})
 
 	// Serve embedded UI in production mode
@@ -506,8 +532,13 @@ func RunUIServer(port int, dev bool) error {
 				return
 			}
 			defer f.Close()
+			rs, ok := f.(io.ReadSeeker)
+			if !ok {
+				http.Error(w, "UI unavailable", http.StatusInternalServerError)
+				return
+			}
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			http.ServeContent(w, r, "index.html", time.Time{}, f.(io.ReadSeeker))
+			http.ServeContent(w, r, "index.html", time.Time{}, rs)
 		})
 	}
 
@@ -535,7 +566,7 @@ func traceRoute(route *amconfig.Route, labels model.LabelSet) *RouteNode {
 	node := &RouteNode{
 		Receiver: route.Receiver,
 		Continue: route.Continue,
-		Matched:  routeMatches(route, labels),
+		Matched:  pipeline.RouteMatches(route, labels),
 	}
 
 	// Capture Grouping and Timing
@@ -649,26 +680,6 @@ func identifyMatcherFailures(route *amconfig.Route, labels model.LabelSet) []Mat
 	return out
 }
 
-func routeMatches(route *amconfig.Route, labels model.LabelSet) bool {
-	for k, v := range route.Match {
-		if string(labels[model.LabelName(k)]) != v {
-			return false
-		}
-	}
-	for k, re := range route.MatchRE {
-		val := string(labels[model.LabelName(k)])
-		if !re.MatchString(val) {
-			return false
-		}
-	}
-	for _, m := range route.Matchers {
-		if !m.Matches(string(labels[model.LabelName(m.Name)])) {
-			return false
-		}
-	}
-	return true
-}
-
 func openBrowser(url string) {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
@@ -679,34 +690,7 @@ func openBrowser(url string) {
 	default:
 		cmd = exec.Command("xdg-open", url)
 	}
-	_ = cmd.Start()
-}
-
-// loadBaseline reads a msgpack regression baseline from disk.
-func loadBaseline(path string) ([]*types.TestCase, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
+	if err := cmd.Start(); err != nil {
+		log.Printf("warning: failed to open browser: %v", err)
 	}
-	defer func() { _ = file.Close() }()
-
-	var tests []*types.TestCase
-	if err := codec.DecodeMsgPack(file, &tests); err != nil {
-		return nil, err
-	}
-	return tests, nil
-}
-
-// loadBaselineYAML reads a YAML regression baseline from disk.
-func loadBaselineYAML(path string) ([]*types.TestCase, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var tests []*types.TestCase
-	if err := yaml.Unmarshal(data, &tests); err != nil {
-		return nil, err
-	}
-	return tests, nil
 }

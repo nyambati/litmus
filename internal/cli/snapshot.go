@@ -101,7 +101,7 @@ func RunSnapshot(update, strict bool) error {
 		return fmt.Errorf("writing YAML mirror: %w", err)
 	}
 
-	fmt.Println("✓ Snapshot processed successffuly") //nolint:forbidigo
+	fmt.Println("✓ Snapshot processed successfully") //nolint:forbidigo
 
 	return nil
 }

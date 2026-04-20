@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -164,6 +165,9 @@ func RunRegressionTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 	baselinePath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.mpk")
 	baseline, err := LoadBaseline(baselinePath)
 	if err != nil {
+		if !os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "WARN: could not read regression baseline: %v\n", err)
+		}
 		return result
 	}
 
@@ -195,6 +199,9 @@ func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 	loader := behavioral.NewBehavioralTestLoader()
 	tests, err := loader.LoadFromDirectory(litmusConfig.Tests.Directory)
 	if err != nil {
+		if !os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "WARN: could not load behavioral tests: %v\n", err)
+		}
 		return result
 	}
 

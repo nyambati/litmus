@@ -88,10 +88,10 @@ type LabelCombinationGenerator struct {
 }
 
 // NewLabelCombinationGenerator creates combination generator.
-// Panics if maxCombinations < 1 to prevent silent degradation.
+// Values < 1 are clamped to 1.
 func NewLabelCombinationGenerator(maxCombinations int) *LabelCombinationGenerator {
 	if maxCombinations < 1 {
-		panic("maxCombinations must be >= 1")
+		maxCombinations = 1
 	}
 	return &LabelCombinationGenerator{maxCombinations: maxCombinations}
 }

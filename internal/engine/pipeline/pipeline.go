@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/nyambati/litmus/internal/stores"
 	amconfig "github.com/prometheus/alertmanager/config"
@@ -48,6 +49,9 @@ func (r *Runner) Execute(ctx context.Context, labels model.LabelSet) (*Outcome, 
 		}
 	}
 	iter.Close()
+	if err := iter.Err(); err != nil {
+		return nil, fmt.Errorf("checking inhibition: %w", err)
+	}
 
 	receivers := r.router.Match(labels)
 	return &Outcome{
