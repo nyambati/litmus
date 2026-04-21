@@ -128,9 +128,12 @@ export const RegressionPage = ({
     setLoading(true);
     setNotification(null);
     try {
-      const resp = await fetch(`${API}/api/v1/snapshot?update=true`, {
-        method: "POST",
-      });
+      const resp = await fetch(
+        `${API}/api/v1/regressions/generate?update=true`,
+        {
+          method: "POST",
+        },
+      );
       if (!resp.ok) throw new Error(await resp.text());
 
       setNotification({

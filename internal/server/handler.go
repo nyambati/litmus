@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -305,9 +304,9 @@ func generateRegressionsHandler(c *gin.Context) {
 	if litmusConfig == nil {
 		return
 	}
-	regressionMpkPath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.mpk")
-	_, err := os.Stat(regressionMpkPath)
-	update := os.IsNotExist(err)
+	_, err := os.Stat(litmusConfig.RegressionsBinaryFilePath())
+
+	update := c.Query("update") == "true" || os.IsNotExist(err)
 
 	if err := cli.RunSnapshot(update, false); err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Snapshot failed: %v", err))
@@ -425,16 +424,6 @@ func diffHandler(c *gin.Context) {
 	resp.Passed = resp.Total - resp.Drifted
 
 	c.JSON(http.StatusOK, resp)
-}
-
-func snapshotHandler(c *gin.Context) {
-	update := c.Query("update") == "true"
-
-	if err := cli.RunSnapshot(update, false); err != nil {
-		c.String(http.StatusInternalServerError, fmt.Sprintf("Snapshot failed: %v", err))
-		return
-	}
-	c.String(http.StatusOK, "OK")
 }
 
 func healthHandler(c *gin.Context) {

@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-const wildcardPlaceholder = "a1b2c3"
+const wildcardPlaceholder = "litmus"
 
 var (
 	ncgRegex    = regexp.MustCompile(`^\^?\(\?:([^)]+)\)\$?$`)
