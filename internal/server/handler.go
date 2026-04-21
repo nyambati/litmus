@@ -438,3 +438,11 @@ func snapshotHandler(c *gin.Context) {
 func healthHandler(c *gin.Context) {
 	c.String(http.StatusOK, "OK")
 }
+
+func serveStatic(c *gin.Context) {
+	if strings.HasPrefix(c.Request.URL.Path, "/api/") {
+		c.Next()
+		return
+	}
+	http.FileServer(http.FS(staticFS)).ServeHTTP(c.Writer, c.Request)
+}

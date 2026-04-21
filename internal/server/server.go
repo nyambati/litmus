@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os/exec"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -16,8 +15,6 @@ import (
 
 var (
 	staticFS fs.FS
-
-	alertConfigPath string
 )
 
 type contextKey string
@@ -31,11 +28,15 @@ func SetStaticFS(f fs.FS) {
 
 // RunUIServer starts the Litmus UI backend.
 func RunUIServer(port int, dev bool) error {
+	if !dev {
+		// use gin in production mode to serve static files
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	litmusConfig, err := config.LoadConfig()
 	if err != nil {
 		return fmt.Errorf("loading litmus config: %w", err)
 	}
-	alertConfigPath = litmusConfig.Config.File
 
 	router := gin.Default()
 
@@ -61,12 +62,7 @@ func RunUIServer(port int, dev bool) error {
 
 	// Serve embedded UI in production mode
 	if !dev && staticFS != nil {
-		router.StaticFS("/assets", http.FS(staticFS))
-		router.NoRoute(func(c *gin.Context) {
-			if !strings.HasPrefix(c.Request.URL.Path, "/api/") {
-				c.FileFromFS("index.html", http.FS(staticFS))
-			}
-		})
+		router.Use(serveStatic)
 	}
 
 	addr := fmt.Sprintf(":%d", port)
@@ -76,7 +72,7 @@ func RunUIServer(port int, dev bool) error {
 	if !dev {
 		go func() {
 			time.Sleep(150 * time.Millisecond)
-			// openBrowser(url)
+			openBrowser(url)
 		}()
 	}
 
