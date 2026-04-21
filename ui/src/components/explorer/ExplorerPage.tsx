@@ -63,18 +63,13 @@ export const ExplorerPage = ({
       let labelMap: Record<string, string> = {};
       const src = (overrideLabels ?? labels).trim();
 
-      if (src.startsWith("{")) {
-        labelMap = JSON.parse(src);
-      } else {
-        const pairs = src.includes(",") ? src.split(",") : src.split("\n");
-        pairs.forEach((pair) => {
-          const delimiter = pair.includes("=") ? "=" : ":";
-          const [k, v] = pair
-            .split(delimiter)
-            .map((s) => s.trim().replace(/^["']|["']$/g, ""));
-          if (k && v) labelMap[k] = v;
-        });
-      }
+      const pairs = src.includes(",") ? src.split(",") : src.split("\n");
+      pairs.forEach((pair) => {
+        const [k, v] = pair
+          .split("=")
+          .map((s) => s.trim());
+        if (k && v) labelMap[k] = v;
+      });
 
       const resp = await fetch(`${API}/api/v1/evaluate`, {
         method: "POST",
@@ -87,7 +82,7 @@ export const ExplorerPage = ({
       onQuerySaved(overrideLabels ?? labels, data.receivers || []);
     } catch (err) {
       console.error("Evaluation failed:", err);
-      alert("Failed to parse labels. Use k=v,k=v or JSON.");
+      alert("Failed to parse labels. Use k=v format (comma or newline separated).");
     } finally {
       setLoading(false);
     }
@@ -366,7 +361,7 @@ export const ExplorerPage = ({
           </div>
         </div>
         <p className="text-[10px] text-[#8e9193]/50 font-mono">
-          ⌘ + Enter to run · k=v,k=v · JSON · newline-separated
+          ⌘ + Enter to run · k=v comma-separated or newline-separated
         </p>
       </div>
     </div>
