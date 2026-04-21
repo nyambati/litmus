@@ -19,9 +19,9 @@ mimir:
 
 # Regression Settings
 regression:
-  directory: regressions/ # Baseline directory
+  directory: config/regressions/ # Baseline directory
   max_samples: 5
 
 # Behavioral Unit Test (BUT) Settings
 tests:
-  directory: tests/ # Behavioral tests directory
+  directory: config/tests/ # Behavioral tests directory

@@ -31,14 +31,9 @@ func RunInit() error {
 		return fmt.Errorf("creating tests/README.md: %w", err)
 	}
 
-	if err := os.WriteFile(".gitattributes", []byte(templates.GitAttributes), 0600); err != nil {
-		return fmt.Errorf("creating .gitattributes: %w", err)
-	}
-
 	fmt.Println("✓ .litmus.yaml created")
 	fmt.Println("✓ config/ and regressions/ directories created")
 	fmt.Println("✓ tests/ directory created")
-	fmt.Println("✓ .gitattributes created")
 	fmt.Println("\nWorkspace initialized! Next steps:")
 	fmt.Println("1. Update .litmus.yaml with your Alertmanager config path")
 	fmt.Println("2. Add your behavioral unit tests to tests/")

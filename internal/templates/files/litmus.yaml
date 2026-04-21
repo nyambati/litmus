@@ -2,9 +2,9 @@
 # See https://github.com/nyambati/litmus for documentation
 
 config:
-  directory: config       # Alertmanager config directory
-  file: alertmanager.yml  # Config filename
-  templates: templates/    # Templates directory (relative to config.directory)
+  directory: config # Alertmanager config directory
+  file: alertmanager.yml # Config filename
+  templates: templates/ # Templates directory (relative to config.directory)
 
 # Global Test Labels: These labels are automatically added to
 # EVERY synthesized alert during the 'snapshot' process.
@@ -16,7 +16,7 @@ global_labels:
 mimir:
   address: ""
   tenant_id: ""
-  api_key: "env(MIMIR_API_KEY)"
+  api_key: ""
 
 # Regression Settings
 regression:
@@ -25,4 +25,4 @@ regression:
 
 # Behavioral Unit Test (BUT) Settings
 tests:
-  directory: tests/       # Behavioral tests directory
+  directory: tests/ # Behavioral tests directory

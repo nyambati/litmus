@@ -8,17 +8,22 @@ export const PrimaryButton = ({
   loading,
   icon,
   children,
+  className,
 }: {
   onClick: () => void;
   disabled?: boolean;
   loading?: boolean;
   icon?: React.ReactNode;
   children: React.ReactNode;
+  className?: string;
 }) => (
   <button
     onClick={onClick}
     disabled={disabled || loading}
-    className="inline-flex items-center gap-2 px-4 py-[7px] rounded bg-[#f46800] hover:bg-[#ff7f2a] disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors"
+    className={cn(
+      "inline-flex items-center gap-2 px-4 py-[7px] rounded bg-[#f46800] hover:bg-[#ff7f2a] disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors",
+      className,
+    )}
   >
     {loading ? <GfSpinner size="sm" /> : icon}
     {children}

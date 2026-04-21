@@ -5,8 +5,10 @@ import (
 	"strings"
 )
 
+const wildcardPlaceholder = "litmus"
+
 var (
-	ncgRegex    = regexp.MustCompile(`^\(\?:([^)]+)\)\$?$`)
+	ncgRegex    = regexp.MustCompile(`^\^?\(\?:([^)]+)\)\$?$`)
 	capRegex    = regexp.MustCompile(`^\(([^)]+)\)$`)
 	prefixRegex = regexp.MustCompile(`^\^([^.]+)`)
 	charRegex   = regexp.MustCompile(`^\[([a-z])-([a-z])\]$`)
@@ -20,8 +22,25 @@ func NewRegexExpander() *RegexExpander {
 	return &RegexExpander{}
 }
 
+// replaceWildcards replaces .* and .+ with the placeholder constant.
+func replaceWildcards(s string) string {
+	s = strings.ReplaceAll(s, ".*", wildcardPlaceholder)
+	s = strings.ReplaceAll(s, ".+", wildcardPlaceholder)
+	return s
+}
+
+// isPureWildcard reports whether s is solely a wildcard token.
+func isPureWildcard(s string) bool {
+	return s == ".*" || s == ".+"
+}
+
 // ExpandAlternations extracts all concrete options from a regex pattern.
 func (re *RegexExpander) ExpandAlternations(pattern string) []string {
+	// Pure wildcard — no useful value, drop.
+	if isPureWildcard(pattern) {
+		return nil
+	}
+
 	// Non-capturing group: (?:opt1|opt2)$ — Alertmanager's compiled regex format
 	if matches := ncgRegex.FindStringSubmatch(pattern); matches != nil {
 		return sanitizeParts(strings.Split(matches[1], "|"))
@@ -37,23 +56,10 @@ func (re *RegexExpander) ExpandAlternations(pattern string) []string {
 		return sanitizeParts(strings.Split(pattern, "|"))
 	}
 
-	// Anchored prefix: ^api-.* -> "api-"
+	// Anchored prefix: ^api-.* — strip anchor, replace wildcards inline
 	if matches := prefixRegex.FindStringSubmatch(pattern); matches != nil {
-		return []string{matches[1]}
-	}
-
-	// Suffix wildcard: prd.* -> "prd"
-	if strings.HasSuffix(pattern, ".*") || strings.HasSuffix(pattern, ".+") {
-		base := strings.TrimSuffix(strings.TrimSuffix(pattern, ".*"), ".+")
-		if base == "" {
-			return []string{"litmus_match"}
-		}
-		return []string{base}
-	}
-
-	// Pure wildcard
-	if pattern == ".*" || pattern == ".+" {
-		return []string{"litmus_match"}
+		rest := pattern[1:] // drop leading ^
+		return []string{replaceWildcards(rest)}
 	}
 
 	// Character class: [a-z] -> "a"
@@ -63,8 +69,8 @@ func (re *RegexExpander) ExpandAlternations(pattern string) []string {
 		}
 	}
 
-	// No expansion: return literal as-is
-	return []string{pattern}
+	// No expansion: replace any wildcards inline and return.
+	return []string{replaceWildcards(pattern)}
 }
 
 // sanitizeParts strips regex metacharacters from alternation parts and deduplicates.
@@ -72,12 +78,18 @@ func sanitizeParts(parts []string) []string {
 	seen := make(map[string]bool)
 	result := make([]string, 0, len(parts))
 	for _, p := range parts {
-		p = strings.TrimSuffix(strings.TrimSuffix(p, ".*"), ".+")
 		p = strings.TrimPrefix(p, "^")
+		if isPureWildcard(p) {
+			continue
+		}
+		p = replaceWildcards(p)
 		if p != "" && !seen[p] {
 			seen[p] = true
 			result = append(result, p)
 		}
+	}
+	if len(result) == 0 {
+		return nil
 	}
 	return result
 }

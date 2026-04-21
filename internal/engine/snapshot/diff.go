@@ -26,17 +26,17 @@ func ComputeDiff(oldTests, newTests []*types.TestCase) *types.RegressionDiff {
 			diff.Deltas = append(diff.Deltas, types.RegressionDelta{
 				Kind:   types.DeltaAdded,
 				Labels: newTest.Labels[0],
-				Actual: newTest.Expected,
+				Actual: newTest.Expect.Receivers,
 			})
 			continue
 		}
 
-		if !matching.ExactMatch(newTest.Expected, oldTest.Expected) {
+		if !matching.ExactMatch(newTest.Expect.Receivers, oldTest.Expect.Receivers) {
 			diff.Deltas = append(diff.Deltas, types.RegressionDelta{
 				Kind:     types.DeltaModified,
 				Labels:   newTest.Labels[0],
-				Expected: oldTest.Expected,
-				Actual:   newTest.Expected,
+				Expected: oldTest.Expect.Receivers,
+				Actual:   newTest.Expect.Receivers,
 			})
 		}
 	}
@@ -50,7 +50,7 @@ func ComputeDiff(oldTests, newTests []*types.TestCase) *types.RegressionDiff {
 			diff.Deltas = append(diff.Deltas, types.RegressionDelta{
 				Kind:     types.DeltaRemoved,
 				Labels:   oldTest.Labels[0],
-				Expected: oldTest.Expected,
+				Expected: oldTest.Expect.Receivers,
 			})
 		}
 	}

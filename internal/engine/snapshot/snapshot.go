@@ -92,7 +92,9 @@ func (ss *SnapshotSynthesizer) expandMatchers(matchers []model.LabelSet) map[str
 	for _, labelSet := range matchers {
 		for k, v := range labelSet {
 			vals := ss.expander.ExpandAlternations(string(v))
-			opts[string(k)] = vals
+			if len(vals) > 0 {
+				opts[string(k)] = vals
+			}
 		}
 	}
 

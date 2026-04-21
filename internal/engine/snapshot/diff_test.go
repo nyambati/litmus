@@ -11,10 +11,10 @@ func TestComputeDiff_Added(t *testing.T) {
 	oldTests := []*types.TestCase{}
 	newTests := []*types.TestCase{
 		{
-			Type:     "regression",
-			Name:     "Route to team-a",
-			Labels:   []map[string]string{{"team": "a"}},
-			Expected: []string{"receiver-a"},
+			Type:   "regression",
+			Name:   "Route to team-a",
+			Labels: []map[string]string{{"team": "a"}},
+			Expect: &types.BehavioralExpect{Outcome: "active", Receivers: []string{"receiver-a"}},
 		},
 	}
 
@@ -26,10 +26,10 @@ func TestComputeDiff_Added(t *testing.T) {
 func TestComputeDiff_Removed(t *testing.T) {
 	oldTests := []*types.TestCase{
 		{
-			Type:     "regression",
-			Name:     "Route to team-a",
-			Labels:   []map[string]string{{"team": "a"}},
-			Expected: []string{"receiver-a"},
+			Type:   "regression",
+			Name:   "Route to team-a",
+			Labels: []map[string]string{{"team": "a"}},
+			Expect: &types.BehavioralExpect{Outcome: "active", Receivers: []string{"receiver-a"}},
 		},
 	}
 	newTests := []*types.TestCase{}
@@ -42,18 +42,18 @@ func TestComputeDiff_Removed(t *testing.T) {
 func TestComputeDiff_Modified(t *testing.T) {
 	oldTests := []*types.TestCase{
 		{
-			Type:     "regression",
-			Name:     "Route to team-a",
-			Labels:   []map[string]string{{"team": "a"}},
-			Expected: []string{"receiver-a"},
+			Type:   "regression",
+			Name:   "Route to team-a",
+			Labels: []map[string]string{{"team": "a"}},
+			Expect: &types.BehavioralExpect{Outcome: "active", Receivers: []string{"receiver-a"}},
 		},
 	}
 	newTests := []*types.TestCase{
 		{
-			Type:     "regression",
-			Name:     "Route to team-a-new",
-			Labels:   []map[string]string{{"team": "a"}},
-			Expected: []string{"receiver-a-new"},
+			Type:   "regression",
+			Name:   "Route to team-a-new",
+			Labels: []map[string]string{{"team": "a"}},
+			Expect: &types.BehavioralExpect{Outcome: "active", Receivers: []string{"receiver-a-new"}},
 		},
 	}
 
@@ -67,10 +67,10 @@ func TestComputeDiff_Modified(t *testing.T) {
 func TestComputeDiff_Unchanged(t *testing.T) {
 	tests := []*types.TestCase{
 		{
-			Type:     "regression",
-			Name:     "Route to team-a",
-			Labels:   []map[string]string{{"team": "a"}},
-			Expected: []string{"receiver-a"},
+			Type:   "regression",
+			Name:   "Route to team-a",
+			Labels: []map[string]string{{"team": "a"}},
+			Expect: &types.BehavioralExpect{Outcome: "active", Receivers: []string{"receiver-a"}},
 		},
 	}
 
@@ -81,46 +81,46 @@ func TestComputeDiff_Unchanged(t *testing.T) {
 func TestComputeDiff_Mixed(t *testing.T) {
 	oldTests := []*types.TestCase{
 		{
-			Type:     "regression",
-			Name:     "Route 1",
-			Labels:   []map[string]string{{"team": "a"}},
-			Expected: []string{"receiver-a"},
+			Type:   "regression",
+			Name:   "Route 1",
+			Labels: []map[string]string{{"team": "a"}},
+			Expect: &types.BehavioralExpect{Outcome: "active", Receivers: []string{"receiver-a"}},
 		},
 		{
-			Type:     "regression",
-			Name:     "Route 2",
-			Labels:   []map[string]string{{"team": "b"}},
-			Expected: []string{"receiver-b"},
+			Type:   "regression",
+			Name:   "Route 2",
+			Labels: []map[string]string{{"team": "b"}},
+			Expect: &types.BehavioralExpect{Outcome: "active", Receivers: []string{"receiver-b"}},
 		},
 		{
-			Type:     "regression",
-			Name:     "Route 3",
-			Labels:   []map[string]string{{"team": "c"}},
-			Expected: []string{"receiver-c"},
+			Type:   "regression",
+			Name:   "Route 3",
+			Labels: []map[string]string{{"team": "c"}},
+			Expect: &types.BehavioralExpect{Outcome: "active", Receivers: []string{"receiver-c"}},
 		},
 	}
 	newTests := []*types.TestCase{
 		// Route 1: removed
 		// Route 2: modified
 		{
-			Type:     "regression",
-			Name:     "Route 2 Modified",
-			Labels:   []map[string]string{{"team": "b"}},
-			Expected: []string{"receiver-b-new"},
+			Type:   "regression",
+			Name:   "Route 2 Modified",
+			Labels: []map[string]string{{"team": "b"}},
+			Expect: &types.BehavioralExpect{Outcome: "active", Receivers: []string{"receiver-b-new"}},
 		},
 		// Route 3: unchanged
 		{
-			Type:     "regression",
-			Name:     "Route 3",
-			Labels:   []map[string]string{{"team": "c"}},
-			Expected: []string{"receiver-c"},
+			Type:   "regression",
+			Name:   "Route 3",
+			Labels: []map[string]string{{"team": "c"}},
+			Expect: &types.BehavioralExpect{Outcome: "active", Receivers: []string{"receiver-c"}},
 		},
 		// Route 4: added
 		{
-			Type:     "regression",
-			Name:     "Route 4",
-			Labels:   []map[string]string{{"team": "d"}},
-			Expected: []string{"receiver-d"},
+			Type:   "regression",
+			Name:   "Route 4",
+			Labels: []map[string]string{{"team": "d"}},
+			Expect: &types.BehavioralExpect{Outcome: "active", Receivers: []string{"receiver-d"}},
 		},
 	}
 

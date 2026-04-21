@@ -19,11 +19,11 @@ func TestInspectCommand_YAML(t *testing.T) {
 
 	tests := []*types.TestCase{
 		{
-			Type:     "regression",
-			Name:     "Test 1",
-			Labels:   []map[string]string{{"service": "api"}},
-			Expected: []string{"api-team"},
-			Tags:     []string{"regression"},
+			Type:   "regression",
+			Name:   "Test 1",
+			Labels: []map[string]string{{"service": "api"}},
+			Expect: &types.BehavioralExpect{Outcome: "active", Receivers: []string{"api-team"}},
+			Tags:   []string{"regression"},
 		},
 	}
 
@@ -51,11 +51,11 @@ func TestInspectCommand_JSON(t *testing.T) {
 
 	tests := []*types.TestCase{
 		{
-			Type:     "regression",
-			Name:     "Test 1",
-			Labels:   []map[string]string{{"service": "api"}},
-			Expected: []string{"api-team"},
-			Tags:     []string{"regression"},
+			Type:   "regression",
+			Name:   "Test 1",
+			Labels: []map[string]string{{"service": "api"}},
+			Expect: &types.BehavioralExpect{Outcome: "active", Receivers: []string{"api-team"}},
+			Tags:   []string{"regression"},
 		},
 	}
 

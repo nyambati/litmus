@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { FlaskConical } from "lucide-react";
-import { API, loadCache, saveCache } from "../../utils/persistence";
+import { FlaskConical, ChevronDown } from "lucide-react";
+import { API, loadCache, saveCache, cn } from "../../utils/persistence";
 import { GfSpinner } from "../ui/Spinner";
 import { LastUpdated } from "../ui/LastUpdated";
-import { PrimaryButton } from "../ui/Buttons";
 import { Header } from "../layout/Header";
 import { EmptyState } from "../ui/EmptyState";
 import { FilterTabs } from "../ui/Tabs";
@@ -33,8 +32,37 @@ export const LabPage = ({
   });
   const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState(false);
+  const [snapshotting, setSnapshotting] = useState(false);
   const [runningTest, setRunningTest] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterType>("all");
+  const [activeAction, setActiveAction] = useState<"run" | "snapshot">("run");
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const actions = [
+    {
+      id: "run" as const,
+      label: "Run All",
+      icon: FlaskConical,
+      desc: "Run all tests",
+    },
+    {
+      id: "snapshot" as const,
+      label: "Snapshot",
+      icon: FlaskConical,
+      desc: "Generate regression tests",
+    },
+  ];
+
+  const currentAction =
+    actions.find((a) => a.id === activeAction) || actions[0];
+
+  const handleAction = () => {
+    if (activeAction === "run") {
+      runAllTests();
+    } else {
+      runSnapshot();
+    }
+  };
 
   const fetchTests = useCallback(async () => {
     setLoading(true);
@@ -69,6 +97,18 @@ export const LabPage = ({
       setLoading(false);
     }
   }, []);
+
+  const runSnapshot = async () => {
+    setSnapshotting(true);
+    try {
+      await fetch(`${API}/api/v1/regressions/generate`, { method: "POST" });
+      await fetchTests();
+    } catch (err) {
+      console.error("Failed to generate regressions:", err);
+    } finally {
+      setSnapshotting(false);
+    }
+  };
 
   const applyResults = (data: TestRunResult[]) => {
     // eslint-disable-next-line react-hooks/purity
@@ -170,6 +210,7 @@ export const LabPage = ({
     });
 
   useEffect(() => {
+    localStorage.removeItem("litmus:lab:results");
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchTests();
   }, [fetchTests]);
@@ -207,14 +248,81 @@ export const LabPage = ({
             </span>
             <LastUpdated ts={lastRunTs} />
           </div>
-          <PrimaryButton
-            onClick={runAllTests}
-            disabled={running || filteredTests.length === 0}
-            loading={running}
-            icon={<FlaskConical size={14} />}
-          >
-            {running ? "Running…" : "Run All"}
-          </PrimaryButton>
+          <div className="flex items-center">
+            <div className="relative flex items-stretch">
+              <button
+                onClick={handleAction}
+                disabled={running || snapshotting}
+                className="flex items-center gap-2 px-4 py-[7px] rounded-l bg-[#f46800] hover:bg-[#ff7f2a] disabled:opacity-40 text-white text-sm font-semibold transition-colors border-r border-black/20"
+              >
+                {running || snapshotting ? (
+                  <GfSpinner size="sm" />
+                ) : (
+                  <currentAction.icon size={12} />
+                )}
+                {running
+                  ? "Running…"
+                  : snapshotting
+                    ? "Snapshotting…"
+                    : currentAction.label}
+              </button>
+              <button
+                onClick={() => setShowDropdown(!showDropdown)}
+                disabled={running || snapshotting}
+                className="flex items-center px-2 py-[7px] rounded-r bg-[#f46800] hover:bg-[#ff7f2a] disabled:opacity-40 text-white transition-colors"
+              >
+                <ChevronDown size={14} />
+              </button>
+
+              {showDropdown && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setShowDropdown(false)}
+                  />
+                  <div className="absolute right-0 mt-1 w-64 bg-[#1f2128] border border-[#34383e] rounded shadow-xl z-20 py-1">
+                    {actions.map((action) => (
+                      <button
+                        key={action.id}
+                        onClick={() => {
+                          setActiveAction(action.id);
+                          setShowDropdown(false);
+                        }}
+                        className={cn(
+                          "w-full text-left px-4 py-2.5 hover:bg-[#ffffff08] transition-colors group",
+                          activeAction === action.id && "bg-[#f46800]/10",
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <action.icon
+                            size={14}
+                            className={
+                              activeAction === action.id
+                                ? "text-[#f46800]"
+                                : "text-[#8e9193] group-hover:text-[#d9d9d9]"
+                            }
+                          />
+                          <span
+                            className={cn(
+                              "text-sm font-medium",
+                              activeAction === action.id
+                                ? "text-[#f46800]"
+                                : "text-[#d9d9d9]",
+                            )}
+                          >
+                            {action.label}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#8e9193] mt-0.5 ml-6">
+                          {action.desc}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Underline tabs */}
