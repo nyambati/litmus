@@ -3,7 +3,7 @@ import { Search, Activity, Zap } from "lucide-react";
 import { cn, API } from "../../utils/persistence";
 import { GfSpinner } from "../ui/Spinner";
 import { ReceiverChip } from "../ui/Chips";
-import { PrimaryButton, GhostButton } from "../ui/Buttons";
+import { PrimaryButton } from "../ui/Buttons";
 import { Header } from "../layout/Header";
 import { EmptyState } from "../ui/EmptyState";
 import { Autocomplete } from "./Autocomplete";
@@ -48,6 +48,7 @@ export const ExplorerPage = ({
   const [suggestions, setSuggestions] = useState<{ labels: string[], values: Record<string, string[]> }>({ labels: [], values: {} });
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [cursorPos, setCursorPos] = useState(0);
+  const [textareaHeight, setTextareaHeight] = useState("auto");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -56,6 +57,14 @@ export const ExplorerPage = ({
       .then(setSuggestions)
       .catch(console.error);
   }, []);
+
+  const adjustTextareaHeight = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      const scrollHeight = textareaRef.current.scrollHeight;
+      setTextareaHeight(`${Math.max(scrollHeight, 40)}px`);
+    }
+  };
 
   const runEvaluation = useCallback(async (overrideLabels?: string) => {
     setLoading(true);
@@ -319,6 +328,7 @@ export const ExplorerPage = ({
                 setLabels(e.target.value);
                 setCursorPos(e.target.selectionStart);
                 setShowSuggestions(true);
+                adjustTextareaHeight();
               }}
               onKeyUp={(e) => {
                 setCursorPos((e.target as HTMLTextAreaElement).selectionStart);
@@ -329,9 +339,9 @@ export const ExplorerPage = ({
               onBlur={() => {
                 setTimeout(() => setShowSuggestions(false), 200);
               }}
-              rows={2}
-              className="flex-1 bg-transparent py-2.5 font-mono text-[13px] text-[#5794f2] focus:outline-none resize-none placeholder:text-[#34383e]"
-              placeholder='severity="critical", team="database"'
+              style={{ height: textareaHeight }}
+              className="flex-1 bg-transparent py-2.5 font-mono text-[13px] text-[#5794f2] focus:outline-none resize-none placeholder:text-[#34383e] overflow-hidden"
+              placeholder="severity=critical, team=database"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                   e.preventDefault();
@@ -349,16 +359,13 @@ export const ExplorerPage = ({
               />
             )}
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <GhostButton onClick={() => setLabels("")}>Clear</GhostButton>
-            <PrimaryButton
-              onClick={() => runEvaluation()}
-              loading={loading}
-              icon={<Zap size={14} />}
-            >
-              Run Query
-            </PrimaryButton>
-          </div>
+          <PrimaryButton
+            onClick={() => runEvaluation()}
+            loading={loading}
+            icon={<Zap size={14} />}
+          >
+            Run Query
+          </PrimaryButton>
         </div>
         <p className="text-[10px] text-[#8e9193]/50 font-mono">
           ⌘ + Enter to run · k=v comma-separated or newline-separated
