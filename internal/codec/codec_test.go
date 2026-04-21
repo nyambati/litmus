@@ -15,8 +15,8 @@ func TestTestCaseRoundTrip_Regression(t *testing.T) {
 		Labels: []map[string]string{
 			{"service": "mysql", "env": "prod"},
 		},
-		Expected: []string{"receiver-1"},
-		Tags:     []string{"regression"},
+		Expect: &types.BehavioralExpect{Outcome: "active", Receivers: []string{"receiver-1"}},
+		Tags:   []string{"regression"},
 	}
 
 	t.Run("YAML", func(t *testing.T) {

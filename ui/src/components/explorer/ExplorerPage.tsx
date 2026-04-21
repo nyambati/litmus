@@ -63,7 +63,7 @@ export const ExplorerPage = ({
   }, []);
 
   useEffect(() => {
-    fetch(`${API}/api/v1/suggest`)
+    fetch(`${API}/api/v1/label_values`)
       .then((r) => r.json())
       .then(setSuggestions)
       .catch(console.error);

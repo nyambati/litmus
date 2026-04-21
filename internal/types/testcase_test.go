@@ -46,7 +46,7 @@ func TestTestCase_JSON_RegressionType(t *testing.T) {
 		Labels: []map[string]string{
 			{"service": "api", "severity": "critical"},
 		},
-		Expected: []string{"api-team"},
+		Expect: &BehavioralExpect{Outcome: "active", Receivers: []string{"api-team"}},
 	}
 
 	data, err := json.Marshal(tc)
@@ -57,12 +57,12 @@ func TestTestCase_JSON_RegressionType(t *testing.T) {
 
 	require.Equal(t, "regression", out["type"])
 	require.NotNil(t, out["labels"])
-	require.NotNil(t, out["expected"])
+	require.NotNil(t, out["expect"])
 
-	// unit fields must be absent
+	// unit-only fields must be absent
 	require.Nil(t, out["alert"])
-	require.Nil(t, out["expect"])
 	require.Nil(t, out["state"])
+	require.Nil(t, out["expected"])
 }
 
 func TestTestCase_JSON_RoundTrip_Unit(t *testing.T) {
@@ -108,7 +108,7 @@ func TestTestCase_JSON_RoundTrip_Regression(t *testing.T) {
 			{"service": "db"},
 			{"service": "db", "severity": "critical"},
 		},
-		Expected: []string{"db-team", "ops-team"},
+		Expect: &BehavioralExpect{Outcome: "active", Receivers: []string{"db-team", "ops-team"}},
 	}
 
 	data, err := json.Marshal(original)
@@ -120,7 +120,7 @@ func TestTestCase_JSON_RoundTrip_Regression(t *testing.T) {
 	require.Equal(t, original.Name, decoded.Name)
 	require.Equal(t, original.Type, decoded.Type)
 	require.Equal(t, original.Labels, decoded.Labels)
-	require.Equal(t, original.Expected, decoded.Expected)
+	require.Equal(t, original.Expect.Receivers, decoded.Expect.Receivers)
 }
 
 func TestTestCase_YAML_RoundTrip_Unit(t *testing.T) {
@@ -158,8 +158,8 @@ func TestTestCase_YAML_RoundTrip_Regression(t *testing.T) {
 		Labels: []map[string]string{
 			{"service": "api"},
 		},
-		Expected: []string{"api-team"},
-		Tags:     []string{"regression"},
+		Expect: &BehavioralExpect{Outcome: "active", Receivers: []string{"api-team"}},
+		Tags:   []string{"regression"},
 	}
 
 	data, err := yaml.Marshal(original)
@@ -171,7 +171,7 @@ func TestTestCase_YAML_RoundTrip_Regression(t *testing.T) {
 	require.Equal(t, original.Name, decoded.Name)
 	require.Equal(t, original.Type, decoded.Type)
 	require.Equal(t, original.Labels, decoded.Labels)
-	require.Equal(t, original.Expected, decoded.Expected)
+	require.Equal(t, original.Expect.Receivers, decoded.Expect.Receivers)
 	require.Equal(t, original.Tags, decoded.Tags)
 }
 

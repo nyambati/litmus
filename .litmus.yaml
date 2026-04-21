@@ -24,4 +24,4 @@ regression:
 
 # Behavioral Unit Test (BUT) Settings
 tests:
-  directory: tests/ # Behavioral tests directory
+  directory: config/tests/ # Behavioral tests directory

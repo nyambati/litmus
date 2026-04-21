@@ -114,11 +114,11 @@ func BuildRegressionTests(outcomes []*snapshot.SynthesisResult, globalLabels map
 		maps.Copy(labels, globalLabels)
 		maps.Copy(labels, outcome.Labels)
 		tests = append(tests, &types.TestCase{
-			Type:     "regression",
-			Name:     fmt.Sprintf("Route to %s", strings.Join(outcome.Receivers, ", ")),
-			Labels:   []map[string]string{labels},
-			Expected: outcome.Receivers,
-			Tags:     []string{"regression"},
+			Type:   "regression",
+			Name:   fmt.Sprintf("Route to %s", strings.Join(outcome.Receivers, ", ")),
+			Labels: []map[string]string{labels},
+			Expect: &types.BehavioralExpect{Outcome: "active", Receivers: outcome.Receivers},
+			Tags:   []string{"regression"},
 		})
 	}
 	return tests

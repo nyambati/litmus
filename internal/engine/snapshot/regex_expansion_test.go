@@ -30,12 +30,17 @@ func TestRegexExpansion_ExpandAlternations(t *testing.T) {
 		{
 			name:     "anchored prefix",
 			pattern:  "^api-.*",
-			wantVals: []string{"api-"},
+			wantVals: []string{"api-" + wildcardPlaceholder},
 		},
 		{
-			name:     "wildcard",
+			name:     "pure wildcard dropped",
 			pattern:  ".*",
-			wantVals: []string{"litmus_match"},
+			wantVals: nil,
+		},
+		{
+			name:     "pure plus wildcard dropped",
+			pattern:  ".+",
+			wantVals: nil,
 		},
 		{
 			name:     "non-capturing group single value",
@@ -50,17 +55,58 @@ func TestRegexExpansion_ExpandAlternations(t *testing.T) {
 		{
 			name:     "bare alternation no parens",
 			pattern:  "production|production.*",
-			wantVals: []string{"production"},
+			wantVals: []string{"production", "production" + wildcardPlaceholder},
 		},
 		{
 			name:     "bare alternation with wildcards",
 			pattern:  "prd.*|infra01|infra03|production|production.*",
-			wantVals: []string{"prd", "infra01", "infra03", "production"},
+			wantVals: []string{"prd" + wildcardPlaceholder, "infra01", "infra03", "production", "production" + wildcardPlaceholder},
 		},
 		{
 			name:     "suffix wildcard",
 			pattern:  "prd.*",
-			wantVals: []string{"prd"},
+			wantVals: []string{"prd" + wildcardPlaceholder},
+		},
+		{
+			name:     "suffix plus wildcard",
+			pattern:  "prd.+",
+			wantVals: []string{"prd" + wildcardPlaceholder},
+		},
+		{
+			name:     "prefix wildcard",
+			pattern:  ".*-eu-sim",
+			wantVals: []string{wildcardPlaceholder + "-eu-sim"},
+		},
+		{
+			name:     "infix wildcard",
+			pattern:  "pre-.*-suf",
+			wantVals: []string{"pre-" + wildcardPlaceholder + "-suf"},
+		},
+		{
+			name:     "prefix plus wildcard",
+			pattern:  ".+-eu-sim",
+			wantVals: []string{wildcardPlaceholder + "-eu-sim"},
+		},
+		// Alertmanager wraps MatchRE patterns as ^(?:value)$ — these must clean to bare values.
+		{
+			name:     "alertmanager compiled single value",
+			pattern:  "^(?:apac-compliance-team)$",
+			wantVals: []string{"apac-compliance-team"},
+		},
+		{
+			name:     "alertmanager compiled alternation",
+			pattern:  "^(?:critical|warning)$",
+			wantVals: []string{"critical", "warning"},
+		},
+		{
+			name:     "alertmanager compiled alternation with wildcards",
+			pattern:  "^(?:prd.*|infra01|production)$",
+			wantVals: []string{"prd" + wildcardPlaceholder, "infra01", "production"},
+		},
+		{
+			name:     "alertmanager compiled prefix wildcard",
+			pattern:  "^(?:.*-eu-sim)$",
+			wantVals: []string{wildcardPlaceholder + "-eu-sim"},
 		},
 	}
 
@@ -121,10 +167,8 @@ func TestLabelCombinations_BalancedCovering(t *testing.T) {
 
 			require.Len(t, combos, tt.wantCount)
 			if tt.wantAllOptionsHit {
-				// Verify all options appear in at least one combination
 				coverage := verifyCoverage(combos, tt.matchers)
 				if !coverage {
-					// Debug: show which options weren't covered
 					for k, vals := range tt.matchers {
 						for _, v := range vals {
 							found := false

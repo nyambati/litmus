@@ -182,11 +182,11 @@ func suggestHandler(c *gin.Context) {
 		for k, v := range route.Match {
 			addSuggestion(k, v)
 		}
-		for k := range route.MatchRE {
-			addSuggestion(k, "")
+		for k, v := range route.MatchRE {
+			addSuggestion(k, v.String())
 		}
 		for _, m := range route.Matchers {
-			addSuggestion(m.Name, "")
+			addSuggestion(m.Name, m.Value)
 		}
 		for _, child := range route.Routes {
 			walkRoute(child)
@@ -218,13 +218,15 @@ func suggestHandler(c *gin.Context) {
 		Values: make(map[string][]string),
 	}
 
+	expander := snapshot.NewRegexExpander()
 	for k, vSet := range labelMap {
 		resp.Labels = append(resp.Labels, k)
-		values := make([]string, 0, len(vSet))
+		seen := make(map[string]struct{})
+		var values []string
 		for v := range vSet {
-			parts := strings.SplitSeq(v, "|")
-			for part := range parts {
-				if part != "" {
+			for _, part := range expander.ExpandAlternations(v) {
+				if _, dup := seen[part]; !dup {
+					seen[part] = struct{}{}
 					values = append(values, part)
 				}
 			}
@@ -415,7 +417,7 @@ func diffHandler(c *gin.Context) {
 				Pass:   true,
 				Kind:   "passing",
 				Labels: test.Labels[0],
-				Actual: test.Expected,
+				Actual: test.Expect.Receivers,
 			})
 		}
 	}

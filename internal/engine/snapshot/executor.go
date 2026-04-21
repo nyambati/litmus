@@ -37,6 +37,13 @@ func (rte *RegressionTestExecutor) Execute(ctx context.Context, tests []*types.T
 			continue
 		}
 
+		if test.Expect == nil {
+			result.Pass = false
+			result.Error = "test has no expect defined"
+			results = append(results, result)
+			continue
+		}
+
 		for _, labels := range test.Labels {
 			labelSet := make(model.LabelSet)
 			for k, v := range labels {
@@ -51,10 +58,10 @@ func (rte *RegressionTestExecutor) Execute(ctx context.Context, tests []*types.T
 				break
 			}
 
-			if !matching.ExactMatch(outcome.Receivers, test.Expected) {
+			if !matching.ExactMatch(outcome.Receivers, test.Expect.Receivers) {
 				result.Pass = false
 				result.Labels = labels
-				result.Expected = test.Expected
+				result.Expected = test.Expect.Receivers
 				result.Actual = outcome.Receivers
 				break
 			}

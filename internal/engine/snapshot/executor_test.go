@@ -14,10 +14,10 @@ func TestRegressionTestExecutor_Execute_Pass(t *testing.T) {
 	executor := NewRegressionTestExecutor()
 	tests := []*types.TestCase{
 		{
-			Type:     "regression",
-			Name:     "Route to api-team",
-			Labels:   []map[string]string{{"service": "api"}},
-			Expected: []string{"api-team"},
+			Type:   "regression",
+			Name:   "Route to api-team",
+			Labels: []map[string]string{{"service": "api"}},
+			Expect: &types.BehavioralExpect{Outcome: "active", Receivers: []string{"api-team"}},
 		},
 	}
 
@@ -33,10 +33,10 @@ func TestRegressionTestExecutor_Execute_Fail_WrongReceivers(t *testing.T) {
 	executor := NewRegressionTestExecutor()
 	tests := []*types.TestCase{
 		{
-			Type:     "regression",
-			Name:     "Route to api-team",
-			Labels:   []map[string]string{{"service": "api"}},
-			Expected: []string{"wrong-team"},
+			Type:   "regression",
+			Name:   "Route to api-team",
+			Labels: []map[string]string{{"service": "api"}},
+			Expect: &types.BehavioralExpect{Outcome: "active", Receivers: []string{"wrong-team"}},
 		},
 	}
 
@@ -54,10 +54,10 @@ func TestRegressionTestExecutor_Execute_Fail_NoLabels(t *testing.T) {
 	executor := NewRegressionTestExecutor()
 	tests := []*types.TestCase{
 		{
-			Type:     "regression",
-			Name:     "Empty labels test",
-			Labels:   nil,
-			Expected: []string{"api-team"},
+			Type:   "regression",
+			Name:   "Empty labels test",
+			Labels: nil,
+			Expect: &types.BehavioralExpect{Outcome: "active", Receivers: []string{"api-team"}},
 		},
 	}
 
@@ -73,16 +73,16 @@ func TestRegressionTestExecutor_Execute_MultipleTests(t *testing.T) {
 	executor := NewRegressionTestExecutor()
 	tests := []*types.TestCase{
 		{
-			Type:     "regression",
-			Name:     "Pass case",
-			Labels:   []map[string]string{{"service": "api"}},
-			Expected: []string{"api-team"},
+			Type:   "regression",
+			Name:   "Pass case",
+			Labels: []map[string]string{{"service": "api"}},
+			Expect: &types.BehavioralExpect{Outcome: "active", Receivers: []string{"api-team"}},
 		},
 		{
-			Type:     "regression",
-			Name:     "Fail case",
-			Labels:   []map[string]string{{"service": "api"}},
-			Expected: []string{"wrong-team"},
+			Type:   "regression",
+			Name:   "Fail case",
+			Labels: []map[string]string{{"service": "api"}},
+			Expect: &types.BehavioralExpect{Outcome: "active", Receivers: []string{"wrong-team"}},
 		},
 	}
 
@@ -104,7 +104,7 @@ func TestRegressionTestExecutor_Execute_MultipleLabels(t *testing.T) {
 				{"service": "api"},
 				{"service": "api", "severity": "critical"},
 			},
-			Expected: []string{"api-team"},
+			Expect: &types.BehavioralExpect{Outcome: "active", Receivers: []string{"api-team"}},
 		},
 	}
 
@@ -119,10 +119,10 @@ func TestRegressionTestExecutor_Execute_ResultType(t *testing.T) {
 	executor := NewRegressionTestExecutor()
 	tests := []*types.TestCase{
 		{
-			Type:     "regression",
-			Name:     "type preserved in result",
-			Labels:   []map[string]string{{"service": "api"}},
-			Expected: []string{"api-team"},
+			Type:   "regression",
+			Name:   "type preserved in result",
+			Labels: []map[string]string{{"service": "api"}},
+			Expect: &types.BehavioralExpect{Outcome: "active", Receivers: []string{"api-team"}},
 		},
 	}
 

@@ -57,12 +57,12 @@ func TestTestCase_Regression_Roundtrip(t *testing.T) {
 		Labels: []map[string]string{
 			{"service": "api", "severity": "critical"},
 		},
-		Expected: []string{"api-team"},
-		Tags:     []string{"regression"},
+		Expect: &types.BehavioralExpect{Outcome: "active", Receivers: []string{"api-team"}},
+		Tags:   []string{"regression"},
 	}
 
 	require.Equal(t, "Route to api-team", tc.Name)
 	require.Equal(t, "regression", tc.Type)
-	require.Len(t, tc.Expected, 1)
-	require.Contains(t, tc.Expected, "api-team")
+	require.Len(t, tc.Expect.Receivers, 1)
+	require.Contains(t, tc.Expect.Receivers, "api-team")
 }

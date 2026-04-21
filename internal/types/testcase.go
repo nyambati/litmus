@@ -14,8 +14,7 @@ type TestCase struct {
 	Expect *BehavioralExpect `json:"expect,omitempty" yaml:"expect,omitempty" msgpack:"expect,omitempty"`
 
 	// regression-only fields
-	Labels   []map[string]string `json:"labels,omitempty"   yaml:"labels,omitempty"   msgpack:"labels,omitempty"`
-	Expected []string            `json:"expected,omitempty" yaml:"expected,omitempty" msgpack:"expected,omitempty"`
+	Labels []map[string]string `json:"labels,omitempty" yaml:"labels,omitempty" msgpack:"labels,omitempty"`
 }
 
 // TestResult is the unified execution result for both unit and regression tests.

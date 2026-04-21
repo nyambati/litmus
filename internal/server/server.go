@@ -51,7 +51,7 @@ func RunUIServer(port int, dev bool) error {
 		api.GET("/tests", testsHandler)
 		api.POST("/tests/run", runTestsHandler)
 		api.POST("/evaluate", evaluateHandler)
-		api.GET("/suggest", suggestHandler)
+		api.GET("/label_values", suggestHandler)
 		api.GET("/regressions", regressionsHandler)
 		api.POST("/regressions/run", regressionsRunHandler)
 		api.POST("/regressions/generate", generateRegressionsHandler)
