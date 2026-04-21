@@ -55,18 +55,20 @@ type TestFailure struct {
 
 // RegressionResult holds regression test results.
 type RegressionResult struct {
-	Passed    bool          `json:"passed"`
-	Tests     int           `json:"tests"`
-	PassCount int           `json:"pass_count"`
-	Failures  []TestFailure `json:"failures,omitempty"`
+	Passed      bool          `json:"passed"`
+	Tests       int           `json:"tests"`
+	TotalTests  int           `json:"total_tests"`
+	PassCount   int           `json:"pass_count"`
+	Failures    []TestFailure `json:"failures,omitempty"`
 }
 
 // BehavioralResult holds behavioral test results.
 type BehavioralResult struct {
-	Passed    bool          `json:"passed"`
-	Tests     int           `json:"tests"`
-	PassCount int           `json:"pass_count"`
-	Failures  []TestFailure `json:"failures,omitempty"`
+	Passed      bool          `json:"passed"`
+	Tests       int           `json:"tests"`
+	TotalTests  int           `json:"total_tests"`
+	PassCount   int           `json:"pass_count"`
+	Failures    []TestFailure `json:"failures,omitempty"`
 }
 
 // RunCheck loads config, runs all validation stages, prints results, and returns
@@ -171,6 +173,7 @@ func RunRegressionTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 		return result
 	}
 
+	result.TotalTests = len(baseline)
 	baseline = filterByTags(baseline, tags)
 	result.Tests = len(baseline)
 	executor := snapshot.NewRegressionTestExecutor()
@@ -206,6 +209,7 @@ func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 		return result
 	}
 
+	result.TotalTests = len(tests)
 	tests = filterByTags(tests, tags)
 	result.Tests = len(tests)
 	executor := behavioral.NewBehavioralTestExecutor(inhibitRules)
@@ -230,15 +234,22 @@ func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 // filterByTags filters test cases to only those with matching tags.
 // If tags is empty, all tests are returned. Uses OR semantics: a test
 // is included if it has at least one tag in the filter list.
+// Whitespace is trimmed from tag names and empty tags are ignored.
 func filterByTags(tests []*types.TestCase, tags []string) []*types.TestCase {
 	if len(tags) == 0 {
 		return tests
 	}
-	tagSet := make(map[string]struct{}, len(tags))
+	tagSet := make(map[string]struct{})
 	for _, t := range tags {
-		tagSet[t] = struct{}{}
+		trimmed := strings.TrimSpace(t)
+		if trimmed != "" {
+			tagSet[trimmed] = struct{}{}
+		}
 	}
-	var out []*types.TestCase
+	if len(tagSet) == 0 {
+		return tests
+	}
+	out := make([]*types.TestCase, 0, len(tests))
 	for _, tc := range tests {
 		for _, tag := range tc.Tags {
 			if _, ok := tagSet[tag]; ok {
@@ -268,8 +279,10 @@ func PrintCheckResult(r CheckResult, showDiff bool) {
 	// 2. Regressions
 	fmt.Println("2. Regressions (Automated)")
 	//nolint:gocritic
-	if r.Regression.Tests == 0 {
+	if r.Regression.TotalTests == 0 {
 		fmt.Println("   [SKIP]  No baseline found — run 'litmus snapshot' first")
+	} else if r.Regression.Tests == 0 {
+		fmt.Printf("   [SKIP]  No tests matched filter (0/%d baseline cases)\n", r.Regression.TotalTests)
 	} else if r.Regression.Passed {
 		fmt.Printf("   [PASS]  %d/%d cases passed\n", r.Regression.Tests, r.Regression.Tests)
 	} else {
@@ -305,8 +318,10 @@ func PrintCheckResult(r CheckResult, showDiff bool) {
 	// 3. Behavioral
 	fmt.Println("3. Behavioral (BUT)")
 	//nolint:gocritic
-	if r.Behavioral.Tests == 0 {
+	if r.Behavioral.TotalTests == 0 {
 		fmt.Println("   [SKIP]  No tests found")
+	} else if r.Behavioral.Tests == 0 {
+		fmt.Printf("   [SKIP]  No tests matched filter (0/%d tests)\n", r.Behavioral.TotalTests)
 	} else if r.Behavioral.Passed {
 		fmt.Printf("   [PASS]  %d/%d unit tests passed\n", r.Behavioral.Tests, r.Behavioral.Tests)
 	} else {
