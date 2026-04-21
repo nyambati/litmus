@@ -1,31 +1,33 @@
 #!/bin/bash
 
-# Exit on any error
 set -e
 
 echo "Running pre-commit checks..."
 
-# Run go fmt
-echo "Checking code format..."
-if ! go fmt ./...; then
-    echo "✗ Code formatting check failed. Run 'go fmt ./...'"
+# Run make all (fmt, test, vet, lint)
+echo "Running make all..."
+if ! make all; then
+    echo "✗ make all failed"
     exit 1
 fi
 
-# Run go vet
-echo "Running go vet..."
-if ! go vet ./...; then
-    echo "✗ go vet failed"
-    exit 1
-fi
-
-# Run tests
-echo "Running tests..."
-if ! go test ./... -short; then
-    echo "✗ Tests failed"
-    exit 1
+# Only rebuild and check ui/dist when UI source files are staged
+if git diff --cached --name-only | grep -qE '^ui/(src|public|index\.html|package\.json|vite\.config)'; then
+    echo "UI source changes detected — checking ui/dist is up to date..."
+    if ! npm --prefix ui run build; then
+        echo "✗ UI build failed"
+        exit 1
+    fi
+    if ! git diff --quiet ui/dist/; then
+        echo "✗ ui/dist/ is out of date after build. Stage the changes:"
+        echo ""
+        git diff --name-only ui/dist/ | sed 's/^/  /'
+        echo ""
+        echo "  Run: git add ui/dist/ && git commit --amend --no-edit"
+        exit 1
+    fi
+    echo "✓ ui/dist is up to date"
 fi
 
 echo "✓ All pre-commit checks passed"
 exit 0
-

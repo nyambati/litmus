@@ -1,15 +1,41 @@
 import React from "react";
-import { Circle, CheckCircle2, AlertCircle, Play, Tag, Layers } from "lucide-react";
+import {
+  Circle,
+  CheckCircle2,
+  AlertCircle,
+  Play,
+  Tag,
+  Layers,
+} from "lucide-react";
 import { cn } from "../../utils/persistence";
 import { GfSpinner } from "../ui/Spinner";
 import { StatusBadge } from "../ui/Status";
 import { LabelChip, ReceiverChip } from "../ui/Chips";
 
+export interface TestResult {
+  pass: boolean;
+  error?: string;
+  expected?: string[];
+  actual?: string[];
+  labels?: Record<string, unknown>;
+}
+
+export interface Test {
+  name: string;
+  type: "regression" | "unit";
+  tags?: string[];
+  expect?: { outcome?: string; receivers?: string[] };
+  alert?: { labels?: Record<string, unknown> };
+  state?: { silences?: unknown[]; active_alerts?: unknown[] };
+  labels?: Record<string, string>[];
+  expected?: string[];
+}
+
 interface TestCaseShellProps {
   name: string;
   testType: "unit" | "regression";
   tags?: string[];
-  result?: any;
+  result?: TestResult;
   isRunning: boolean;
   globalRunning: boolean;
   onRun: () => void;
@@ -56,7 +82,9 @@ const TestCaseShell = ({
 
         {/* Name + tags */}
         <div className="flex-1 min-w-0">
-          <h4 className="text-[#d9d9d9] text-sm font-medium truncate">{name}</h4>
+          <h4 className="text-[#d9d9d9] text-sm font-medium truncate">
+            {name}
+          </h4>
           <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
             <span
               className={cn(
@@ -72,7 +100,7 @@ const TestCaseShell = ({
               ?.filter((t) => t !== "regression")
               .map((t, i) => (
                 <span
-                  key={i}
+                  key={i + t}
                   className="text-[10px] text-[#8e9193]/60 px-1 py-px rounded-[2px] bg-[#22252b] border border-[#2c3235]"
                 >
                   {t}
@@ -83,11 +111,7 @@ const TestCaseShell = ({
 
         {/* Result badge + run button */}
         <div className="flex items-center gap-2 shrink-0">
-          {result ? (
-            <StatusBadge pass={result.pass} />
-          ) : (
-            <StatusBadge idle />
-          )}
+          {result ? <StatusBadge pass={result.pass} /> : <StatusBadge idle />}
           <button
             onClick={onRun}
             disabled={isRunning || globalRunning}
@@ -99,11 +123,7 @@ const TestCaseShell = ({
               "disabled:opacity-30 disabled:cursor-not-allowed",
             )}
           >
-            {isRunning ? (
-              <GfSpinner size="sm" />
-            ) : (
-              <Play size={11} />
-            )}
+            {isRunning ? <GfSpinner size="sm" /> : <Play size={11} />}
           </button>
         </div>
       </div>
@@ -115,8 +135,8 @@ const TestCaseShell = ({
 };
 
 interface TestCaseProps {
-  test: any;
-  result?: any;
+  test: Test;
+  result?: TestResult;
   isRunning: boolean;
   globalRunning: boolean;
   onRun: () => void;
@@ -134,7 +154,7 @@ const UnitTestCase = ({
   const alertLabels = test.alert?.labels || {};
   const hasState =
     test.state &&
-    (test.state.silences?.length > 0 || test.state.active_alerts?.length > 0);
+    ((test.state.silences?.length ?? 0) > 0 || (test.state.active_alerts?.length ?? 0) > 0);
 
   const outcomeColors: Record<string, string> = {
     active: "bg-[#73bf69]/10 border-[#73bf69]/25 text-[#73bf69]",
@@ -176,19 +196,19 @@ const UnitTestCase = ({
           >
             {outcome || "active"}
           </span>
-          {receivers.map((r: string) => (
-            <ReceiverChip key={r} name={r} variant="blue" />
+          {receivers.map((r: string, i: number) => (
+            <ReceiverChip key={`${r}-${i}`} name={r} variant="blue" />
           ))}
         </div>
 
         {/* State hint */}
         {hasState && (
           <div className="flex items-center gap-3 text-[11px] text-[#8e9193]/50 font-mono">
-            {test.state.silences?.length > 0 && (
-              <span>{test.state.silences.length} silence(s)</span>
+            {(test.state?.silences?.length ?? 0) > 0 && (
+              <span>{test.state?.silences?.length} silence(s)</span>
             )}
-            {test.state.active_alerts?.length > 0 && (
-              <span>{test.state.active_alerts.length} active alert(s)</span>
+            {(test.state?.active_alerts?.length ?? 0) > 0 && (
+              <span>{test.state?.active_alerts?.length} active alert(s)</span>
             )}
           </div>
         )}
@@ -242,8 +262,8 @@ const RegressionTestCase = ({
           <span className="text-[10px] text-[#8e9193]/50 uppercase font-bold tracking-wider">
             expect
           </span>
-          {expected.map((r) => (
-            <ReceiverChip key={r} name={r} variant="purple" />
+          {expected.map((r, i) => (
+            <ReceiverChip key={`${r}-${i}`} name={r} variant="purple" />
           ))}
         </div>
 
@@ -256,20 +276,26 @@ const RegressionTestCase = ({
             {result.expected && (
               <>
                 <div className="flex gap-2 items-baseline">
-                  <span className="text-[#8e9193]/40 w-16 shrink-0">expected</span>
+                  <span className="text-[#8e9193]/40 w-16 shrink-0">
+                    expected
+                  </span>
                   <span className="text-[#d9d9d9]/70">
                     [{result.expected.join(", ")}]
                   </span>
                 </div>
                 <div className="flex gap-2 items-baseline">
-                  <span className="text-[#8e9193]/40 w-16 shrink-0">actual</span>
+                  <span className="text-[#8e9193]/40 w-16 shrink-0">
+                    actual
+                  </span>
                   <span className="text-[#f2495c]">
                     [{(result.actual || []).join(", ")}]
                   </span>
                 </div>
                 {result.labels && (
                   <div className="flex gap-2 pt-1.5 border-t border-[#2c3235]">
-                    <span className="text-[#8e9193]/40 w-16 shrink-0">labels</span>
+                    <span className="text-[#8e9193]/40 w-16 shrink-0">
+                      labels
+                    </span>
                     <span className="flex flex-wrap gap-1 text-[#8e9193]/60">
                       {Object.entries(result.labels).map(([k, v]) => (
                         <span key={k}>

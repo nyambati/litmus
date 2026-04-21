@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background gradient: warm dark center -->
+    <radialGradient id="bg" cx="50%" cy="50%" r="65%">
+      <stop offset="0%"  stop-color="#221208"/>
+      <stop offset="100%" stop-color="#130b04"/>
+    </radialGradient>
+    <!-- Glow filter for the waveform -->
+    <filter id="glow" x="-30%" y="-60%" width="160%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect width="512" height="512" rx="108" ry="108" fill="url(#bg)"/>
+
+  <!-- Subtle inner highlight on top edge -->
+  <rect width="512" height="512" rx="108" ry="108"
+        fill="none"
+        stroke="#f46800" stroke-width="1.5" stroke-opacity="0.12"/>
+
+  <!-- ECG waveform with glow -->
+  <polyline
+    filter="url(#glow)"
+    points="
+      56,256
+      168,256
+      192,298
+      210,214
+      228,256
+      248,256
+      275,96
+      308,392
+      332,256
+      352,256
+      370,214
+      388,298
+      408,256
+      456,256
+    "
+    fill="none"
+    stroke="#f46800"
+    stroke-width="22"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

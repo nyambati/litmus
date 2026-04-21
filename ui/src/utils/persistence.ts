@@ -10,7 +10,9 @@ export function loadCache<T>(key: string): { data: T; ts: number } | null {
 export function saveCache<T>(key: string, data: T) {
   try {
     localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() }));
-  } catch {}
+  } catch {
+    // Silently ignore storage errors (e.g., quota exceeded, private mode)
+  }
 }
 
 export function formatAge(ts: number): string {

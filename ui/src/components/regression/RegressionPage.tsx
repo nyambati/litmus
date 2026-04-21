@@ -1,5 +1,15 @@
-import React, { useState, useEffect } from "react";
-import { CheckCircle2, AlertTriangle, ShieldCheck, Tag, ArrowRight, ChevronDown, Save, Play, X } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  CheckCircle2,
+  AlertTriangle,
+  ShieldCheck,
+  Tag,
+  ArrowRight,
+  ChevronDown,
+  Save,
+  Play,
+  X,
+} from "lucide-react";
 import { cn, API, loadCache, saveCache } from "../../utils/persistence";
 import { GfSpinner } from "../ui/Spinner";
 import { StatusBadge } from "../ui/Status";
@@ -50,11 +60,12 @@ export const RegressionPage = ({
 }: {
   onDiffRun?: (total: number, drifted: number) => void;
 }) => {
-  const _diffCache = loadCache<DiffResult>("litmus:regression:diff");
-  const [diff, setDiff] = useState<DiffResult | null>(_diffCache?.data ?? null);
-  const [lastRunTs, setLastRunTs] = useState<number | null>(
-    _diffCache?.ts ?? null,
-  );
+  const [diff, setDiff] = useState<DiffResult | null>(() => {
+    return loadCache<DiffResult>("litmus:regression:diff")?.data ?? null;
+  });
+  const [lastRunTs, setLastRunTs] = useState<number | null>(() => {
+    return loadCache<DiffResult>("litmus:regression:diff")?.ts ?? null;
+  });
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<"all" | "passing">("all");
   const [activeAction, setActiveAction] = useState<ActionType>("analyze");
@@ -72,33 +83,37 @@ export const RegressionPage = ({
     }
   }, [notification]);
 
-  const runAnalyse = async (silent = false) => {
-    setLoading(true);
-    if (!silent) setNotification(null);
-    try {
-      const resp = await fetch(`${API}/api/v1/diff`);
-      if (!resp.ok) throw new Error(await resp.text());
-      const data: DiffResult = await resp.json();
-      setDiff(data);
-      setLastRunTs(Date.now());
-      saveCache("litmus:regression:diff", data);
-      onDiffRun?.(data.total, data.drifted);
-      if (!silent) {
+  const runAnalyse = useCallback(
+    async (silent = false) => {
+      setLoading(true);
+      if (!silent) setNotification(null);
+      try {
+        const resp = await fetch(`${API}/api/v1/diff`);
+        if (!resp.ok) throw new Error(await resp.text());
+        const data: DiffResult = await resp.json();
+        const now = Date.now();
+        setDiff(data);
+        setLastRunTs(now);
+        saveCache("litmus:regression:diff", data);
+        onDiffRun?.(data.total, data.drifted);
+        if (!silent) {
+          setNotification({
+            type: "success",
+            message: "Routing analysis completed",
+          });
+        }
+      } catch (err) {
+        console.error("Failed to run analysis:", err);
         setNotification({
-          type: "success",
-          message: "Routing analysis completed",
+          type: "error",
+          message: `Analysis failed: ${err}`,
         });
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("Failed to run analysis:", err);
-      setNotification({
-        type: "error",
-        message: `Analysis failed: ${err}`,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [onDiffRun],
+  );
 
   const handleAction = async () => {
     if (activeAction === "analyze") {
@@ -137,8 +152,13 @@ export const RegressionPage = ({
   };
 
   useEffect(() => {
-    if (!_diffCache) runAnalyse(true);
-  }, []);
+    if (diff === null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      runAnalyse(true);
+    }
+    // diff is intentionally read from initial render only — auto-run once on mount when no cache
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runAnalyse]);
 
   const visibleResults =
     diff?.results.filter((r) => {
@@ -171,29 +191,37 @@ export const RegressionPage = ({
         {/* Confirm Modal */}
         {showConfirm && (
           <>
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-[100]" onClick={() => setShowConfirm(false)} />
+            <div
+              className="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-[100]"
+              onClick={() => setShowConfirm(false)}
+            />
             <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-[#1f2128] border border-[#34383e] rounded shadow-2xl z-[101] overflow-hidden animate-in zoom-in-95 duration-200">
               <div className="px-6 py-4 border-b border-[#34383e] flex items-center justify-between bg-[#111217]">
                 <h3 className="text-[#d9d9d9] font-semibold flex items-center gap-2">
                   <Save size={16} className="text-[#f46800]" />
                   Update Baseline
                 </h3>
-                <button onClick={() => setShowConfirm(false)} className="text-[#8e9193] hover:text-[#d9d9d9] transition-colors">
+                <button
+                  onClick={() => setShowConfirm(false)}
+                  className="text-[#8e9193] hover:text-[#d9d9d9] transition-colors"
+                >
                   <X size={18} />
                 </button>
               </div>
               <div className="px-6 py-5">
                 <p className="text-[#d9d9d9] text-sm leading-relaxed">
-                  Are you sure you want to update the regression baseline? This will overwrite the current baseline with the detected routing behavior.
+                  Are you sure you want to update the regression baseline? This
+                  will overwrite the current baseline with the detected routing
+                  behavior.
                 </p>
                 <div className="mt-6 flex items-center justify-end gap-3">
-                  <button 
+                  <button
                     onClick={() => setShowConfirm(false)}
                     className="px-4 py-[7px] rounded border border-[#34383e] text-[#d9d9d9] text-sm font-medium hover:bg-[#ffffff08] transition-colors"
                   >
                     Cancel
                   </button>
-                  <button 
+                  <button
                     onClick={performUpdate}
                     className="px-4 py-[7px] rounded bg-[#f46800] hover:bg-[#ff7f2a] text-white text-sm font-semibold transition-colors"
                   >
@@ -256,7 +284,12 @@ export const RegressionPage = ({
                 {loading ? (
                   <GfSpinner size="sm" />
                 ) : (
-                  <currentAction.icon size={12} fill={currentAction.id === "analyze" ? "currentColor" : "none"} />
+                  <currentAction.icon
+                    size={12}
+                    fill={
+                      currentAction.id === "analyze" ? "currentColor" : "none"
+                    }
+                  />
                 )}
                 {loading ? "Processing…" : currentAction.label}
               </button>
@@ -380,7 +413,9 @@ export const RegressionPage = ({
             <div className="space-y-2">
               {visibleResults.length === 0 && (
                 <div className="py-8 text-center text-[#8e9193] text-sm">
-                  {filter === "all" ? "No changes detected" : "No passing results"}
+                  {filter === "all"
+                    ? "No changes detected"
+                    : "No passing results"}
                 </div>
               )}
               {visibleResults.map((result, i) => (
@@ -388,10 +423,10 @@ export const RegressionPage = ({
                   key={`${result.name}-${i}`}
                   className={cn(
                     "bg-[#1f2128] border border-[#2c3235] border-l-[3px] rounded-sm overflow-hidden",
-                    result.pass 
-                      ? "border-l-[#73bf69]" 
-                      : result.kind === "added" 
-                        ? "border-l-[#5794f2]" 
+                    result.pass
+                      ? "border-l-[#73bf69]"
+                      : result.kind === "added"
+                        ? "border-l-[#5794f2]"
                         : "border-l-[#f5a623]",
                   )}
                 >
@@ -412,10 +447,14 @@ export const RegressionPage = ({
                           {result.name}
                         </p>
                         {result.kind && !result.pass && (
-                          <span className={cn(
-                            "text-[10px] font-bold uppercase tracking-tighter px-1 rounded-[2px]",
-                            result.kind === "added" ? "bg-[#5794f2]/20 text-[#5794f2]" : "bg-[#f5a623]/20 text-[#f5a623]"
-                          )}>
+                          <span
+                            className={cn(
+                              "text-[10px] font-bold uppercase tracking-tighter px-1 rounded-[2px]",
+                              result.kind === "added"
+                                ? "bg-[#5794f2]/20 text-[#5794f2]"
+                                : "bg-[#f5a623]/20 text-[#f5a623]",
+                            )}
+                          >
                             {result.kind}
                           </span>
                         )}
@@ -455,7 +494,9 @@ export const RegressionPage = ({
                                 <ReceiverChip key={r} name={r} variant="blue" />
                               ))
                             ) : (
-                                <span className="text-[#8e9193]/40 italic text-[11px]">none</span>
+                              <span className="text-[#8e9193]/40 italic text-[11px]">
+                                none
+                              </span>
                             )}
                           </div>
                           <ArrowRight

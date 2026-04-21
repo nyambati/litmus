@@ -8,6 +8,10 @@ import {
 } from "lucide-react";
 import { cn, loadCache, saveCache, formatAge } from "./utils/persistence";
 
+interface TestResult {
+  pass: boolean;
+}
+
 // Layout components
 import { AppLayout } from "./components/layout/AppLayout";
 import { StatPanel } from "./components/layout/StatsSidebar";
@@ -61,30 +65,38 @@ function App() {
     setExplorerRunTrigger((n) => n + 1);
   };
 
-  const _labCache = loadCache<Record<string, any>>("litmus:lab:results");
+  const deleteHistoryEntry = (query: string) => {
+    setQueryHistory((prev) => {
+      const next = prev.filter((e) => e.query !== query);
+      saveCache(HISTORY_KEY, next);
+      return next;
+    });
+  };
+
   const [testResults, setTestResults] = useState<{
     passed: number;
     failed: number;
   }>(() => {
-    if (!_labCache?.data) return { passed: 0, failed: 0 };
+    const labCache = loadCache<Record<string, TestResult>>("litmus:lab:results");
+    if (!labCache?.data) return { passed: 0, failed: 0 };
     let passed = 0;
     let failed = 0;
-    Object.values(_labCache.data).forEach((r: any) => {
+    Object.values(labCache.data).forEach((r) => {
       if (r.pass) passed++;
       else failed++;
     });
     return { passed, failed };
   });
 
-  const _diffCache = loadCache<DiffResult>("litmus:regression:diff");
   const [diffStats, setDiffStats] = useState<{
     total: number;
     drifted: number;
-  } | null>(
-    _diffCache?.data
-      ? { total: _diffCache.data.total, drifted: _diffCache.data.drifted }
-      : null,
-  );
+  } | null>(() => {
+    const diffCache = loadCache<DiffResult>("litmus:regression:diff");
+    return diffCache?.data
+      ? { total: diffCache.data.total, drifted: diffCache.data.drifted }
+      : null;
+  });
 
   return (
     <Router>
@@ -159,34 +171,45 @@ function App() {
                       </div>
                       <div className="space-y-1.5">
                         {queryHistory.map((entry, i) => (
-                          <button
+                          <div
                             key={i}
-                            onClick={() => loadHistoryEntry(entry)}
-                            className="w-full text-left p-2.5 rounded-[2px] bg-[#1f2128] border border-[#2c3235] hover:border-[#34383e] hover:bg-[#22252b] transition-all group"
+                            className="relative p-2.5 rounded-xs bg-[#1f2128] border border-[#2c3235] hover:border-[#34383e] hover:bg-[#22252b] transition-all group"
                           >
-                            <p className="font-mono text-[11px] text-[#d9d9d9]/70 truncate group-hover:text-[#d9d9d9] transition-colors">
-                              {entry.query}
-                            </p>
-                            <div className="flex items-center justify-between mt-1.5">
-                              <div className="flex gap-1 flex-wrap">
-                                {entry.receivers.slice(0, 2).map((r) => (
-                                  <ReceiverChip
-                                    key={r}
-                                    name={r}
-                                    variant="green"
-                                  />
-                                ))}
-                                {entry.receivers.length > 2 && (
-                                  <span className="text-[10px] text-[#8e9193]/50">
-                                    +{entry.receivers.length - 2}
-                                  </span>
-                                )}
+                            <button
+                              onClick={() => loadHistoryEntry(entry)}
+                              className="w-full text-left"
+                            >
+                              <p className="font-mono text-[11px] text-[#d9d9d9]/70 truncate pr-5 group-hover:text-[#d9d9d9] transition-colors">
+                                {entry.query}
+                              </p>
+                              <div className="flex items-center justify-between mt-1.5">
+                                <div className="flex gap-1 flex-wrap">
+                                  {entry.receivers.slice(0, 2).map((r, ri) => (
+                                    <ReceiverChip
+                                      key={`${r}-${ri}`}
+                                      name={r}
+                                      variant="green"
+                                    />
+                                  ))}
+                                  {entry.receivers.length > 2 && (
+                                    <span className="text-[10px] text-[#8e9193]/50">
+                                      +{entry.receivers.length - 2}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-[#8e9193]/40 shrink-0 ml-1">
+                                  {formatAge(entry.ts)}
+                                </span>
                               </div>
-                              <span className="text-[10px] text-[#8e9193]/40 shrink-0 ml-1">
-                                {formatAge(entry.ts)}
-                              </span>
-                            </div>
-                          </button>
+                            </button>
+                            <button
+                              onClick={() => deleteHistoryEntry(entry.query)}
+                              title="Remove"
+                              className="absolute top-2 right-2 w-4 h-4 flex items-center justify-center text-[#8e9193]/0 group-hover:text-[#8e9193]/50 hover:!text-[#f2495c] transition-colors"
+                            >
+                              ×
+                            </button>
+                          </div>
                         ))}
                       </div>
                     </div>

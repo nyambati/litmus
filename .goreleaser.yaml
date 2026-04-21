@@ -2,9 +2,14 @@ version: 2
 
 project_name: litmus
 
+before:
+  hooks:
+    - npm --prefix ui ci --prefer-offline
+    - npm --prefix ui run build
+
 builds:
   - id: litmus
-    main: ./cmd/litmus
+    main: .
     binary: litmus
     env:
       - CGO_ENABLED=0

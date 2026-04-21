@@ -55,23 +55,25 @@ type TestFailure struct {
 
 // RegressionResult holds regression test results.
 type RegressionResult struct {
-	Passed    bool          `json:"passed"`
-	Tests     int           `json:"tests"`
-	PassCount int           `json:"pass_count"`
-	Failures  []TestFailure `json:"failures,omitempty"`
+	Passed     bool          `json:"passed"`
+	Tests      int           `json:"tests"`
+	TotalTests int           `json:"total_tests"`
+	PassCount  int           `json:"pass_count"`
+	Failures   []TestFailure `json:"failures,omitempty"`
 }
 
 // BehavioralResult holds behavioral test results.
 type BehavioralResult struct {
-	Passed    bool          `json:"passed"`
-	Tests     int           `json:"tests"`
-	PassCount int           `json:"pass_count"`
-	Failures  []TestFailure `json:"failures,omitempty"`
+	Passed     bool          `json:"passed"`
+	Tests      int           `json:"tests"`
+	TotalTests int           `json:"total_tests"`
+	PassCount  int           `json:"pass_count"`
+	Failures   []TestFailure `json:"failures,omitempty"`
 }
 
 // RunCheck loads config, runs all validation stages, prints results, and returns
 // the exit code the CLI layer should pass to os.Exit (0 = all passed).
-func RunCheck(format string, showDiff bool) (CheckExitCode, error) {
+func RunCheck(format string, showDiff bool, tags []string) (CheckExitCode, error) {
 	start := time.Now()
 	ctx := context.Background()
 
@@ -93,8 +95,8 @@ func RunCheck(format string, showDiff bool) (CheckExitCode, error) {
 	router := pipeline.NewRouter(alertConfig.Route)
 
 	sanityResult := RunSanityChecks(alertConfig)
-	regressionResult := RunRegressionTests(ctx, litmusConfig, router)
-	behavioralResult := RunBehavioralTests(ctx, litmusConfig, router, alertConfig.InhibitRules)
+	regressionResult := RunRegressionTests(ctx, litmusConfig, router, tags)
+	behavioralResult := RunBehavioralTests(ctx, litmusConfig, router, alertConfig.InhibitRules, tags)
 
 	passed := sanityResult.Passed && regressionResult.Passed && behavioralResult.Passed
 
@@ -159,7 +161,7 @@ func RunSanityChecks(alertConfig *amconfig.Config) SanityResult {
 }
 
 // RunRegressionTests executes the regression baseline against the current router.
-func RunRegressionTests(ctx context.Context, litmusConfig *config.LitmusConfig, router *pipeline.Router) RegressionResult {
+func RunRegressionTests(ctx context.Context, litmusConfig *config.LitmusConfig, router *pipeline.Router, tags []string) RegressionResult {
 	result := RegressionResult{Passed: true}
 
 	baselinePath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.mpk")
@@ -171,6 +173,8 @@ func RunRegressionTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 		return result
 	}
 
+	result.TotalTests = len(baseline)
+	baseline = filterByTags(baseline, tags)
 	result.Tests = len(baseline)
 	executor := snapshot.NewRegressionTestExecutor()
 
@@ -193,7 +197,7 @@ func RunRegressionTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 }
 
 // RunBehavioralTests loads and executes all behavioral unit tests.
-func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, router *pipeline.Router, inhibitRules []amconfig.InhibitRule) BehavioralResult {
+func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, router *pipeline.Router, inhibitRules []amconfig.InhibitRule, tags []string) BehavioralResult {
 	result := BehavioralResult{Passed: true}
 
 	loader := behavioral.NewBehavioralTestLoader()
@@ -205,6 +209,8 @@ func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 		return result
 	}
 
+	result.TotalTests = len(tests)
+	tests = filterByTags(tests, tags)
 	result.Tests = len(tests)
 	executor := behavioral.NewBehavioralTestExecutor(inhibitRules)
 
@@ -225,6 +231,36 @@ func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 	return result
 }
 
+// filterByTags filters test cases to only those with matching tags.
+// If tags is empty, all tests are returned. Uses OR semantics: a test
+// is included if it has at least one tag in the filter list.
+// Whitespace is trimmed from tag names and empty tags are ignored.
+func filterByTags(tests []*types.TestCase, tags []string) []*types.TestCase {
+	if len(tags) == 0 {
+		return tests
+	}
+	tagSet := make(map[string]struct{})
+	for _, t := range tags {
+		trimmed := strings.TrimSpace(t)
+		if trimmed != "" {
+			tagSet[trimmed] = struct{}{}
+		}
+	}
+	if len(tagSet) == 0 {
+		return tests
+	}
+	out := make([]*types.TestCase, 0, len(tests))
+	for _, tc := range tests {
+		for _, tag := range tc.Tags {
+			if _, ok := tagSet[tag]; ok {
+				out = append(out, tc)
+				break
+			}
+		}
+	}
+	return out
+}
+
 // PrintCheckResult writes the formatted validation report to stdout.
 //
 //nolint:forbidigo
@@ -243,8 +279,10 @@ func PrintCheckResult(r CheckResult, showDiff bool) {
 	// 2. Regressions
 	fmt.Println("2. Regressions (Automated)")
 	//nolint:gocritic
-	if r.Regression.Tests == 0 {
+	if r.Regression.TotalTests == 0 {
 		fmt.Println("   [SKIP]  No baseline found — run 'litmus snapshot' first")
+	} else if r.Regression.Tests == 0 {
+		fmt.Printf("   [SKIP]  No tests matched filter (0/%d baseline cases)\n", r.Regression.TotalTests)
 	} else if r.Regression.Passed {
 		fmt.Printf("   [PASS]  %d/%d cases passed\n", r.Regression.Tests, r.Regression.Tests)
 	} else {
@@ -280,8 +318,10 @@ func PrintCheckResult(r CheckResult, showDiff bool) {
 	// 3. Behavioral
 	fmt.Println("3. Behavioral (BUT)")
 	//nolint:gocritic
-	if r.Behavioral.Tests == 0 {
+	if r.Behavioral.TotalTests == 0 {
 		fmt.Println("   [SKIP]  No tests found")
+	} else if r.Behavioral.Tests == 0 {
+		fmt.Printf("   [SKIP]  No tests matched filter (0/%d tests)\n", r.Behavioral.TotalTests)
 	} else if r.Behavioral.Passed {
 		fmt.Printf("   [PASS]  %d/%d unit tests passed\n", r.Behavioral.Tests, r.Behavioral.Tests)
 	} else {
