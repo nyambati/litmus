@@ -4,15 +4,27 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/joho/godotenv"
 	amconfig "github.com/prometheus/alertmanager/config"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
-// DefaultConfigName is the base name of the configuration file.
-const DefaultConfigName = ".litmus"
+const (
+	// DefaultConfigName is the base name of the configuration file.
+	DefaultConfigName = ".litmus"
+
+	DefaultAlertConfigDirectory = "config"
+	DefaultAlertConfigFile      = "alertmanager.yml"
+	DefaultAlertTemplates       = "templates/"
+	DefaultRegressionDirectory  = "regressions"
+	DefaultRegressionMaxSamples = 5
+	DefaultRegressionYamlFile   = "regressions.litmus.yml"
+)
 
 // envPattern matches env(VAR_NAME) where VAR_NAME is an uppercase env var identifier.
 var envPattern = regexp.MustCompile(`env\(([A-Za-z_][A-Za-z0-9_]*)\)`)
@@ -20,6 +32,10 @@ var envPattern = regexp.MustCompile(`env\(([A-Za-z_][A-Za-z0-9_]*)\)`)
 // LoadConfig initializes and returns the litmus configuration.
 // It follows the precedence order: Flags > Env Vars > Config File > Defaults.
 func LoadConfig() (*LitmusConfig, error) {
+	if err := godotenv.Load(); err != nil {
+		logrus.Warnf("Error loading .env file: %v", err)
+	}
+
 	v := viper.New()
 
 	// 1. Set Defaults
@@ -155,4 +171,18 @@ func expandEnvVars(s string) (string, error) {
 		return "", expandErr
 	}
 	return result, nil
+}
+
+// methods
+func (c *LitmusConfig) FilePath() string {
+	return filepath.Join(c.Config.Directory, c.Config.File)
+}
+
+func (c *LitmusConfig) RegressionsYamlFilePath() string {
+	return filepath.Join(c.Regression.Directory, DefaultRegressionYamlFile)
+}
+
+func (c *LitmusConfig) RegressionsBinaryFilePath() string {
+	file := strings.Replace(DefaultRegressionYamlFile, "yml", "mpk", 1)
+	return filepath.Join(c.Regression.Directory, file)
 }

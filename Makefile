@@ -53,6 +53,7 @@ clean:
 
 all: fmt test vet lint
 dev:
-	@cd ui && npm run dev
+	@nohup sh -c 'cd ui && npm run dev' > /dev/null 2>&1 &
+	@go run main.go serve
 serve:
 	@go run main.go serve
