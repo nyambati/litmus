@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { cn } from "../../utils/persistence";
 
 interface Suggestions {
@@ -22,7 +22,6 @@ export const Autocomplete = ({
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Determine what we are suggesting
   const beforeCursor = text.slice(0, cursorPos);
   const lines = beforeCursor.split("\n");
   const lastLine = lines[lines.length - 1];
@@ -33,12 +32,11 @@ export const Autocomplete = ({
   let filter = currentPart;
   let activeLabel = "";
 
-  if (currentPart.includes("=") || currentPart.includes(":")) {
+  if (currentPart.includes("=")) {
     type = "value";
-    const delimiter = currentPart.includes("=") ? "=" : ":";
-    const [label, ...rest] = currentPart.split(delimiter);
+    const [label, ...rest] = currentPart.split("=");
     activeLabel = label.trim();
-    filter = rest.join(delimiter).trim().replace(/^["']/, "");
+    filter = rest.join("=").trim().replace(/^["']/, "");
   }
 
   const list =
@@ -54,29 +52,45 @@ export const Autocomplete = ({
     setActiveIndex(0);
   }, [filter, type]);
 
+  // Use refs so the keydown handler is registered once, not re-registered on every render.
+  // useLayoutEffect keeps refs in sync before browser paint, so handlers always see current values.
+  const listRef = useRef(list);
+  const activeIndexRef = useRef(activeIndex);
+  const onSelectRef = useRef(onSelect);
+  const onCloseRef = useRef(onClose);
+
+  useLayoutEffect(() => {
+    listRef.current = list;
+    activeIndexRef.current = activeIndex;
+    onSelectRef.current = onSelect;
+    onCloseRef.current = onClose;
+  });
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const currentList = listRef.current;
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setActiveIndex((prev) => (prev + 1) % Math.max(1, list.length));
+        setActiveIndex((prev) => (prev + 1) % Math.max(1, currentList.length));
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         setActiveIndex(
-          (prev) => (prev - 1 + list.length) % Math.max(1, list.length),
+          (prev) =>
+            (prev - 1 + currentList.length) % Math.max(1, currentList.length),
         );
       } else if (e.key === "Enter" || e.key === "Tab") {
-        if (list.length > 0) {
+        if (currentList.length > 0) {
           e.preventDefault();
-          onSelect(list[activeIndex]);
+          onSelectRef.current(currentList[activeIndexRef.current]);
         }
       } else if (e.key === "Escape") {
-        onClose();
+        onCloseRef.current();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [list, activeIndex, onSelect, onClose]);
+  }, []); // Registered once on mount, refs keep values current
 
   if (list.length === 0) return null;
 

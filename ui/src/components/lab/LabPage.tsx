@@ -25,13 +25,12 @@ export const LabPage = ({
   onTestsRun: (passed: number, failed: number) => void;
 }) => {
   const [tests, setTests] = useState<TestWithType[]>([]);
-  const _labCache = loadCache<Record<string, TestResult>>("litmus:lab:results");
-  const [results, setResults] = useState<Record<string, TestResult>>(
-    _labCache?.data ?? {},
-  );
-  const [lastRunTs, setLastRunTs] = useState<number | null>(
-    _labCache?.ts ?? null,
-  );
+  const [results, setResults] = useState<Record<string, TestResult>>(() => {
+    return loadCache<Record<string, TestResult>>("litmus:lab:results")?.data ?? {};
+  });
+  const [lastRunTs, setLastRunTs] = useState<number | null>(() => {
+    return loadCache<Record<string, TestResult>>("litmus:lab:results")?.ts ?? null;
+  });
   const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState(false);
   const [runningTest, setRunningTest] = useState<string | null>(null);
@@ -111,19 +110,17 @@ export const LabPage = ({
       });
 
       const now = Date.now();
-      setResults((prev) => {
-        const merged = { ...prev, ...incoming };
-        let passed = 0;
-        let failed = 0;
-        Object.values(merged).forEach((r) => {
-          if (r.pass) passed++;
-          else failed++;
-        });
-        onTestsRun(passed, failed);
-        saveCache("litmus:lab:results", merged);
-        return merged;
+      const merged = { ...results, ...incoming };
+      let passed = 0;
+      let failed = 0;
+      Object.values(merged).forEach((r) => {
+        if (r.pass) passed++;
+        else failed++;
       });
+      saveCache("litmus:lab:results", merged);
+      setResults(merged);
       setLastRunTs(now);
+      onTestsRun(passed, failed);
     } catch (err) {
       console.error("Failed to run tests:", err);
     } finally {
@@ -148,7 +145,7 @@ export const LabPage = ({
     }
   };
 
-  const getTestType = (test: TestWithType): string => test.type || "unit";
+  const getTestType = (test: TestWithType): string => test.type;
 
   const filteredTests = tests
     .filter((test) => {
@@ -240,9 +237,9 @@ export const LabPage = ({
           />
         ) : (
           <div className="space-y-2">
-            {filteredTests.map((test, testIdx) => (
+            {filteredTests.map((test) => (
               <TestCaseCard
-                key={`${test.name}-${testIdx}`}
+                key={`${test.name}-${test.type}`}
                 test={test}
                 result={results[test.name]}
                 isRunning={runningTest === test.name}
