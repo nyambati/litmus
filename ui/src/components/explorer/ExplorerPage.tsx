@@ -222,11 +222,11 @@ export const ExplorerPage = ({
             </div>
 
             {/* Matchers + timing */}
-            {(node.match?.length > 0 || node.matched) && (
+            {((node.match?.length ?? 0) > 0 || node.matched) && (
               <div className="px-4 pb-3 border-t border-[#2c3235] pt-2.5 grid grid-cols-2 gap-4">
-                {node.match?.length > 0 && (
+                {(node.match?.length ?? 0) > 0 && (
                   <div className="space-y-1">
-                    {node.match.map((m: string, idx: number) => (
+                    {node.match!.map((m: string, idx: number) => (
                       <div
                         key={`${currentNodeId}-match-${idx}`}
                         className="flex gap-2 font-mono text-[11px]"
@@ -242,13 +242,13 @@ export const ExplorerPage = ({
 
                 {node.matched && (
                   <div className="space-y-1 text-[11px] font-mono">
-                    {(node.group_by || node.groupBy)?.length > 0 && (
+                    {((node.group_by || node.groupBy)?.length ?? 0) > 0 && (
                       <div className="flex gap-2">
                         <span className="text-[#34383e] w-14 shrink-0">
                           group
                         </span>
                         <span className="text-[#8e9193]">
-                          [{(node.group_by || node.groupBy).join(", ")}]
+                          [{(node.group_by ?? node.groupBy ?? []).join(", ")}]
                         </span>
                       </div>
                     )}
@@ -329,16 +329,16 @@ export const ExplorerPage = ({
                 <span className="text-sm font-medium text-[#d9d9d9]">
                   Route Path
                 </span>
-                {result.receivers?.length > 0 && (
+                {(result.receivers?.length ?? 0) > 0 && (
                   <div className="flex items-center gap-1.5 ml-2">
-                    {result.receivers.map((r: string, i: number) => (
+                    {result.receivers!.map((r: string, i: number) => (
                       <ReceiverChip key={`${r}-${i}`} name={r} variant="green" />
                     ))}
                   </div>
                 )}
               </div>
             </div>
-            {renderPath(result.path)}
+            {renderPath(result.path ?? null)}
           </div>
         )}
       </main>

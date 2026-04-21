@@ -12,7 +12,7 @@ import { GfSpinner } from "../ui/Spinner";
 import { StatusBadge } from "../ui/Status";
 import { LabelChip, ReceiverChip } from "../ui/Chips";
 
-interface TestResult {
+export interface TestResult {
   pass: boolean;
   error?: string;
   expected?: string[];
@@ -20,7 +20,7 @@ interface TestResult {
   labels?: Record<string, unknown>;
 }
 
-interface Test {
+export interface Test {
   name: string;
   type: "regression" | "unit";
   tags?: string[];
@@ -154,7 +154,7 @@ const UnitTestCase = ({
   const alertLabels = test.alert?.labels || {};
   const hasState =
     test.state &&
-    (test.state.silences?.length > 0 || test.state.active_alerts?.length > 0);
+    ((test.state.silences?.length ?? 0) > 0 || (test.state.active_alerts?.length ?? 0) > 0);
 
   const outcomeColors: Record<string, string> = {
     active: "bg-[#73bf69]/10 border-[#73bf69]/25 text-[#73bf69]",
@@ -204,11 +204,11 @@ const UnitTestCase = ({
         {/* State hint */}
         {hasState && (
           <div className="flex items-center gap-3 text-[11px] text-[#8e9193]/50 font-mono">
-            {test.state.silences?.length > 0 && (
-              <span>{test.state.silences.length} silence(s)</span>
+            {(test.state?.silences?.length ?? 0) > 0 && (
+              <span>{test.state?.silences?.length} silence(s)</span>
             )}
-            {test.state.active_alerts?.length > 0 && (
-              <span>{test.state.active_alerts.length} active alert(s)</span>
+            {(test.state?.active_alerts?.length ?? 0) > 0 && (
+              <span>{test.state?.active_alerts?.length} active alert(s)</span>
             )}
           </div>
         )}
