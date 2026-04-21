@@ -44,3 +44,5 @@ config/*.yaml
 config/templates
 node_modules
 litmus
+.env
+tmp

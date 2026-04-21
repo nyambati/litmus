@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -56,6 +57,10 @@ func testsHandler(c *gin.Context) {
 	loader := behavioral.NewBehavioralTestLoader()
 	tests, err := loader.LoadFromDirectory(litmusConfig.Tests.Directory)
 	if err != nil {
+		if strings.Contains(err.Error(), "no such file or directory") {
+			c.JSON(http.StatusOK, []types.TestCase{})
+			return
+		}
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading tests: %v", err))
 		return
 	}
@@ -77,6 +82,10 @@ func runTestsHandler(c *gin.Context) {
 	loader := behavioral.NewBehavioralTestLoader()
 	tests, err := loader.LoadFromDirectory(litmusConfig.Tests.Directory)
 	if err != nil {
+		if strings.Contains(err.Error(), "no such file or directory") {
+			c.JSON(http.StatusOK, []*types.TestResult{})
+			return
+		}
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading tests: %v", err))
 		return
 	}
@@ -233,8 +242,13 @@ func regressionsHandler(c *gin.Context) {
 	if litmusConfig == nil {
 		return
 	}
+
 	tests, err := cli.LoadBaselineYAML(litmusConfig.RegressionsYamlFilePath())
 	if err != nil {
+		if strings.Contains(err.Error(), "no such file or directory") {
+			c.JSON(http.StatusOK, []types.TestCase{})
+			return
+		}
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading regressions: %v", err))
 		return
 	}
@@ -254,6 +268,10 @@ func regressionsRunHandler(c *gin.Context) {
 
 	tests, err := cli.LoadBaselineYAML(litmusConfig.RegressionsYamlFilePath())
 	if err != nil {
+		if strings.Contains(err.Error(), "no such file or directory") {
+			c.JSON(http.StatusOK, []*types.TestResult{})
+			return
+		}
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading regressions: %v", err))
 		return
 	}
@@ -278,6 +296,22 @@ func regressionsRunHandler(c *gin.Context) {
 	raw := executor.Execute(context.Background(), tests, router)
 
 	c.JSON(http.StatusOK, raw)
+}
+
+func generateRegressionsHandler(c *gin.Context) {
+	litmusConfig := getLitmusConfig(c)
+	if litmusConfig == nil {
+		return
+	}
+	regressionMpkPath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.mpk")
+	_, err := os.Stat(regressionMpkPath)
+	update := os.IsNotExist(err)
+
+	if err := cli.RunSnapshot(update, false); err != nil {
+		c.String(http.StatusInternalServerError, fmt.Sprintf("Snapshot failed: %v", err))
+		return
+	}
+	c.String(http.StatusOK, "OK")
 }
 
 func diffHandler(c *gin.Context) {

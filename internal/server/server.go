@@ -53,11 +53,11 @@ func RunUIServer(port int, dev bool) error {
 		api.GET("/suggest", suggestHandler)
 		api.GET("/regressions", regressionsHandler)
 		api.POST("/regressions/run", regressionsRunHandler)
+		api.POST("/regressions/generate", generateRegressionsHandler)
 		api.GET("/diff", diffHandler)
 		api.POST("/snapshot", snapshotHandler)
 		api.GET("/health", healthHandler)
 	}
-
 
 	// Serve embedded UI in production mode
 	if !dev && staticFS != nil {
@@ -76,7 +76,7 @@ func RunUIServer(port int, dev bool) error {
 	if !dev {
 		go func() {
 			time.Sleep(150 * time.Millisecond)
-			openBrowser(url)
+			// openBrowser(url)
 		}()
 	}
 
