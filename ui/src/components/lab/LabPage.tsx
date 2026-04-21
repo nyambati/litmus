@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
-import { FlaskConical, ChevronDown } from "lucide-react";
-import { API, loadCache, saveCache, cn } from "../../utils/persistence";
+import { FlaskConical, ChevronDown, CheckCircle2, AlertTriangle, X } from "lucide-react";
+import { API, cn, minDelay } from "../../utils/persistence";
+import { useLabStore } from "../../stores/useLabStore";
 import { GfSpinner } from "../ui/Spinner";
 import { LastUpdated } from "../ui/LastUpdated";
 import { Header } from "../layout/Header";
@@ -18,18 +19,9 @@ interface TestRunResult extends TestResult {
   name: string;
 }
 
-export const LabPage = ({
-  onTestsRun,
-}: {
-  onTestsRun: (passed: number, failed: number) => void;
-}) => {
+export const LabPage = () => {
+  const { results, setResults, lastRunTs, setLastRunTs } = useLabStore();
   const [tests, setTests] = useState<TestWithType[]>([]);
-  const [results, setResults] = useState<Record<string, TestResult>>(() => {
-    return loadCache<Record<string, TestResult>>("litmus:lab:results")?.data ?? {};
-  });
-  const [lastRunTs, setLastRunTs] = useState<number | null>(() => {
-    return loadCache<Record<string, TestResult>>("litmus:lab:results")?.ts ?? null;
-  });
   const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState(false);
   const [snapshotting, setSnapshotting] = useState(false);
@@ -37,6 +29,17 @@ export const LabPage = ({
   const [filter, setFilter] = useState<FilterType>("all");
   const [activeAction, setActiveAction] = useState<"run" | "snapshot">("run");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [notification, setNotification] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
 
   const actions = [
     {
@@ -100,69 +103,88 @@ export const LabPage = ({
 
   const runSnapshot = async () => {
     setSnapshotting(true);
+    setNotification(null);
     try {
-      await fetch(`${API}/api/v1/regressions/generate`, { method: "POST" });
+      const fetchPromise = fetch(`${API}/api/v1/regressions/generate`, { method: "POST" });
+      const resp = await minDelay(fetchPromise);
+      if (!resp.ok) throw new Error(await resp.text());
       await fetchTests();
-    } catch (err) {
+      setNotification({
+        type: "success",
+        message: "Regression snapshot generated successfully",
+      });
+    } catch (err: any) {
       console.error("Failed to generate regressions:", err);
+      setNotification({
+        type: "error",
+        message: `Snapshot failed: ${err.message || String(err)}`,
+      });
     } finally {
       setSnapshotting(false);
     }
   };
 
   const applyResults = (data: TestRunResult[]) => {
-    // eslint-disable-next-line react-hooks/purity
     const now = Date.now();
-    setResults((prev) => {
-      const next = { ...prev };
-      data.forEach((res) => {
-        next[res.name] = res;
-      });
-      saveCache("litmus:lab:results", next);
-      return next;
+    const next = { ...results };
+    data.forEach((res) => {
+      next[res.name] = res;
     });
+    setResults(next);
     setLastRunTs(now);
   };
 
   const runAllTests = async () => {
     setRunning(true);
+    setNotification(null);
     try {
       const toRun: Promise<TestRunResult[]>[] = [];
       if (filter === "all" || filter === "unit") {
         toRun.push(
-          fetch(`${API}/api/v1/tests/run`, { method: "POST" }).then((r) =>
-            r.json(),
+          minDelay(
+            fetch(`${API}/api/v1/tests/run`, { method: "POST" }).then((r) => {
+              if (!r.ok) throw new Error("Failed to run unit tests");
+              return r.json();
+            }),
           ),
         );
       }
       if (filter === "all" || filter === "regression") {
         toRun.push(
-          fetch(`${API}/api/v1/regressions/run`, { method: "POST" }).then((r) =>
-            r.json(),
+          minDelay(
+            fetch(`${API}/api/v1/regressions/run`, { method: "POST" }).then(
+              (r) => {
+                if (!r.ok) throw new Error("Failed to run regression tests");
+                return r.json();
+              },
+            ),
           ),
         );
       }
 
       const allResults = await Promise.all(toRun);
       const incoming: Record<string, TestRunResult> = {};
-      allResults.flat().forEach((res) => {
+      const resultsArray = allResults.flat();
+      resultsArray.forEach((res) => {
         incoming[res.name] = res;
       });
 
       const now = Date.now();
       const merged = { ...results, ...incoming };
-      let passed = 0;
-      let failed = 0;
-      Object.values(merged).forEach((r) => {
-        if (r.pass) passed++;
-        else failed++;
-      });
-      saveCache("litmus:lab:results", merged);
       setResults(merged);
       setLastRunTs(now);
-      onTestsRun(passed, failed);
-    } catch (err) {
+
+      const passedCount = resultsArray.filter((r) => r.pass).length;
+      setNotification({
+        type: "success",
+        message: `Test run completed: ${passedCount}/${resultsArray.length} passed`,
+      });
+    } catch (err: any) {
       console.error("Failed to run tests:", err);
+      setNotification({
+        type: "error",
+        message: `Test run failed: ${err.message || String(err)}`,
+      });
     } finally {
       setRunning(false);
     }
@@ -170,16 +192,29 @@ export const LabPage = ({
 
   const runSingleTest = async (testName: string, testType: string) => {
     setRunningTest(testName);
+    setNotification(null);
     try {
       const endpoint =
         testType === "regression"
           ? `${API}/api/v1/regressions/run?name=${encodeURIComponent(testName)}`
           : `${API}/api/v1/tests/run?name=${encodeURIComponent(testName)}`;
-      const resp = await fetch(endpoint, { method: "POST" });
+      const resp = await minDelay(fetch(endpoint, { method: "POST" }));
+      if (!resp.ok) throw new Error(await resp.text());
       const data = await resp.json();
       applyResults(data);
-    } catch (err) {
+      const passed = data.every((r: any) => r.pass);
+      setNotification({
+        type: passed ? "success" : "error",
+        message: passed
+          ? `Test '${testName}' passed`
+          : `Test '${testName}' failed`,
+      });
+    } catch (err: any) {
       console.error("Failed to run test:", err);
+      setNotification({
+        type: "error",
+        message: `Failed to run test: ${err.message || String(err)}`,
+      });
     } finally {
       setRunningTest(null);
     }
@@ -210,7 +245,6 @@ export const LabPage = ({
     });
 
   useEffect(() => {
-    localStorage.removeItem("litmus:lab:results");
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchTests();
   }, [fetchTests]);
@@ -233,6 +267,33 @@ export const LabPage = ({
     <div className="flex-1 flex flex-col min-h-0 bg-[#181b1f]">
       <Header title="Test Lab" />
       <main className="flex-1 p-6 overflow-y-auto">
+        {/* Notifications */}
+        {notification && (
+          <div
+            className={cn(
+              "mb-5 px-4 py-3 rounded border flex items-center justify-between animate-in fade-in slide-in-from-top-2",
+              notification.type === "success"
+                ? "bg-[#73bf69]/10 border-[#73bf69]/20 text-[#73bf69]"
+                : "bg-[#f2495c]/10 border-[#f2495c]/20 text-[#f2495c]",
+            )}
+          >
+            <div className="flex items-center gap-2 text-sm font-medium">
+              {notification.type === "success" ? (
+                <CheckCircle2 size={16} />
+              ) : (
+                <AlertTriangle size={16} />
+              )}
+              {notification.message}
+            </div>
+            <button
+              onClick={() => setNotification(null)}
+              className="opacity-50 hover:opacity-100 transition-opacity"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
         {/* Toolbar */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -344,7 +405,7 @@ export const LabPage = ({
             }
           />
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2 animate-fade-in-up">
             {filteredTests.map((test) => (
               <TestCaseCard
                 key={`${test.name}-${test.type}`}

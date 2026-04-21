@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-const wildcardPlaceholder = "litmus"
+const wildcardPlaceholder = ""
 
 var (
 	ncgRegex    = regexp.MustCompile(`^\^?\(\?:([^)]+)\)\$?$`)
@@ -43,17 +43,17 @@ func (re *RegexExpander) ExpandAlternations(pattern string) []string {
 
 	// Non-capturing group: (?:opt1|opt2)$ — Alertmanager's compiled regex format
 	if matches := ncgRegex.FindStringSubmatch(pattern); matches != nil {
-		return sanitizeParts(strings.Split(matches[1], "|"))
+		return re.sanitizeParts(strings.Split(matches[1], "|"))
 	}
 
 	// Simple capturing group: (opt1|opt2)
 	if matches := capRegex.FindStringSubmatch(pattern); matches != nil {
-		return sanitizeParts(strings.Split(matches[1], "|"))
+		return re.sanitizeParts(strings.Split(matches[1], "|"))
 	}
 
 	// Bare alternation without parens: a|b|c.*
 	if strings.Contains(pattern, "|") {
-		return sanitizeParts(strings.Split(pattern, "|"))
+		return re.sanitizeParts(strings.Split(pattern, "|"))
 	}
 
 	// Anchored prefix: ^api-.* — strip anchor, replace wildcards inline
@@ -73,9 +73,8 @@ func (re *RegexExpander) ExpandAlternations(pattern string) []string {
 	return []string{replaceWildcards(pattern)}
 }
 
-// sanitizeParts strips regex metacharacters from alternation parts and deduplicates.
-func sanitizeParts(parts []string) []string {
-	seen := make(map[string]bool)
+// sanitizeParts strips regex metacharacters from alternation parts.
+func (re *RegexExpander) sanitizeParts(parts []string) []string {
 	result := make([]string, 0, len(parts))
 	for _, p := range parts {
 		p = strings.TrimPrefix(p, "^")
@@ -83,8 +82,7 @@ func sanitizeParts(parts []string) []string {
 			continue
 		}
 		p = replaceWildcards(p)
-		if p != "" && !seen[p] {
-			seen[p] = true
+		if p != "" {
 			result = append(result, p)
 		}
 	}

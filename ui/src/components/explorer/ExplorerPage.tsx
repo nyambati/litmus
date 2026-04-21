@@ -1,7 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Search, Activity, Zap } from "lucide-react";
-import { cn, API } from "../../utils/persistence";
-import { GfSpinner } from "../ui/Spinner";
+import {
+  Search,
+  Activity,
+  Zap,
+  CheckCircle2,
+  AlertTriangle,
+  X,
+} from "lucide-react";
+import { cn, API, minDelay } from "../../utils/persistence";
+import { useExplorerStore } from "../../stores/useExplorerStore";
 import { ReceiverChip } from "../ui/Chips";
 import { PrimaryButton } from "../ui/Buttons";
 import { Header } from "../layout/Header";
@@ -30,21 +37,24 @@ interface EvaluationResult {
   [key: string]: unknown;
 }
 
-export const ExplorerPage = ({
-  onEvaluate,
-  onQuerySaved,
-  labels,
-  setLabels,
-  runTrigger,
-}: {
-  onEvaluate: (receivers: string[]) => void;
-  onQuerySaved: (query: string, receivers: string[]) => void;
-  labels: string;
-  setLabels: (v: string) => void;
-  runTrigger: number;
-}) => {
+export const ExplorerPage = () => {
+  const { labels, setLabels, runTrigger, setMatchedReceivers, saveQuery } =
+    useExplorerStore();
+
   const [result, setResult] = useState<EvaluationResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
   const [suggestions, setSuggestions] = useState<{
     labels: string[];
     values: Record<string, string[]>;
@@ -71,49 +81,69 @@ export const ExplorerPage = ({
 
   useEffect(() => {
     adjustTextareaHeight();
-  }, [adjustTextareaHeight]);
+  }, [adjustTextareaHeight, labels]);
 
   const runEvaluation = useCallback(
-    async (overrideLabels?: string) => {
+    async (overrideLabels?: string, silent = false) => {
       setLoading(true);
+      if (!silent) setNotification(null);
       try {
         const labelMap: Record<string, string> = {};
         const src = (overrideLabels ?? labels).trim();
 
+        if (!src) throw new Error("Labels cannot be empty");
+
         const pairs = src.includes(",") ? src.split(",") : src.split("\n");
         pairs.forEach((pair) => {
-          const [k, v] = pair.split("=").map((s) => s.trim().replace(/^["']|["']$/g, ""));
+          const [k, v] = pair
+            .split("=")
+            .map((s) => s.trim().replace(/^["']|["']$/g, ""));
           if (k && v) labelMap[k] = v;
         });
 
-        const resp = await fetch(`${API}/api/v1/evaluate`, {
+        const fetchPromise = fetch(`${API}/api/v1/evaluate`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ labels: labelMap }),
         });
+
+        const resp = await minDelay(fetchPromise);
+
+        if (!resp.ok) {
+          const text = await resp.text();
+          throw new Error(text || `Server returned ${resp.status}`);
+        }
+
         const data = await resp.json();
         setResult(data);
-        onEvaluate(data.receivers || []);
-        onQuerySaved(overrideLabels ?? labels, data.receivers || []);
-      } catch (err) {
+        const receivers = data.receivers || [];
+        setMatchedReceivers(receivers);
+        saveQuery(overrideLabels ?? labels, receivers);
+
+        if (!silent) {
+          setNotification({
+            type: "success",
+            message: `Evaluation completed: ${receivers.length} matched receivers`,
+          });
+        }
+      } catch (err: any) {
         console.error("Evaluation failed:", err);
-        alert(
-          "Failed to parse labels. Use k=v format (comma or newline separated).",
-        );
+        setNotification({
+          type: "error",
+          message: err.message || "Failed to parse labels. Use k=v format.",
+        });
       } finally {
         setLoading(false);
       }
     },
-    [labels, onEvaluate, onQuerySaved],
+    [labels, setMatchedReceivers, saveQuery],
   );
 
   useEffect(() => {
     if (runTrigger > 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      runEvaluation(labels);
+      runEvaluation(labels, true);
     }
     // Only re-run when runTrigger changes (history entry load), not on every keystroke.
-    // runEvaluation and labels are stable at the time runTrigger fires due to React batching.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runTrigger]);
 
@@ -154,7 +184,10 @@ export const ExplorerPage = ({
     [labels, cursorPos, setLabels],
   );
 
-  const handleCloseSuggestions = useCallback(() => setShowSuggestions(false), []);
+  const handleCloseSuggestions = useCallback(
+    () => setShowSuggestions(false),
+    [],
+  );
 
   const renderPath = (
     node: RouteNode | null,
@@ -307,6 +340,33 @@ export const ExplorerPage = ({
 
       {/* Route path result */}
       <main className="flex-1 overflow-y-auto p-6">
+        {/* Notifications */}
+        {notification && (
+          <div
+            className={cn(
+              "mb-5 px-4 py-3 rounded border flex items-center justify-between animate-in fade-in slide-in-from-top-2",
+              notification.type === "success"
+                ? "bg-[#73bf69]/10 border-[#73bf69]/20 text-[#73bf69]"
+                : "bg-[#f2495c]/10 border-[#f2495c]/20 text-[#f2495c]",
+            )}
+          >
+            <div className="flex items-center gap-2 text-sm font-medium">
+              {notification.type === "success" ? (
+                <CheckCircle2 size={16} />
+              ) : (
+                <AlertTriangle size={16} />
+              )}
+              {notification.message}
+            </div>
+            <button
+              onClick={() => setNotification(null)}
+              className="opacity-50 hover:opacity-100 transition-opacity"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
         {!result && !loading && (
           <EmptyState
             icon={Search}
@@ -315,14 +375,8 @@ export const ExplorerPage = ({
           />
         )}
 
-        {loading && (
-          <div className="flex items-center justify-center py-20">
-            <GfSpinner size="lg" />
-          </div>
-        )}
-
         {result && (
-          <div className="pb-8 space-y-1">
+          <div className="pb-8 space-y-1 animate-fade-in-up">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Activity size={14} className="text-[#f46800]" />
@@ -332,7 +386,11 @@ export const ExplorerPage = ({
                 {(result.receivers?.length ?? 0) > 0 && (
                   <div className="flex items-center gap-1.5 ml-2">
                     {result.receivers!.map((r: string, i: number) => (
-                      <ReceiverChip key={`${r}-${i}`} name={r} variant="green" />
+                      <ReceiverChip
+                        key={`${r}-${i}`}
+                        name={r}
+                        variant="green"
+                      />
                     ))}
                   </div>
                 )}
