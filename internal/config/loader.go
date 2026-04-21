@@ -183,6 +183,6 @@ func (c *LitmusConfig) RegressionsYamlFilePath() string {
 }
 
 func (c *LitmusConfig) RegressionsBinaryFilePath() string {
-	file := strings.Replace(DefaultRegressionYamlFile, "yml", "mpk", 1)
+	file := strings.TrimSuffix(DefaultRegressionYamlFile, filepath.Ext(DefaultRegressionYamlFile)) + ".mpk"
 	return filepath.Join(c.Regression.Directory, file)
 }
