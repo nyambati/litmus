@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { CheckCircle2, AlertTriangle, ShieldCheck, Tag, ArrowRight, ChevronDown, Save, Play, X } from "lucide-react";
 import { cn, API, loadCache, saveCache } from "../../utils/persistence";
 import { GfSpinner } from "../ui/Spinner";
@@ -72,15 +72,16 @@ export const RegressionPage = ({
     }
   }, [notification]);
 
-  const runAnalyse = async (silent = false) => {
+  const runAnalyse = useCallback(async (silent = false) => {
     setLoading(true);
     if (!silent) setNotification(null);
     try {
       const resp = await fetch(`${API}/api/v1/diff`);
       if (!resp.ok) throw new Error(await resp.text());
       const data: DiffResult = await resp.json();
+      const now = Date.now();
       setDiff(data);
-      setLastRunTs(Date.now());
+      setLastRunTs(now);
       saveCache("litmus:regression:diff", data);
       onDiffRun?.(data.total, data.drifted);
       if (!silent) {
@@ -98,7 +99,7 @@ export const RegressionPage = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [onDiffRun]);
 
   const handleAction = async () => {
     if (activeAction === "analyze") {
@@ -137,8 +138,11 @@ export const RegressionPage = ({
   };
 
   useEffect(() => {
-    if (!_diffCache) runAnalyse(true);
-  }, []);
+    if (!_diffCache) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      runAnalyse(true);
+    }
+  }, [_diffCache, runAnalyse]);
 
   const visibleResults =
     diff?.results.filter((r) => {

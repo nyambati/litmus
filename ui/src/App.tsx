@@ -8,6 +8,10 @@ import {
 } from "lucide-react";
 import { cn, loadCache, saveCache, formatAge } from "./utils/persistence";
 
+interface TestResult {
+  pass: boolean;
+}
+
 // Layout components
 import { AppLayout } from "./components/layout/AppLayout";
 import { StatPanel } from "./components/layout/StatsSidebar";
@@ -61,7 +65,7 @@ function App() {
     setExplorerRunTrigger((n) => n + 1);
   };
 
-  const _labCache = loadCache<Record<string, any>>("litmus:lab:results");
+  const _labCache = loadCache<Record<string, TestResult>>("litmus:lab:results");
   const [testResults, setTestResults] = useState<{
     passed: number;
     failed: number;
@@ -69,7 +73,7 @@ function App() {
     if (!_labCache?.data) return { passed: 0, failed: 0 };
     let passed = 0;
     let failed = 0;
-    Object.values(_labCache.data).forEach((r: any) => {
+    Object.values(_labCache.data).forEach((r) => {
       if (r.pass) passed++;
       else failed++;
     });

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { FlaskConical } from "lucide-react";
 import { API, loadCache, saveCache } from "../../utils/persistence";
 import { GfSpinner } from "../ui/Spinner";
@@ -7,18 +7,26 @@ import { PrimaryButton } from "../ui/Buttons";
 import { Header } from "../layout/Header";
 import { EmptyState } from "../ui/EmptyState";
 import { FilterTabs } from "../ui/Tabs";
-import { TestCaseCard } from "./TestCase";
+import { TestCaseCard, type Test, type TestResult } from "./TestCase";
 
 type FilterType = "all" | "unit" | "regression";
+
+interface TestWithType extends Test {
+  type: "unit" | "regression";
+}
+
+interface TestRunResult extends TestResult {
+  name: string;
+}
 
 export const LabPage = ({
   onTestsRun,
 }: {
   onTestsRun: (passed: number, failed: number) => void;
 }) => {
-  const [tests, setTests] = useState<any[]>([]);
-  const _labCache = loadCache<Record<string, any>>("litmus:lab:results");
-  const [results, setResults] = useState<Record<string, any>>(
+  const [tests, setTests] = useState<TestWithType[]>([]);
+  const _labCache = loadCache<Record<string, TestResult>>("litmus:lab:results");
+  const [results, setResults] = useState<Record<string, TestResult>>(
     _labCache?.data ?? {},
   );
   const [lastRunTs, setLastRunTs] = useState<number | null>(
@@ -29,7 +37,7 @@ export const LabPage = ({
   const [runningTest, setRunningTest] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterType>("all");
 
-  const fetchTests = async () => {
+  const fetchTests = useCallback(async () => {
     setLoading(true);
     try {
       const [unitSettled, regressionSettled] = await Promise.allSettled([
@@ -37,9 +45,9 @@ export const LabPage = ({
         fetch(`${API}/api/v1/regressions`).then((r) => r.json()),
       ]);
 
-      const unitData: any[] =
+      const unitData: Test[] =
         unitSettled.status === "fulfilled" ? unitSettled.value || [] : [];
-      const regressionData: any[] =
+      const regressionData: Test[] =
         regressionSettled.status === "fulfilled"
           ? regressionSettled.value || []
           : [];
@@ -49,8 +57,8 @@ export const LabPage = ({
       if (regressionSettled.status === "rejected")
         console.error("Failed to fetch regression tests:", regressionSettled.reason);
 
-      const unitTests = unitData.map((t) => ({ ...t, type: "unit" }));
-      const regressionTests = regressionData.map((t) => ({
+      const unitTests: TestWithType[] = unitData.map((t) => ({ ...t, type: "unit" }));
+      const regressionTests: TestWithType[] = regressionData.map((t) => ({
         ...t,
         type: "regression",
       }));
@@ -61,24 +69,26 @@ export const LabPage = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const applyResults = (data: any[]) => {
+  const applyResults = (data: TestRunResult[]) => {
+    // eslint-disable-next-line react-hooks/purity
+    const now = Date.now();
     setResults((prev) => {
       const next = { ...prev };
-      data.forEach((res: any) => {
+      data.forEach((res) => {
         next[res.name] = res;
       });
       saveCache("litmus:lab:results", next);
       return next;
     });
-    setLastRunTs(Date.now());
+    setLastRunTs(now);
   };
 
   const runAllTests = async () => {
     setRunning(true);
     try {
-      const toRun: Promise<any[]>[] = [];
+      const toRun: Promise<TestRunResult[]>[] = [];
       if (filter === "all" || filter === "unit") {
         toRun.push(
           fetch(`${API}/api/v1/tests/run`, { method: "POST" }).then((r) =>
@@ -94,17 +104,18 @@ export const LabPage = ({
         );
       }
 
-      const allResults = (await Promise.all(toRun)).flat();
-      const incoming: Record<string, any> = {};
-      allResults.forEach((res: any) => {
+      const allResults = await Promise.all(toRun);
+      const incoming: Record<string, TestRunResult> = {};
+      allResults.flat().forEach((res) => {
         incoming[res.name] = res;
       });
 
+      const now = Date.now();
       setResults((prev) => {
         const merged = { ...prev, ...incoming };
         let passed = 0;
         let failed = 0;
-        Object.values(merged).forEach((r: any) => {
+        Object.values(merged).forEach((r) => {
           if (r.pass) passed++;
           else failed++;
         });
@@ -112,7 +123,7 @@ export const LabPage = ({
         saveCache("litmus:lab:results", merged);
         return merged;
       });
-      setLastRunTs(Date.now());
+      setLastRunTs(now);
     } catch (err) {
       console.error("Failed to run tests:", err);
     } finally {
@@ -137,7 +148,7 @@ export const LabPage = ({
     }
   };
 
-  const getTestType = (test: any): string => test.type || "unit";
+  const getTestType = (test: TestWithType): string => test.type || "unit";
 
   const filteredTests = tests
     .filter((test) => {
@@ -162,8 +173,9 @@ export const LabPage = ({
     });
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchTests();
-  }, []);
+  }, [fetchTests]);
 
   const filterTabs = [
     { label: "All", value: "all" as FilterType, count: tests.length },

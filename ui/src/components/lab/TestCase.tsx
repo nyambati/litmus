@@ -5,11 +5,30 @@ import { GfSpinner } from "../ui/Spinner";
 import { StatusBadge } from "../ui/Status";
 import { LabelChip, ReceiverChip } from "../ui/Chips";
 
+interface TestResult {
+  pass: boolean;
+  error?: string;
+  expected?: string[];
+  actual?: string[];
+  labels?: Record<string, unknown>;
+}
+
+interface Test {
+  name: string;
+  type: "regression" | "unit";
+  tags?: string[];
+  expect?: { outcome?: string; receivers?: string[] };
+  alert?: { labels?: Record<string, unknown> };
+  state?: { silences?: unknown[]; active_alerts?: unknown[] };
+  labels?: Record<string, string>[];
+  expected?: string[];
+}
+
 interface TestCaseShellProps {
   name: string;
   testType: "unit" | "regression";
   tags?: string[];
-  result?: any;
+  result?: TestResult;
   isRunning: boolean;
   globalRunning: boolean;
   onRun: () => void;
@@ -115,8 +134,8 @@ const TestCaseShell = ({
 };
 
 interface TestCaseProps {
-  test: any;
-  result?: any;
+  test: Test;
+  result?: TestResult;
   isRunning: boolean;
   globalRunning: boolean;
   onRun: () => void;

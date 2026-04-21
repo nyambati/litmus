@@ -16,7 +16,6 @@ global_labels:
 mimir:
   address: ""
   tenant_id: ""
-  api_key: "env(MIMIR_API_KEY)"
 
 # Regression Settings
 regression:

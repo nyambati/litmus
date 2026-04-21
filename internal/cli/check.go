@@ -55,20 +55,20 @@ type TestFailure struct {
 
 // RegressionResult holds regression test results.
 type RegressionResult struct {
-	Passed      bool          `json:"passed"`
-	Tests       int           `json:"tests"`
-	TotalTests  int           `json:"total_tests"`
-	PassCount   int           `json:"pass_count"`
-	Failures    []TestFailure `json:"failures,omitempty"`
+	Passed     bool          `json:"passed"`
+	Tests      int           `json:"tests"`
+	TotalTests int           `json:"total_tests"`
+	PassCount  int           `json:"pass_count"`
+	Failures   []TestFailure `json:"failures,omitempty"`
 }
 
 // BehavioralResult holds behavioral test results.
 type BehavioralResult struct {
-	Passed      bool          `json:"passed"`
-	Tests       int           `json:"tests"`
-	TotalTests  int           `json:"total_tests"`
-	PassCount   int           `json:"pass_count"`
-	Failures    []TestFailure `json:"failures,omitempty"`
+	Passed     bool          `json:"passed"`
+	Tests      int           `json:"tests"`
+	TotalTests int           `json:"total_tests"`
+	PassCount  int           `json:"pass_count"`
+	Failures   []TestFailure `json:"failures,omitempty"`
 }
 
 // RunCheck loads config, runs all validation stages, prints results, and returns

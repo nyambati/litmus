@@ -48,7 +48,9 @@ export const Autocomplete = ({
           v.startsWith(filter),
         );
 
+  // Reset active index when filter or type changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveIndex(0);
   }, [filter, type]);
 

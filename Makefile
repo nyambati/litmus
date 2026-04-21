@@ -52,3 +52,7 @@ clean:
 	@go clean
 
 all: fmt test vet lint
+dev:
+	@cd ui && npm run dev
+serve:
+	@go run main.go serve

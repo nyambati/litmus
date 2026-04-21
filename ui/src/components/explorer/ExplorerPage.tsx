@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Search, Activity, Zap } from "lucide-react";
 import { cn, API } from "../../utils/persistence";
 import { GfSpinner } from "../ui/Spinner";
@@ -7,6 +7,28 @@ import { PrimaryButton, GhostButton } from "../ui/Buttons";
 import { Header } from "../layout/Header";
 import { EmptyState } from "../ui/EmptyState";
 import { Autocomplete } from "./Autocomplete";
+
+interface RouteNode {
+  receiver?: string;
+  matched: boolean;
+  match?: string[];
+  continue?: boolean;
+  group_by?: string[];
+  groupBy?: string[];
+  group_wait?: string;
+  groupWait?: string;
+  group_interval?: string;
+  groupInterval?: string;
+  repeat_interval?: string;
+  repeatInterval?: string;
+  children?: RouteNode[];
+}
+
+interface EvaluationResult {
+  receivers?: string[];
+  route?: RouteNode;
+  [key: string]: unknown;
+}
 
 export const ExplorerPage = ({
   onEvaluate,
@@ -21,7 +43,7 @@ export const ExplorerPage = ({
   setLabels: (v: string) => void;
   runTrigger: number;
 }) => {
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<EvaluationResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<{ labels: string[], values: Record<string, string[]> }>({ labels: [], values: {} });
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -35,7 +57,7 @@ export const ExplorerPage = ({
       .catch(console.error);
   }, []);
 
-  const runEvaluation = async (overrideLabels?: string) => {
+  const runEvaluation = useCallback(async (overrideLabels?: string) => {
     setLoading(true);
     try {
       let labelMap: Record<string, string> = {};
@@ -69,11 +91,14 @@ export const ExplorerPage = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [labels, onEvaluate, onQuerySaved]);
 
   useEffect(() => {
-    if (runTrigger > 0) runEvaluation(labels);
-  }, [runTrigger]);
+    if (runTrigger > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      runEvaluation(labels);
+    }
+  }, [runTrigger, runEvaluation, labels]);
 
   const handleSelect = (selected: string) => {
     const beforeCursor = labels.slice(0, cursorPos);
@@ -111,7 +136,7 @@ export const ExplorerPage = ({
   };
 
   const renderPath = (
-    node: any,
+    node: RouteNode | null,
     depth = 0,
     pathId = "root",
   ): React.ReactNode => {
@@ -236,7 +261,7 @@ export const ExplorerPage = ({
         {/* Children */}
         {node.children && node.children.length > 0 && (
           <div className="ml-11 space-y-2 border-l border-[#2c3235] pl-4">
-            {node.children.map((child: any, idx: number) =>
+            {node.children.map((child, idx: number) =>
               renderPath(child, depth + 1, `${currentNodeId}-${idx}`),
             )}
           </div>
