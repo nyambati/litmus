@@ -7,9 +7,7 @@
 *.test
 *.out
 bin/
-dist/
-ui/dist/
-!ui/dist/.gitkeep
+/dist/
 
 # Go workspace file
 go.work
