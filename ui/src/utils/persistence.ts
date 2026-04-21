@@ -31,3 +31,13 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export const API = import.meta.env.DEV ? "http://localhost:8080" : "";
+
+/**
+ * Ensures a promise takes at least ms to resolve for smooth UI transitions
+ */
+export const minDelay = <T>(promise: Promise<T>, ms = 300): Promise<T> => {
+  return Promise.all([
+    promise,
+    new Promise((resolve) => setTimeout(resolve, ms)),
+  ]).then(([res]) => res);
+};

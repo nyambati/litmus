@@ -10,7 +10,8 @@ import {
   Play,
   X,
 } from "lucide-react";
-import { cn, API, loadCache, saveCache } from "../../utils/persistence";
+import { cn, API, minDelay } from "../../utils/persistence";
+import { useRegressionStore } from "../../stores/useRegressionStore";
 import { GfSpinner } from "../ui/Spinner";
 import { StatusBadge } from "../ui/Status";
 import { LastUpdated } from "../ui/LastUpdated";
@@ -55,17 +56,8 @@ export interface DiffResult {
 
 type ActionType = "analyze" | "update";
 
-export const RegressionPage = ({
-  onDiffRun,
-}: {
-  onDiffRun?: (total: number, drifted: number) => void;
-}) => {
-  const [diff, setDiff] = useState<DiffResult | null>(() => {
-    return loadCache<DiffResult>("litmus:regression:diff")?.data ?? null;
-  });
-  const [lastRunTs, setLastRunTs] = useState<number | null>(() => {
-    return loadCache<DiffResult>("litmus:regression:diff")?.ts ?? null;
-  });
+export const RegressionPage = () => {
+  const { diff, setDiff, lastRunTs, setLastRunTs } = useRegressionStore();
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<"all" | "passing">("all");
   const [activeAction, setActiveAction] = useState<ActionType>("analyze");
@@ -88,14 +80,13 @@ export const RegressionPage = ({
       setLoading(true);
       if (!silent) setNotification(null);
       try {
-        const resp = await fetch(`${API}/api/v1/diff`);
+        const fetchPromise = fetch(`${API}/api/v1/diff`);
+        const resp = await minDelay(fetchPromise);
         if (!resp.ok) throw new Error(await resp.text());
         const data: DiffResult = await resp.json();
         const now = Date.now();
         setDiff(data);
         setLastRunTs(now);
-        saveCache("litmus:regression:diff", data);
-        onDiffRun?.(data.total, data.drifted);
         if (!silent) {
           setNotification({
             type: "success",
@@ -112,7 +103,7 @@ export const RegressionPage = ({
         setLoading(false);
       }
     },
-    [onDiffRun],
+    [setDiff, setLastRunTs],
   );
 
   const handleAction = async () => {
@@ -128,12 +119,13 @@ export const RegressionPage = ({
     setLoading(true);
     setNotification(null);
     try {
-      const resp = await fetch(
+      const fetchPromise = fetch(
         `${API}/api/v1/regressions/generate?update=true`,
         {
           method: "POST",
         },
       );
+      const resp = await minDelay(fetchPromise);
       if (!resp.ok) throw new Error(await resp.text());
 
       setNotification({
@@ -413,7 +405,7 @@ export const RegressionPage = ({
             />
 
             {/* Result cards */}
-            <div className="space-y-2">
+            <div className="space-y-2 animate-fade-in-up">
               {visibleResults.length === 0 && (
                 <div className="py-8 text-center text-[#8e9193] text-sm">
                   {filter === "all"
