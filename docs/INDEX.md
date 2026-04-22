@@ -9,6 +9,7 @@ Welcome to Litmus documentation. Choose your starting point:
 ### Getting Started
 - **[README](README.md)** — Quick start guide and feature overview
 - **[User Guide](cli/user_guide.md)** — How to use each command (init, snapshot, check, diff, inspect, sync)
+- **[Interactive UI Guide](ui_guide.md)** — How to use the web interface
 - **[Configuration](cli/configuration.md)** — Complete `litmus.yaml` schema and options
 
 ### Understanding Litmus
@@ -78,4 +79,4 @@ A: Check [Backlog](backlog.md).
 
 ---
 
-Last Updated: 2026-04-18
+Last Updated: 2026-04-22

@@ -56,6 +56,29 @@ litmus check           # Includes static analysis
 
 ---
 
+## Interactive Testing UI
+
+For a more interactive experience, Litmus provides a web UI that brings the validation process into your browser.
+
+```bash
+litmus server
+```
+
+The UI provides three main features:
+
+### 1. **Route Explorer**
+An interactive tool where you can input a set of alert labels and receive a complete, visual trace of how that alert would be routed through the Alertmanager configuration tree. This allows for easy debugging of routing rules.
+
+### 2. **Behavioral Testing Lab**
+A framework that allows you to see and run your YAML-based behavioral tests. Each test defines an input alert and the expected outcome (e.g., which receivers should be notified). These tests can be executed from the UI to validate the configuration's behavior.
+
+### 3. **Snapshot-based Regression Testing**
+A system to prevent unintended changes to routing logic. From the UI, you can generate a "snapshot" which captures the expected outcome for all possible routing paths. Subsequently, the system can compare the current configuration's behavior against this snapshot to detect any "drift" or regressions. The UI provides a rich diff viewer to see what has changed.
+
+For a full guide, see the **[Interactive UI Guide](ui_guide.md)**.
+
+---
+
 ## Quick Start
 
 ### Initialize a Workspace
@@ -107,6 +130,7 @@ Exit codes:
 | `litmus diff` | Show changes from baseline |
 | `litmus inspect` | Read binary regression file |
 | `litmus sync` | Push validated config to Grafana Mimir |
+| `litmus server` | Launch interactive web UI |
 
 ---
 

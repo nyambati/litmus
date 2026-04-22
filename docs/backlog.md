@@ -4,9 +4,6 @@ This document tracks high-value features and research areas for `litmus` that ar
 
 ## Completed
 
-- ✅ **`litmus diff` command** — Compare current configuration against regression baseline (v0.2.0)
-- ✅ **JSON Output Format** — `litmus check --format json` emits machine-readable results; `litmus inspect --format json` for baselines
-
 ## 1. Negative Matcher Synthesis Paradox
 *   **The Problem:** Routes defined *only* with `!=` or `!~` matchers have no positive labels to synthesize, making automated regression testing difficult for these branches.
 *   **The Goal:** Implement a **"Non-Matching Seed"** generator. This would require an engine that analyzes a regex and produces a string guaranteed to *fail* that regex (thereby passing the negative route). 
@@ -24,9 +21,6 @@ This document tracks high-value features and research areas for `litmus` that ar
 *   **The Goal:** Support for **Configuration Fragments**. Teams define their own routes and receivers in isolated files (e.g., `teams/database.yml`). 
 *   **The Mechanism:** Litmus would "assemble" these fragments into a virtual routing tree for validation. This enables **Cross-Impact Detection**, where Litmus can warn a team if their local change has accidentally shadowed or inhibited another team's alerts in the global tree.
 
-## ~~5. JSON Output Format~~ ✅ Done
-*   Implemented as `litmus check --format json` and `litmus inspect --format json`. See `docs/cli/user_guide.md` for schema.
-
 ## 6. Baseline History & Rollback
 *   **The Problem:** If a baseline update is reverted, users must re-run `litmus snapshot --update` to restore it.
 *   **The Goal:** Support for baseline versioning, allowing rollback to previous baselines without re-synthesis.
@@ -42,9 +36,6 @@ This document tracks high-value features and research areas for `litmus` that ar
 *   **The Goal:** Add `litmus analyze` command to report label cardinality and identify problematic routes.
 *   **Recommendation:** Suggest route refactoring (use regex instead of direct matches).
 
-## 9. Integration Tests for Popular Notification Channels
-*   **The Problem:** Templates can fail at runtime due to missing labels, but this only shows up in production.
-*   **The Goal:** Add built-in tests for common receivers (Slack, PagerDuty, Webhook, Email) to validate that routes provide required labels.
 
 ## 10. Alertmanager Versions Matrix
 *   **The Problem:** Alertmanager behavior changes across versions (e.g., new matcher syntax in 0.24).
@@ -61,10 +52,6 @@ This document tracks high-value features and research areas for `litmus` that ar
 ## 13. Timing Assertions (group_wait / group_interval / repeat_interval)
 *   **The Problem:** Notification timing semantics (`group_wait`, `group_interval`, `repeat_interval`) are invisible to current tests.
 *   **The Goal:** Allow unit tests to assert the effective timing values on a matched route path, catching silent timing regressions.
-
-## 14. Test Tagging and Selective Runs
-*   **The Problem:** Running all tests on every change is slow in large configs; users need a way to run only critical paths.
-*   **The Goal:** Support `litmus check --tags=critical` to filter which behavioral/regression tests are executed, using the existing `tags:` field.
 
 ## 15. Named Snapshots (Multi-Environment Baselines)
 *   **The Problem:** A single baseline can't represent multiple environments (staging, prod, canary).
