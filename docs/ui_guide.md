@@ -9,7 +9,7 @@ Litmus includes a web-based UI for interactive testing and exploration. This gui
 To get started, run the `litmus serve` command from your project root:
 
 ```bash
-litmus server
+litmus serve
 ```
 
 By default, the server will be available at `http://localhost:8080`.
