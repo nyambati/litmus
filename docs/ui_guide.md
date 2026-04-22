@@ -6,7 +6,7 @@ Litmus includes a web-based UI for interactive testing and exploration. This gui
 
 ## Starting the Server
 
-To get started, run the `litmus server` command from your project root:
+To get started, run the `litmus serve` command from your project root:
 
 ```bash
 litmus server
