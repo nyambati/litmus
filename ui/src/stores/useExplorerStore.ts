@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { loadCache, saveCache } from "../utils/persistence";
 
 export interface QueryHistoryEntry {
   query: string;
@@ -22,7 +21,7 @@ interface ExplorerStore {
   clearHistory: () => void;
 }
 
-const HISTORY_KEY = "litmus:explorer:history";
+const HISTORY_KEY = "litmus:explorer:history:v2";
 const HISTORY_MAX = 20;
 
 export const useExplorerStore = create<ExplorerStore>()(
@@ -58,21 +57,6 @@ export const useExplorerStore = create<ExplorerStore>()(
     {
       name: HISTORY_KEY,
       partialize: (state) => ({ queryHistory: state.queryHistory }),
-      // Compatibility with existing persistence.ts loadCache/saveCache structure
-      storage: {
-        getItem: (name) => {
-          const cache = loadCache<QueryHistoryEntry[]>(name);
-          if (!cache) return null;
-          return {
-            state: { queryHistory: cache.data },
-            version: 0,
-          };
-        },
-        setItem: (name, value) => {
-          saveCache(name, value.state.queryHistory);
-        },
-        removeItem: (name) => localStorage.removeItem(name),
-      },
     },
   ),
 );

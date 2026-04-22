@@ -7,7 +7,7 @@ import {
   AlertTriangle,
   X,
 } from "lucide-react";
-import { cn, API, minDelay } from "../../utils/persistence";
+import { cn, API, minDelay } from "../../utils/ui";
 import { useExplorerStore } from "../../stores/useExplorerStore";
 import { ReceiverChip } from "../ui/Chips";
 import { PrimaryButton } from "../ui/Buttons";

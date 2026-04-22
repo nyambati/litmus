@@ -31,12 +31,18 @@ func newRouteInspector(root *config.Route) *routeInspector {
 
 // findPaths returns all leaf paths with their cumulative typed matchers.
 func (ri *routeInspector) findPaths() []*sanityPath {
+	if ri.root == nil {
+		return nil
+	}
 	var paths []*sanityPath
 	ri.walk(ri.root, nil, &paths)
 	return paths
 }
 
 func (ri *routeInspector) walk(route *config.Route, inherited []sanityMatcher, paths *[]*sanityPath) {
+	if route == nil {
+		return
+	}
 	current := append([]sanityMatcher{}, inherited...)
 
 	for k, v := range route.Match {

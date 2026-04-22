@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Search, FlaskConical, History, Activity } from "lucide-react";
-import { cn } from "../../utils/persistence";
+import { cn } from "../../utils/ui";
 
 export const Sidebar = () => {
   const location = useLocation();

@@ -7,7 +7,7 @@ import {
   Tag,
   Layers,
 } from "lucide-react";
-import { cn } from "../../utils/persistence";
+import { cn } from "../../utils/ui";
 import { GfSpinner } from "../ui/Spinner";
 import { StatusBadge } from "../ui/Status";
 import { LabelChip, ReceiverChip } from "../ui/Chips";

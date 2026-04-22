@@ -26,6 +26,12 @@ func NewBehavioralTestExecutor(inhibitRules []amconfig.InhibitRule) *BehavioralT
 
 // Execute runs a unit TestCase through the pipeline and verifies assertions.
 func (bte *BehavioralTestExecutor) Execute(ctx context.Context, test *types.TestCase, router *pipeline.Router) *types.TestResult {
+	if test == nil {
+		return &types.TestResult{Pass: false, Error: "test case is nil"}
+	}
+	if router == nil {
+		return &types.TestResult{Name: test.Name, Type: test.Type, Pass: false, Error: "router is nil"}
+	}
 	var silences []types.Silence
 	var activeAlerts []types.AlertSample
 	if test.State != nil {

@@ -35,25 +35,35 @@ func NewRunner(silenceStore *stores.SilenceStore, alertStore *stores.AlertStore,
 
 // Execute processes alert through pipeline: silence -> inhibit -> route.
 func (r *Runner) Execute(ctx context.Context, labels model.LabelSet) (*Outcome, error) {
-	if r.silenceStore.Mutes(ctx, labels) {
+	if r == nil {
+		return nil, fmt.Errorf("runner is nil")
+	}
+
+	if r.silenceStore != nil && r.silenceStore.Mutes(ctx, labels) {
 		return &Outcome{Status: "silenced"}, nil
 	}
 
-	iter := r.alertStore.GetPending()
-	alertChan := iter.Next()
-	for activeAlert := range alertChan {
-		activeLabels := model.LabelSet(activeAlert.Labels)
-		if r.isInhibited(activeLabels, labels) {
-			iter.Close()
-			return &Outcome{Status: "inhibited"}, nil
+	if r.alertStore != nil {
+		iter := r.alertStore.GetPending()
+		alertChan := iter.Next()
+		for activeAlert := range alertChan {
+			activeLabels := model.LabelSet(activeAlert.Labels)
+			if r.isInhibited(activeLabels, labels) {
+				iter.Close()
+				return &Outcome{Status: "inhibited"}, nil
+			}
+		}
+		iter.Close()
+		if err := iter.Err(); err != nil {
+			return nil, fmt.Errorf("checking inhibition: %w", err)
 		}
 	}
-	iter.Close()
-	if err := iter.Err(); err != nil {
-		return nil, fmt.Errorf("checking inhibition: %w", err)
+
+	var receivers []string
+	if r.router != nil {
+		receivers = r.router.Match(labels)
 	}
 
-	receivers := r.router.Match(labels)
 	return &Outcome{
 		Status:    "active",
 		Receivers: receivers,

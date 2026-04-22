@@ -23,6 +23,9 @@ func NewRouteWalker(root *config.Route) *RouteWalker {
 
 // FindTerminalPaths returns all leaf routes and their matcher paths.
 func (rw *RouteWalker) FindTerminalPaths() []*RoutePath {
+	if rw.root == nil {
+		return nil
+	}
 	var paths []*RoutePath
 	rw.walk(rw.root, []model.LabelSet{}, &paths)
 	return paths
@@ -30,6 +33,9 @@ func (rw *RouteWalker) FindTerminalPaths() []*RoutePath {
 
 // walk recursively traverses route tree, accumulating matchers.
 func (rw *RouteWalker) walk(route *config.Route, matchers []model.LabelSet, paths *[]*RoutePath) {
+	if route == nil {
+		return
+	}
 	currentMatchers := append([]model.LabelSet{}, matchers...)
 
 	if len(route.Match) > 0 {

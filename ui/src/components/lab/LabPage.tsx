@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { FlaskConical, ChevronDown, CheckCircle2, AlertTriangle, X } from "lucide-react";
-import { API, cn, minDelay } from "../../utils/persistence";
+import { API, cn, minDelay } from "../../utils/ui";
 import { useLabStore } from "../../stores/useLabStore";
 import { GfSpinner } from "../ui/Spinner";
 import { LastUpdated } from "../ui/LastUpdated";

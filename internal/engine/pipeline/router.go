@@ -13,11 +13,17 @@ type Router struct {
 
 // NewRouter creates a Router for the given route tree root.
 func NewRouter(root *config.Route) *Router {
+	if root == nil {
+		return &Router{root: &config.Route{}}
+	}
 	return &Router{root: root}
 }
 
 // Match returns the ordered list of receiver names that would handle labels.
 func (r *Router) Match(labels model.LabelSet) []string {
+	if r.root == nil {
+		return nil
+	}
 	routes := r.walk(r.root, labels)
 	receivers := make([]string, 0, len(routes))
 	for _, route := range routes {

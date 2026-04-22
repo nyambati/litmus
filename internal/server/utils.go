@@ -74,6 +74,9 @@ func flattenMatchedPath(node *RouteNode) []*RouteNode {
 
 // findRoutesByReceiver walks the route tree and returns every route whose receiver equals the target.
 func findRoutesByReceiver(route *amconfig.Route, receiver string) []*amconfig.Route {
+	if route == nil {
+		return nil
+	}
 	var found []*amconfig.Route
 	if route.Receiver == receiver {
 		found = append(found, route)
@@ -86,6 +89,9 @@ func findRoutesByReceiver(route *amconfig.Route, receiver string) []*amconfig.Ro
 
 // identifyMatcherFailures returns matchers on the given route that do not match the label set.
 func identifyMatcherFailures(route *amconfig.Route, labels model.LabelSet) []MatcherMismatch {
+	if route == nil {
+		return nil
+	}
 	var out []MatcherMismatch
 
 	for k, v := range route.Match {

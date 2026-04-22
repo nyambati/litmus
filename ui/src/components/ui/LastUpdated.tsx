@@ -1,5 +1,5 @@
 import { Clock } from "lucide-react";
-import { formatAge } from "../../utils/persistence";
+import { formatAge } from "../../utils/ui";
 
 export const LastUpdated = ({ ts }: { ts: number | null }) => {
   if (!ts) return null;

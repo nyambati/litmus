@@ -1,4 +1,4 @@
-import { cn } from "../../utils/persistence";
+import { cn } from "../../utils/ui";
 
 export const FilterTabs = <T extends string>({
   tabs,

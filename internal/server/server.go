@@ -3,14 +3,11 @@ package server
 import (
 	"fmt"
 	"io/fs"
-	"log"
 	"net/http"
-	"os/exec"
-	"runtime"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/nyambati/litmus/internal/config"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -60,37 +57,14 @@ func RunUIServer(port int, dev bool) error {
 	}
 
 	// Serve embedded UI in production mode
-	if !dev && staticFS != nil {
-		router.Use(serveStatic)
-	}
+
+	router.Use(serveStatic)
 
 	addr := fmt.Sprintf(":%d", port)
 	url := fmt.Sprintf("http://localhost%s", addr)
-	log.Printf("Litmus UI running at %s", url)
-
-	if !dev {
-		go func() {
-			time.Sleep(150 * time.Millisecond)
-			openBrowser(url)
-		}()
-	}
+	logrus.Printf("Litmus UI running at %s", url)
 
 	return router.Run(addr)
-}
-
-func openBrowser(url string) {
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "darwin":
-		cmd = exec.Command("open", url)
-	case "windows":
-		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
-	default:
-		cmd = exec.Command("xdg-open", url)
-	}
-	if err := cmd.Start(); err != nil {
-		log.Printf("warning: failed to open browser: %v", err)
-	}
 }
 
 func corsMiddleware() gin.HandlerFunc {
