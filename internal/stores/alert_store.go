@@ -23,10 +23,16 @@ func NewAlertStore() *AlertStore {
 
 // Put adds alerts to the store.
 func (as *AlertStore) Put(alerts ...*types.Alert) error {
+	if as == nil {
+		return nil
+	}
 	as.mu.Lock()
 	defer as.mu.Unlock()
 
 	for _, alert := range alerts {
+		if alert == nil {
+			continue
+		}
 		as.alerts[alert.Fingerprint()] = alert
 	}
 	return nil

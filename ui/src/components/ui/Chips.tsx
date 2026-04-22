@@ -1,4 +1,4 @@
-import { cn } from "../../utils/persistence";
+import { cn } from "../../utils/ui";
 
 export const LabelChip = ({ labelKey, value }: { labelKey: string; value: string }) => (
   <span className="inline-flex items-center font-mono text-[11px] px-1.5 py-0.5 bg-[#22252b] border border-[#34383e] rounded-[2px] text-[#d9d9d9]/80">

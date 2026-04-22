@@ -38,11 +38,17 @@ func NewSnapshotSynthesizer(runner *pipeline.Runner) *SnapshotSynthesizer {
 
 // DiscoverOutcomes executes synthesized alerts through pipeline to discover outcomes.
 func (ss *SnapshotSynthesizer) DiscoverOutcomes(ctx context.Context, paths []*RoutePath) ([]*SynthesisResult, error) {
+	if ss == nil || ss.runner == nil {
+		return nil, fmt.Errorf("synthesizer or runner is nil")
+	}
 	var results []*SynthesisResult
 	seen := make(map[string]bool) // Dedup by outcome
 	ss.failureCount = 0
 
 	for _, path := range paths {
+		if path == nil {
+			continue
+		}
 		// Convert matchers to label options for expansion
 		labelOpts := ss.expandMatchers(path.Matchers)
 

@@ -4,7 +4,7 @@ import {
   GitCompare,
   AlertTriangle,
 } from "lucide-react";
-import { cn, formatAge } from "../../utils/persistence";
+import { cn, formatAge } from "../../utils/ui";
 import { useExplorerStore } from "../../stores/useExplorerStore";
 import { useLabStore } from "../../stores/useLabStore";
 import { useRegressionStore } from "../../stores/useRegressionStore";

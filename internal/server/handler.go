@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -136,6 +137,11 @@ func evaluateHandler(c *gin.Context) {
 	labelSet := model.LabelSet{}
 	for k, v := range req.Labels {
 		labelSet[model.LabelName(k)] = model.LabelValue(v)
+	}
+
+	if alertConfig.Route == nil {
+		c.String(http.StatusInternalServerError, "Alertmanager config has no root route")
+		return
 	}
 
 	router := pipeline.NewRouter(alertConfig.Route)
@@ -326,6 +332,11 @@ func diffHandler(c *gin.Context) {
 		return
 	}
 
+	if alertConfig.Route == nil {
+		c.String(http.StatusInternalServerError, "Alertmanager config has no root route")
+		return
+	}
+
 	router := pipeline.NewRouter(alertConfig.Route)
 	runner := pipeline.NewRunner(stores.NewSilenceStore(nil), stores.NewAlertStore(), router, nil)
 	walker := snapshot.NewRouteWalker(alertConfig.Route)
@@ -347,6 +358,7 @@ func diffHandler(c *gin.Context) {
 	baseline, err := cli.LoadBaseline(litmusConfig.RegressionsBinaryFilePath())
 	if err != nil {
 		if os.IsNotExist(err) {
+			resp.Total = 0
 			c.JSON(http.StatusOK, resp)
 			return
 		}
@@ -435,5 +447,23 @@ func serveStatic(c *gin.Context) {
 		c.Next()
 		return
 	}
+
+	if staticFS == nil {
+		c.String(http.StatusNotFound, "UI filesystem not initialized")
+		return
+	}
+
+	path := strings.TrimPrefix(c.Request.URL.Path, "/")
+	if path == "" {
+		path = "index.html"
+	}
+
+	// Check if the file exists in the filesystem
+	if _, err := fs.Stat(staticFS, path); err != nil {
+		if !strings.Contains(path, ".") {
+			c.Request.URL.Path = "/"
+		}
+	}
+
 	http.FileServer(http.FS(staticFS)).ServeHTTP(c.Writer, c.Request)
 }

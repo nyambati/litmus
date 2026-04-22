@@ -23,6 +23,9 @@ func (icd *InhibitionCycleDetector) DetectCycles() []string {
 	// Build adjacency list: source matcher -> target matcher
 	graph := make(map[string][]string)
 	for _, rule := range icd.rules {
+		if rule == nil {
+			continue
+		}
 		source := icd.matcherKey(rule.SourceMatch)
 		target := icd.matcherKey(rule.TargetMatch)
 		if source != "" && target != "" {
@@ -109,6 +112,9 @@ func (ord *OrphanReceiverDetector) DetectOrphans() []string {
 
 // markUsed recursively marks receivers as used.
 func (ord *OrphanReceiverDetector) markUsed(route *config.Route, used map[string]bool) {
+	if route == nil {
+		return
+	}
 	if route.Receiver != "" {
 		used[route.Receiver] = true
 	}

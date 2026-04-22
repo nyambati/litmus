@@ -1,5 +1,5 @@
 import React from "react";
-import { cn } from "../../utils/persistence";
+import { cn } from "../../utils/ui";
 import { GfSpinner } from "./Spinner";
 
 export const PrimaryButton = ({

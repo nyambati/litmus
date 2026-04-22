@@ -21,6 +21,9 @@ func NewRegressionTestExecutor() *RegressionTestExecutor {
 
 // Execute runs regression TestCases against the router.
 func (rte *RegressionTestExecutor) Execute(ctx context.Context, tests []*types.TestCase, router *pipeline.Router) []*types.TestResult {
+	if router == nil {
+		return []*types.TestResult{{Pass: false, Error: "router is nil"}}
+	}
 	results := make([]*types.TestResult, 0, len(tests))
 
 	silenceStore := stores.NewSilenceStore(nil)
@@ -28,6 +31,9 @@ func (rte *RegressionTestExecutor) Execute(ctx context.Context, tests []*types.T
 	runner := pipeline.NewRunner(silenceStore, alertStore, router, nil)
 
 	for _, test := range tests {
+		if test == nil {
+			continue
+		}
 		result := &types.TestResult{Name: test.Name, Type: test.Type, Pass: true}
 
 		if len(test.Labels) == 0 {

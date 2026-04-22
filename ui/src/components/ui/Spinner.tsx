@@ -1,4 +1,4 @@
-import { cn } from "../../utils/persistence";
+import { cn } from "../../utils/ui";
 
 export const GfSpinner = ({ size = "md" }: { size?: "sm" | "md" | "lg" }) => {
   const dim = size === "sm" ? "w-3.5 h-3.5" : size === "lg" ? "w-10 h-10" : "w-5 h-5";

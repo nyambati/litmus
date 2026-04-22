@@ -1,5 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
-import { cn } from "../../utils/persistence";
+import { cn } from "../../utils/ui";
 
 interface Suggestions {
   labels: string[];

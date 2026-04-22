@@ -10,7 +10,7 @@ import {
   Play,
   X,
 } from "lucide-react";
-import { cn, API, minDelay } from "../../utils/persistence";
+import { cn, API, minDelay } from "../../utils/ui";
 import { useRegressionStore } from "../../stores/useRegressionStore";
 import { GfSpinner } from "../ui/Spinner";
 import { StatusBadge } from "../ui/Status";
@@ -390,7 +390,7 @@ export const RegressionPage = () => {
             <FilterTabs
               tabs={[
                 {
-                  label: "All Changes",
+                  label: "Drift",
                   value: "all" as const,
                   count: diff.drifted,
                 },
