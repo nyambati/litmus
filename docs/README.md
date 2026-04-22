@@ -130,7 +130,7 @@ Exit codes:
 | `litmus diff` | Show changes from baseline |
 | `litmus inspect` | Read binary regression file |
 | `litmus sync` | Push validated config to Grafana Mimir |
-| `litmus server` | Launch interactive web UI |
+| `litmus serve` | Launch interactive web UI |
 
 ---
 
