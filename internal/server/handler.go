@@ -459,9 +459,10 @@ func serveStatic(c *gin.Context) {
 	}
 
 	// Check if the file exists in the filesystem
-	if _, err := fs.Stat(staticFS, path); err != nil {
-		// If the file doesn't exist, serve index.html for SPA routing
-		c.Request.URL.Path = "/"
+if _, err := fs.Stat(staticFS, path); err != nil {
+		if !strings.Contains(path, ".") {
+			c.Request.URL.Path = "/"
+		}
 	}
 
 	http.FileServer(http.FS(staticFS)).ServeHTTP(c.Writer, c.Request)
