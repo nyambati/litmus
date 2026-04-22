@@ -44,7 +44,7 @@ Litmus includes a web-based UI for interactive testing and exploration.
 
 ```bash
 # Start the web server
-litmus server
+litmus serve
 ```
 
 This launches a local web server that provides:
