@@ -61,7 +61,7 @@ litmus check           # Includes static analysis
 For a more interactive experience, Litmus provides a web UI that brings the validation process into your browser.
 
 ```bash
-litmus server
+litmus serve
 ```
 
 The UI provides three main features:
