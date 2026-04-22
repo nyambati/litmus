@@ -31,7 +31,6 @@ litmus init
 This creates:
 - **`litmus.yaml`** — Configuration file for Litmus
 - **`tests/`** — Directory for behavioral unit tests
-- **`.gitattributes`** — Git configuration for binary diffs
 
 ### Step 2: Create Baseline
 
@@ -179,7 +178,6 @@ litmus init
 **Creates:**
 - `litmus.yaml` — Configuration file
 - `tests/` — Test directory
-- `.gitattributes` — Git configuration
 
 **Options:** None
 
@@ -488,7 +486,7 @@ Write test cases in `tests/` directory (YAML format).
     receivers: [database-oncall]
 
 - name: "Silenced alerts don't reach receivers"
-  system_state:
+  state:
     silences:
       - labels: { severity: warning }
   alert:
@@ -496,7 +494,7 @@ Write test cases in `tests/` directory (YAML format).
       severity: warning
   expect:
     receivers: []
-    silenced: true
+    outcome: silenced
 ```
 
 **Fields:**
