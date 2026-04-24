@@ -164,12 +164,18 @@ func RunSanityChecks(alertConfig *amconfig.Config) SanityResult {
 func RunRegressionTests(ctx context.Context, litmusConfig *config.LitmusConfig, router *pipeline.Router, tags []string) RegressionResult {
 	result := RegressionResult{Passed: true}
 
-	baselinePath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.mpk")
-	baseline, err := LoadBaseline(baselinePath)
+	// Load baseline from regressions.litmus.yml
+	ymlPath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.yml")
+	state, err := LoadRegressionState(ymlPath)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			fmt.Fprintf(os.Stderr, "WARN: could not read regression baseline: %v\n", err)
 		}
+		return result
+	}
+
+	baseline := state.Tests
+	if len(baseline) == 0 {
 		return result
 	}
 

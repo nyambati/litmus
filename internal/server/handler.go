@@ -250,16 +250,17 @@ func regressionsHandler(c *gin.Context) {
 		return
 	}
 
-	tests, err := cli.LoadBaselineYAML(litmusConfig.RegressionsYamlFilePath())
+	ymlPath := fmt.Sprintf("%s/regressions.litmus.yml", litmusConfig.Regression.Directory)
+	state, err := cli.LoadRegressionState(ymlPath)
 	if err != nil {
-		if strings.Contains(err.Error(), "no such file or directory") {
+		if os.IsNotExist(err) {
 			c.JSON(http.StatusOK, []types.TestCase{})
 			return
 		}
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading regressions: %v", err))
 		return
 	}
-	c.JSON(http.StatusOK, tests)
+	c.JSON(http.StatusOK, state.Tests)
 }
 
 func regressionsRunHandler(c *gin.Context) {
@@ -273,15 +274,17 @@ func regressionsRunHandler(c *gin.Context) {
 		return
 	}
 
-	tests, err := cli.LoadBaselineYAML(litmusConfig.RegressionsYamlFilePath())
+	ymlPath := fmt.Sprintf("%s/regressions.litmus.yml", litmusConfig.Regression.Directory)
+	state, err := cli.LoadRegressionState(ymlPath)
 	if err != nil {
-		if strings.Contains(err.Error(), "no such file or directory") {
+		if os.IsNotExist(err) {
 			c.JSON(http.StatusOK, []*types.TestResult{})
 			return
 		}
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading regressions: %v", err))
 		return
 	}
+	tests := state.Tests
 
 	if name := c.Query("name"); name != "" {
 		found := false
@@ -310,7 +313,8 @@ func generateRegressionsHandler(c *gin.Context) {
 	if litmusConfig == nil {
 		return
 	}
-	_, err := os.Stat(litmusConfig.RegressionsBinaryFilePath())
+	ymlPath := fmt.Sprintf("%s/regressions.litmus.yml", litmusConfig.Regression.Directory)
+	_, err := os.Stat(ymlPath)
 
 	update := c.Query("update") == "true" || os.IsNotExist(err)
 
@@ -355,7 +359,8 @@ func diffHandler(c *gin.Context) {
 		Results: make([]*deltaResult, 0),
 	}
 
-	baseline, err := cli.LoadBaseline(litmusConfig.RegressionsBinaryFilePath())
+	ymlPath := fmt.Sprintf("%s/regressions.litmus.yml", litmusConfig.Regression.Directory)
+	state, err := cli.LoadRegressionState(ymlPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			resp.Total = 0
@@ -363,6 +368,13 @@ func diffHandler(c *gin.Context) {
 			return
 		}
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading baseline: %v", err))
+		return
+	}
+
+	baseline := state.Tests
+	if len(baseline) == 0 {
+		resp.Total = 0
+		c.JSON(http.StatusOK, resp)
 		return
 	}
 

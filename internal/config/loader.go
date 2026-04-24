@@ -10,20 +10,19 @@ import (
 
 	"github.com/joho/godotenv"
 	amconfig "github.com/prometheus/alertmanager/config"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
 const (
 	// DefaultConfigName is the base name of the configuration file.
-	DefaultConfigName = ".litmus"
-
-	DefaultAlertConfigDirectory = "config"
-	DefaultAlertConfigFile      = "alertmanager.yml"
-	DefaultAlertTemplates       = "templates/"
-	DefaultRegressionDirectory  = "regressions"
-	DefaultRegressionMaxSamples = 5
-	DefaultRegressionYamlFile   = "regressions.litmus.yml"
+	defaultConfigName         = ".litmus"
+	defaultRegressionYamlFile = "regressions.litmus.yml"
+	defaultRegressionKeep     = 3
+	defaultRegressionDir      = "regressions"
+	defaultConfigDir          = "config"
+	defaultConfigFile         = "alertmanager.yml"
+	defaultConfigTemplatesDir = "templates"
+	defaultTestsDir           = "tests"
 )
 
 // envPattern matches env(VAR_NAME) where VAR_NAME is an uppercase env var identifier.
@@ -32,19 +31,17 @@ var envPattern = regexp.MustCompile(`env\(([A-Za-z_][A-Za-z0-9_]*)\)`)
 // LoadConfig initializes and returns the litmus configuration.
 // It follows the precedence order: Flags > Env Vars > Config File > Defaults.
 func LoadConfig() (*LitmusConfig, error) {
-	if err := godotenv.Load(); err != nil {
-		logrus.Warnf("Error loading .env file: %v", err)
-	}
-
+	//nolint:errcheck
+	godotenv.Load()
 	v := viper.New()
 
 	// 1. Set Defaults
-	v.SetDefault("config.directory", "config")
-	v.SetDefault("config.file", "alertmanager.yml")
-	v.SetDefault("config.templates", "templates/")
-	v.SetDefault("regression.directory", "regressions")
-	v.SetDefault("regression.max_samples", 5)
-	v.SetDefault("tests.directory", "tests")
+	v.SetDefault("config.directory", defaultConfigDir)
+	v.SetDefault("config.file", defaultConfigFile)
+	v.SetDefault("config.templates", defaultConfigTemplatesDir)
+	v.SetDefault("regression.directory", defaultRegressionDir)
+	v.SetDefault("regression.keep", defaultRegressionKeep)
+	v.SetDefault("tests.directory", defaultTestsDir)
 	v.SetDefault("mimir.address", "")
 	v.SetDefault("mimir.tenant_id", "")
 	v.SetDefault("mimir.api_key", "")
@@ -55,7 +52,7 @@ func LoadConfig() (*LitmusConfig, error) {
 	v.AutomaticEnv()
 
 	// 3. Config File
-	v.SetConfigName(DefaultConfigName)
+	v.SetConfigName(defaultConfigName)
 	v.SetConfigType("yaml")
 	v.AddConfigPath(".")
 
@@ -179,10 +176,5 @@ func (c *LitmusConfig) FilePath() string {
 }
 
 func (c *LitmusConfig) RegressionsYamlFilePath() string {
-	return filepath.Join(c.Regression.Directory, DefaultRegressionYamlFile)
-}
-
-func (c *LitmusConfig) RegressionsBinaryFilePath() string {
-	file := strings.TrimSuffix(DefaultRegressionYamlFile, filepath.Ext(DefaultRegressionYamlFile)) + ".mpk"
-	return filepath.Join(c.Regression.Directory, file)
+	return filepath.Join(c.Regression.Directory, defaultRegressionYamlFile)
 }

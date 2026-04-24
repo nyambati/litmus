@@ -1,27 +1,18 @@
-# Litmus Configuration
-# See https://github.com/nyambati/litmus for documentation
 
 config:
-  directory: config # Alertmanager config directory
-  file: alertmanager.yaml # Config filename
-  templates: templates/ # Templates directory (relative to config.directory)
-
-# Global Test Labels: These labels are automatically added to
-# EVERY synthesized alert during the 'snapshot' process.
+    directory: config
+    file: alertmanager.yaml
+    templates: templates/
 global_labels:
-  severity: "warning"
-  cluster: "production"
-
-# Mimir Configuration (optional, used for 'litmus sync')
+    cluster: production
+    severity: warning
 mimir:
-  address: ""
-  tenant_id: ""
-
-# Regression Settings
+    address: "localhost:8080"
+    api_key: ""
+    tenant_id: ""
 regression:
-  directory: config/regressions/ # Baseline directory
-  max_samples: 5
-
-# Behavioral Unit Test (BUT) Settings
+    directory: config/regressions/
+    keep: 5
+    max_samples: 5
 tests:
-  directory: config/tests/ # Behavioral tests directory
+    directory: config/tests/

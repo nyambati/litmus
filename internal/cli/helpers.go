@@ -36,3 +36,37 @@ func LoadBaselineYAML(path string) ([]*types.TestCase, error) {
 	}
 	return tests, nil
 }
+
+// RegressionState holds the current active baseline ID and its tests.
+type RegressionState struct {
+	ID    string            `yaml:"id"`
+	Tests []*types.TestCase `yaml:"tests"`
+}
+
+// LoadRegressionState reads the regression state (ID + tests) from regressions.litmus.yml.
+func LoadRegressionState(path string) (*RegressionState, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var state RegressionState
+	if err := yaml.Unmarshal(data, &state); err != nil {
+		return nil, err
+	}
+	return &state, nil
+}
+
+// SaveRegressionState writes the regression state (ID + tests) to regressions.litmus.yml.
+func SaveRegressionState(path string, state *RegressionState) error {
+	data, err := yaml.Marshal(state)
+	if err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(path, data, 0600); err != nil {
+		return err
+	}
+
+	return nil
+}

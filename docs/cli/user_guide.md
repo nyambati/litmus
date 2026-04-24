@@ -6,11 +6,12 @@ Learn how to use Litmus to validate your Alertmanager configuration.
 
 ## Overview
 
-Litmus provides seven commands for managing alert configuration validation:
+Litmus provides eight commands for managing alert configuration validation:
 
 ```
 litmus init       Initialize workspace
-litmus snapshot   Create/update regression baseline
+litmus snapshot   Capture regression baseline
+litmus history    Manage baseline history (list, rollback)
 litmus check      Validate configuration (for CI/CD)
 litmus diff       Show changes from baseline
 litmus inspect    Read binary regression file (for auditing)
@@ -41,10 +42,10 @@ litmus snapshot
 ```
 
 This generates:
-- **`regressions.litmus.mpk`** — Binary regression baseline (git-tracked, protected from hand-edits)
-- **`regressions.litmus.yml`** — Human-readable YAML mirror for auditing
+- **`regressions/regressions.litmus.yml`** — Active baseline state (contains `id` + `tests`)
+- **`regressions/<timestamp>.mpk`** — Timestamped binary snapshot archived to history
 
-**Commit these files to version control.** They represent the "ground truth" of your configuration.
+**Commit both files to version control.** `regressions.litmus.yml` is the active baseline; the timestamped `.mpk` files are the history that enables rollback.
 
 ### Step 3: Write Tests (Optional)
 
@@ -113,8 +114,8 @@ litmus check
 # If intentional, update baseline
 litmus snapshot --update
 
-# Commit the changes
-git add alertmanager.yaml regressions.litmus.mpk regressions.litmus.yml
+# Commit the changes (include history snapshots so rollback works on any checkout)
+git add alertmanager.yaml regressions/
 git commit -m "refactor: consolidate database routes"
 ```
 
@@ -129,8 +130,8 @@ litmus diff
 # [-] REMOVED: Route to [old-receiver]
 # [!] MODIFIED: Route behavior changed
 
-# Read the regression baseline
-litmus inspect regressions.litmus.mpk
+# Inspect a historical snapshot (get ID from 'litmus history list')
+litmus inspect regressions/<timestamp>.mpk
 
 # Review git diff for the changes
 git diff alertmanager.yaml
@@ -185,33 +186,84 @@ litmus init
 
 ### `litmus snapshot`
 
-Capture current configuration as baseline.
+Capture current configuration as regression baseline.
 
 ```bash
-litmus snapshot
-litmus snapshot --update   # Force update (overwrite existing baseline)
+litmus snapshot            # Create baseline (fails if drift exists)
+litmus snapshot --update   # Accept drift and update baseline
 litmus snapshot -u         # Short form
-litmus snapshot --diff     # Preview what would change without writing
+litmus snapshot --strict   # Fail with error if drift detected (CI/CD gate)
 ```
 
 **Flags:**
 - `-u, --update` — Accept new behavior and overwrite existing baseline
-- `-d, --diff` — Print the routing diff and exit without writing
+- `-s, --strict` — Fail if drift is detected (useful for CI/CD gates)
 
 **Output:**
-- `regressions.litmus.mpk` — Binary baseline
-- `regressions.litmus.yml` — YAML mirror
+- `regressions/regressions.litmus.yml` — Active baseline state (`id` + `tests`)
+- `regressions/<timestamp>.mpk` — Timestamped binary snapshot added to history on each update
 
 **Behavior:**
-- If no baseline exists: Creates one
-- If baseline exists and config matches: Success (no changes)
-- If baseline exists and config differs: **Fails with drift warning**
-  - Use `--update` to intentionally accept the new baseline
-  - Use `diff` to see what changed
+
+When configuration changes:
+- `litmus snapshot` (no flags) — Detects drift, warns you to use `--update` to accept
+- `litmus snapshot --update` — Archives current baseline to history, writes new active baseline
+  - Returns: `✓ Snapshot processed successfully`
+- `litmus snapshot --strict` — Fails if any drift detected
+
+When configuration is unchanged:
+- `litmus snapshot --update` — No backup created, no-op
+  - Returns: `✓ No changes detected; baseline is up to date`
+
+**Use Cases:**
+
+If baseline exists and config differs:
+- Use `litmus diff` to see what changed
+- Use `litmus snapshot --update` to accept changes (creates new history entry)
+
+If you need to revert:
+- Use `litmus history list` to see available versions
+- Use `litmus history rollback <id>` to restore a previous version
 
 **Exit Codes:**
-- `0` — Baseline created/updated
+- `0` — Baseline created/updated successfully
 - `1` — Drift detected (use `--update` to accept)
+
+---
+
+### `litmus history`
+
+Manage regression baseline history.
+
+```bash
+litmus history list              # List all available baseline versions
+litmus history rollback <id>     # Restore a previous baseline by ID
+```
+
+**Subcommands:**
+- `list` — Display all timestamped baselines with the current one marked
+- `rollback <id>` — Restore the active baseline to a previous version
+
+**Example:**
+
+```bash
+$ litmus history list
+Available baselines:
+  20260422-214411  (current)
+  20260422-211233
+  20260422-210545
+
+Use 'litmus history rollback <id>' to restore a baseline.
+
+$ litmus history rollback 20260422-211233
+✓ Rolled back baseline to 20260422-211233
+```
+
+History entries are stored as timestamped `.mpk` files in the `regressions/` directory. A new entry is created only when `litmus snapshot --update` detects actual drift. Old entries are pruned based on `regression.keep` in `litmus.yaml`.
+
+**Exit Codes:**
+- `0` — Success
+- `1` — Version ID not found
 
 ---
 
@@ -328,23 +380,20 @@ litmus diff
 Read a binary regression file as human-readable YAML or JSON.
 
 ```bash
-litmus inspect regressions.litmus.mpk
-litmus inspect regressions.litmus.mpk --format json   # JSON output
+# Inspect a specific history snapshot (timestamped)
+litmus inspect regressions/20260422-214411.mpk
+litmus inspect regressions/20260422-214411.mpk --format json
 
 # Page through output
-litmus inspect regressions.litmus.mpk | less
-
-# Compare with git
-git show HEAD:regressions.litmus.yml | diff - <(litmus inspect regressions.litmus.mpk)
+litmus inspect regressions/20260422-214411.mpk | less
 ```
 
 **Flags:**
 - `-f, --format` — Output format: `yaml` (default) or `json`
 
 **Use when:**
-- Auditing regression changes
+- Auditing a specific historical baseline snapshot
 - Troubleshooting binary file issues
-- Integrating with Git diffs
 
 **Git Integration:**
 ```bash
@@ -352,7 +401,7 @@ git show HEAD:regressions.litmus.yml | diff - <(litmus inspect regressions.litmu
 git config diff.litmus_inspect.textconv "litmus inspect"
 
 # Now `git diff` automatically handles .mpk files
-git diff regressions.litmus.mpk
+git diff regressions/20260422-214411.mpk
 ```
 
 ---
@@ -451,6 +500,7 @@ global_labels:
 regression:
   directory: regressions/
   max_samples: 5
+  keep: 3
 
 tests:
   directory: tests/
@@ -464,6 +514,7 @@ tests:
 - **`global_labels`** (optional) — Labels added to all synthesized alerts
 - **`regression.directory`** (default: `regressions/`) — Baseline directory
 - **`regression.max_samples`** (default: 5) — Limit label combinations per route
+- **`regression.keep`** (default: 3) — Max number of history snapshots to retain
 - **`tests.directory`** (default: `tests/`) — Behavioral test directory
 
 ---
@@ -562,7 +613,7 @@ cat tests/your-test.yml
 
 ## Best Practices
 
-1. **Commit baselines to git** — Track regression changes alongside config changes
+1. **Commit baselines and history to git** — Commit the entire `regressions/` directory so rollback works on any checkout
 2. **Review diffs** — Always use `litmus diff` before `litmus snapshot --update`
 3. **Write tests for critical paths** — Behavioral tests catch intent errors
 4. **Run in CI/CD** — Catch configuration regressions before production

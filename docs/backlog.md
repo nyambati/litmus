@@ -4,11 +4,18 @@ This document tracks high-value features and research areas for `litmus` that ar
 
 ## Completed
 
-## 1. Negative Matcher Synthesis Paradox
-*   **The Problem:** Routes defined *only* with `!=` or `!~` matchers have no positive labels to synthesize, making automated regression testing difficult for these branches.
-*   **The Goal:** Implement a **"Non-Matching Seed"** generator. This would require an engine that analyzes a regex and produces a string guaranteed to *fail* that regex (thereby passing the negative route). 
+### 6. Baseline History & Rollback ✅
+*   **Status:** Completed in v0.2.0
+*   **Feature:** Support for baseline versioning, allowing rollback to previous baselines without re-synthesis.
+*   **Implementation:** Timestamped baselines stored in `.litmus/history/` with a pointer to the current baseline.
+*   **Usage:**
+    - `litmus snapshot history` — List available baselines
+    - `litmus snapshot rollback <id>` — Restore a previous baseline version
+*   **Mechanism:** When `litmus snapshot --update` is executed, the new baseline is archived to `.litmus/history/` with a timestamp, and the `current` pointer file is updated to track the active baseline.
 
-## 2. The Time Dimension (BUT)
+## Features
+
+## 1. Negative Matcher Synthesis Paradox
 *   **The Problem:** `active_time_intervals` can cause tests to pass on weekdays but fail on weekends, introducing "flaky" CI based on the system clock.
 *   **The Goal:** Implement full **Time Simulation**. This requires mocking the internal clock used by the Alertmanager pipeline so that unit tests can assert behavior at specific timestamps (e.g., "Saturday at 2 AM") in a deterministic way.
 
@@ -20,11 +27,6 @@ This document tracks high-value features and research areas for `litmus` that ar
 *   **The Problem:** Large organizations struggle with massive, monolithic `alertmanager.yml` files that cause Git merge conflicts and make team-based ownership difficult.
 *   **The Goal:** Support for **Configuration Fragments**. Teams define their own routes and receivers in isolated files (e.g., `teams/database.yml`). 
 *   **The Mechanism:** Litmus would "assemble" these fragments into a virtual routing tree for validation. This enables **Cross-Impact Detection**, where Litmus can warn a team if their local change has accidentally shadowed or inhibited another team's alerts in the global tree.
-
-## 6. Baseline History & Rollback
-*   **The Problem:** If a baseline update is reverted, users must re-run `litmus snapshot --update` to restore it.
-*   **The Goal:** Support for baseline versioning, allowing rollback to previous baselines without re-synthesis.
-*   **Mechanism:** Keep timestamped baselines in `.litmus/history/` with a pointer to the current baseline.
 
 ## 7. Watch Mode
 *   **The Problem:** During development, users must manually re-run `litmus check` after each change.

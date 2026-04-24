@@ -8,9 +8,10 @@ import (
 // newServeCmd creates the serve command.
 func newServeCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "serve",
-		Short: "Start the Litmus web interface",
-		Long:  "Starts a web server providing a visual interface for route exploration and test management",
+		Use:          "serve",
+		Short:        "Start the Litmus web interface",
+		Long:         "Starts a web server providing a visual interface for route exploration and test management",
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			port, _ := cmd.Flags().GetInt("port")
 			dev, _ := cmd.Flags().GetBool("dev")

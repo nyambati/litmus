@@ -46,3 +46,7 @@ node_modules
 /litmus
 .env
 /tmp
+
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md

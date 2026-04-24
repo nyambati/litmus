@@ -50,13 +50,18 @@ func RunDiff() error {
 
 	currentTests := BuildRegressionTests(outcomes, litmusConfig.GlobalLabels)
 
-	baselinePath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.mpk")
-	existingTests, err := LoadBaseline(baselinePath)
+	ymlPath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.yml")
+	state, err := LoadRegressionState(ymlPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("no baseline found — run 'litmus snapshot' to create one")
 		}
 		return fmt.Errorf("loading baseline: %w", err)
+	}
+
+	existingTests := state.Tests
+	if len(existingTests) == 0 {
+		return fmt.Errorf("baseline is empty")
 	}
 
 	diff := snapshot.ComputeDiff(existingTests, currentTests)

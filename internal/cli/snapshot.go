@@ -8,13 +8,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/nyambati/litmus/internal/codec"
 	"github.com/nyambati/litmus/internal/config"
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/engine/snapshot"
 	"github.com/nyambati/litmus/internal/stores"
 	"github.com/nyambati/litmus/internal/types"
-	"gopkg.in/yaml.v3"
 )
 
 // RunSnapshot captures current routing behavior as a regression baseline.
@@ -53,16 +51,21 @@ func RunSnapshot(update, strict bool) error {
 
 	regTests := BuildRegressionTests(outcomes, litmusConfig.GlobalLabels)
 
-	baselinePath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.mpk")
-
-	existing, err := LoadBaseline(baselinePath)
-	if err != nil && !os.IsNotExist(err) {
+	// Load existing baseline from regressions.litmus.yml
+	var existing []*types.TestCase
+	ymlPath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.yml")
+	state, err := LoadRegressionState(ymlPath)
+	if err == nil && state != nil {
+		existing = state.Tests
+	} else if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("reading existing baseline: %w", err)
 	}
 
+	hasDrift := false
 	if existing != nil {
 		d := snapshot.ComputeDiff(existing, regTests)
 		if len(d.Deltas) > 0 {
+			hasDrift = true
 			if strict {
 				PrintDiffReport(d)
 				return fmt.Errorf("drift detected in routing behavior")
@@ -77,28 +80,30 @@ func RunSnapshot(update, strict bool) error {
 		return fmt.Errorf("creating regression directory: %w", err)
 	}
 
-	// Protect mpk baseline: only write if it doesn't exist OR update is explicit
-	if existing == nil || update {
-		mpkFile, err := os.Create(baselinePath)
-		if err != nil {
-			return fmt.Errorf("creating baseline file: %w", err)
-		}
-		defer mpkFile.Close()
-
-		if err := codec.EncodeMsgPack(mpkFile, regTests); err != nil {
-			return fmt.Errorf("writing baseline: %w", err)
-		}
+	// Decide whether to update baseline
+	shouldUpdate := existing == nil || (update && hasDrift)
+	if update && existing != nil && !hasDrift {
+		fmt.Println("✓ No changes detected; baseline is up to date") //nolint:forbidigo
+		return nil
 	}
 
-	// Mirror is not protected; always reflects current state
-	ymlPath := strings.Replace(baselinePath, "mpk", "yml", 1)
-	ymlData, err := yaml.Marshal(regTests)
-	if err != nil {
-		return fmt.Errorf("marshaling YAML mirror: %w", err)
-	}
-
-	if err := os.WriteFile(ymlPath, ymlData, 0600); err != nil {
-		return fmt.Errorf("writing YAML mirror: %w", err)
+	// Archive baseline to history only on actual updates (new baseline or drift+update)
+	// This creates a new timestamped MPK and updates the ID
+	if shouldUpdate {
+		if _, err := ArchiveBaseline(litmusConfig, regTests); err != nil {
+			return fmt.Errorf("archiving baseline to history: %w", err)
+		}
+	} else {
+		// Not creating new MPK, but update tests in state file with existing ID
+		ymlPath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.yml")
+		state, err := LoadRegressionState(ymlPath)
+		if err == nil {
+			// Keep existing ID, update tests only
+			state.Tests = regTests
+			if err := SaveRegressionState(ymlPath, state); err != nil {
+				return fmt.Errorf("updating tests in state: %w", err)
+			}
+		}
 	}
 
 	fmt.Println("✓ Snapshot processed successfully") //nolint:forbidigo

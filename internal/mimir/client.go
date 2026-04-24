@@ -55,7 +55,7 @@ func (c *Client) Push(ctx context.Context, payload PushPayload) error {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Scope-OrgID", c.tenantID)
 	if c.apiKey != "" {
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.apiKey))
+		req.SetBasicAuth(c.tenantID, c.apiKey)
 	}
 
 	resp, err := c.httpClient.Do(req)
