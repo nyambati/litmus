@@ -82,7 +82,7 @@ func RunCheck(format string, showDiff bool, tags []string) (CheckExitCode, error
 		return 1, fmt.Errorf("loading litmus config: %w", err)
 	}
 
-	alertConfig, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
+	alertConfig, _, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
 	if err != nil {
 		return 1, fmt.Errorf("loading alertmanager config: %w", err)
 	}

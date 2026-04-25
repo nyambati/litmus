@@ -89,7 +89,7 @@ func runTestsHandler(c *gin.Context) {
 		return
 	}
 
-	alertConfig, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
+	alertConfig, _, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
 	if err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading alertmanager config: %v", err))
 		return
@@ -169,7 +169,7 @@ func evaluateHandler(c *gin.Context) {
 	}
 
 	// Reload config on every request for "live" feel
-	alertConfig, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
+	alertConfig, _, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
 	if err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading alertmanager config: %v", err))
 		return
@@ -204,7 +204,7 @@ func suggestHandler(c *gin.Context) {
 	if litmusConfig == nil {
 		return
 	}
-	alertConfig, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
+	alertConfig, _, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
 	if err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading alertmanager config: %v", err))
 		return
@@ -306,7 +306,7 @@ func diffHandler(c *gin.Context) {
 	if litmusConfig == nil {
 		return
 	}
-	alertConfig, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
+	alertConfig, _, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
 	if err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading alertmanager config: %v", err))
 		return

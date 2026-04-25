@@ -90,7 +90,7 @@ receivers:
 	require.NoError(t, err)
 	f.Close()
 
-	cfg, err := LoadAlertmanagerConfig(f.Name())
+	cfg, _, err := LoadAlertmanagerConfig(f.Name())
 	require.NoError(t, err)
 	assert.Equal(t, "test-key-123", string(cfg.Global.OpsGenieAPIKey))
 }

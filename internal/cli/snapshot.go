@@ -25,7 +25,7 @@ func RunSnapshot(update, strict bool) error {
 		return fmt.Errorf("loading litmus config: %w", err)
 	}
 
-	alertConfig, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
+	alertConfig, _, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
 	if err != nil {
 		return fmt.Errorf("loading alertmanager config: %w", err)
 	}

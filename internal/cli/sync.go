@@ -8,7 +8,6 @@ import (
 
 	"github.com/nyambati/litmus/internal/config"
 	"github.com/nyambati/litmus/internal/mimir"
-	amconfig "github.com/prometheus/alertmanager/config"
 )
 
 // RunSync validates the alertmanager config and pushes it to Mimir.
@@ -38,15 +37,10 @@ func RunSync(address, tenantID, apiKey string, skipValidate, dryRun bool) error 
 		return err
 	}
 
-	// Expand and load alertmanager config
-	rawYAML, err := config.ExpandAlertmanagerConfig(litmusConfig.FilePath())
+	// Load alertmanager config (returns both parsed and raw)
+	alertConfig, rawYAML, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
 	if err != nil {
 		return fmt.Errorf("loading alertmanager config: %w", err)
-	}
-
-	alertConfig, err := amconfig.Load(rawYAML)
-	if err != nil {
-		return fmt.Errorf("parsing alertmanager config: %w", err)
 	}
 
 	if alertConfig.Route == nil {
