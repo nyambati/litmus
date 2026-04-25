@@ -25,9 +25,9 @@ func RunSnapshot(update, strict bool) error {
 		return fmt.Errorf("loading litmus config: %w", err)
 	}
 
-	alertConfig, _, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
+	alertConfig, _, _, err := litmusConfig.LoadAssembledConfig()
 	if err != nil {
-		return fmt.Errorf("loading alertmanager config: %w", err)
+		return fmt.Errorf("loading assembled alertmanager config: %w", err)
 	}
 
 	ctx := context.Background()
@@ -73,7 +73,7 @@ func RunSnapshot(update, strict bool) error {
 		}
 	}
 
-	if err := os.MkdirAll(litmusConfig.Regression.Directory, 0755); err != nil {
+	if err := os.MkdirAll(litmusConfig.RegressionsDir(), 0755); err != nil {
 		return fmt.Errorf("creating regression directory: %w", err)
 	}
 

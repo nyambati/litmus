@@ -6,10 +6,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-const historyDir = "regressions"
+const historyDir = "config/regressions"
 
 func TestSnapshotCommand_GeneratesFiles(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -21,16 +22,11 @@ func TestSnapshotCommand_GeneratesFiles(t *testing.T) {
 
 	// Create minimal litmus.yaml
 	err = os.WriteFile(".litmus.yaml", []byte(`
-config:
-  directory: "config"
-  file: "alertmanager.yml"
+workspace:
+  root: "config"
+  history: 3
 global_labels:
   severity: "warning"
-regression:
-  keep: 3
-  directory: "regressions"
-tests:
-  directory: "tests/"
 `), 0600)
 	require.NoError(t, err)
 
@@ -53,11 +49,11 @@ receivers:
 
 	require.NoError(t, err)
 
-	// Verify regression state file exists with ID and tests
-	require.FileExists(t, filepath.Join("regressions", "regressions.litmus.yml"))
+	// Verify regression state file exists with ID and tests in the correct Package-First location
+	require.FileExists(t, filepath.Join(historyDir, "regressions.litmus.yml"))
 
 	// Verify regressions.litmus.yml contains ID
-	data, err := os.ReadFile(filepath.Join("regressions", "regressions.litmus.yml"))
+	data, err := os.ReadFile(filepath.Join(historyDir, "regressions.litmus.yml"))
 	require.NoError(t, err)
 	require.Contains(t, string(data), "id:")
 	require.Contains(t, string(data), "tests:")
@@ -73,16 +69,11 @@ func TestSnapshotCommand_DriftDetection_Graceful(t *testing.T) {
 
 	// Create config
 	err = os.WriteFile(".litmus.yaml", []byte(`
-config:
-  directory: "config"
-  file: "alertmanager.yml"
+workspace:
+  root: "config"
+  history: 3
 global_labels:
   severity: "warning"
-regression:
-  keep: 3
-  directory: "regressions"
-tests:
-  directory: "tests/"
 `), 0600)
 	require.NoError(t, err)
 
@@ -138,16 +129,11 @@ func TestSnapshotCommand_Strict_DriftDetection(t *testing.T) {
 
 	// Create config
 	err = os.WriteFile(".litmus.yaml", []byte(`
-config:
-  directory: "config"
-  file: "alertmanager.yml"
+workspace:
+  root: "config"
+  history: 3
 global_labels:
   severity: "warning"
-regression:
-  keep: 3
-  directory: "regressions"
-tests:
-  directory: "tests/"
 `), 0600)
 	require.NoError(t, err)
 
@@ -204,16 +190,11 @@ func TestSnapshotCommand_UpdateFlag(t *testing.T) {
 
 	// Create config
 	err = os.WriteFile(".litmus.yaml", []byte(`
-config:
-  directory: "config"
-  file: "alertmanager.yml"
+workspace:
+  root: "config"
+  history: 3
 global_labels:
   severity: "warning"
-regression:
-  keep: 3
-  directory: "regressions"
-tests:
-  directory: "tests/"
 `), 0600)
 	require.NoError(t, err)
 
@@ -259,7 +240,7 @@ receivers:
 	require.NoError(t, err)
 
 	// Verify a version was created in history
-	entries, err := os.ReadDir("regressions")
+	entries, err := os.ReadDir(historyDir)
 	require.NoError(t, err)
 	hasVersion := false
 	for _, e := range entries {
@@ -281,16 +262,11 @@ func TestSnapshotCommand_UpdateWithNoDrift(t *testing.T) {
 
 	// Create config
 	err = os.WriteFile(".litmus.yaml", []byte(`
-config:
-  directory: "config"
-  file: "alertmanager.yml"
+workspace:
+  root: "config"
+  history: 3
 global_labels:
   severity: "warning"
-regression:
-  keep: 3
-  directory: "regressions"
-tests:
-  directory: "tests/"
 `), 0600)
 	require.NoError(t, err)
 
@@ -313,7 +289,6 @@ receivers:
 	require.NoError(t, err)
 
 	// Count history entries (should be 1)
-	historyDir := "regressions"
 	entries, err := os.ReadDir(historyDir)
 	require.NoError(t, err)
 	mpkCount := 0
@@ -370,16 +345,11 @@ func TestSnapshotHistory_ListsBaselines(t *testing.T) {
 
 	// Create config
 	err = os.WriteFile(".litmus.yaml", []byte(`
-config:
-  directory: "config"
-  file: "alertmanager.yml"
+workspace:
+  root: "config"
+  history: 3
 global_labels:
   severity: "warning"
-regression:
-  keep: 3
-  directory: "regressions"
-tests:
-  directory: "tests/"
 `), 0600)
 	require.NoError(t, err)
 
@@ -402,7 +372,6 @@ receivers:
 	require.NoError(t, err)
 
 	// Check history is recorded
-	historyDir := "regressions"
 	entries, err := os.ReadDir(historyDir)
 	require.NoError(t, err)
 	versionCount := 0
@@ -430,16 +399,11 @@ func TestSnapshotRollback_RestoresPreviousBaseline(t *testing.T) {
 
 	// Create config
 	err = os.WriteFile(".litmus.yaml", []byte(`
-config:
-  directory: "config"
-  file: "alertmanager.yml"
+workspace:
+  root: "config"
+  history: 3
 global_labels:
   severity: "warning"
-regression:
-  keep: 3
-  directory: "regressions"
-tests:
-  directory: "tests/"
 `), 0600)
 	require.NoError(t, err)
 
@@ -508,4 +472,58 @@ receivers:
 	cmd.SetArgs([]string{"rollback", firstID})
 	err = cmd.Execute()
 	require.NoError(t, err)
+}
+
+func TestSnapshotCommand_WithFragments(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldCwd) }()
+	require.NoError(t, os.Chdir(tmpDir))
+
+	require.NoError(t, os.WriteFile(".litmus.yaml", []byte(`
+workspace:
+  root: "config"
+  fragments: "fragments/*"
+  history: 3
+global_labels:
+  severity: "warning"
+`), 0600))
+
+	require.NoError(t, os.MkdirAll("config", 0755))
+	require.NoError(t, os.WriteFile("config/alertmanager.yml", []byte(`
+global:
+  resolve_timeout: 5m
+route:
+  receiver: 'default'
+  routes:
+    - receiver: 'platform'
+      match:
+        scope: 'teams'
+receivers:
+  - name: 'default'
+  - name: 'platform'
+`), 0600))
+
+	// Fragment mounts a route under scope=teams with a distinct receiver
+	require.NoError(t, os.MkdirAll("config/fragments", 0755))
+	require.NoError(t, os.WriteFile("config/fragments/db.yml", []byte(`
+name: "db-team"
+mount_point:
+  scope: "teams"
+routes:
+  - receiver: "db-critical"
+    match:
+      service: "mysql"
+receivers:
+  - name: "db-critical"
+`), 0600))
+
+	cmd := newSnapshotCmd()
+	cmd.SetArgs([]string{"capture"})
+	require.NoError(t, cmd.Execute())
+
+	data, err := os.ReadFile(filepath.Join("config", "regressions", "regressions.litmus.yml"))
+	require.NoError(t, err)
+	assert.Contains(t, string(data), "db-critical", "snapshot must capture routes from assembled fragments")
 }

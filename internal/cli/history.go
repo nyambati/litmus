@@ -21,12 +21,12 @@ const historyTimeFormat = "20060102-150405"
 // ArchiveBaseline saves tests as a new history entry and writes regressions.litmus.yml.
 func ArchiveBaseline(cfg *config.LitmusConfig, tests []*types.TestCase) (string, error) {
 	id := time.Now().Format(historyTimeFormat)
-	if err := os.MkdirAll(cfg.Regression.Directory, 0755); err != nil {
+	if err := os.MkdirAll(cfg.RegressionsDir(), 0755); err != nil {
 		return "", fmt.Errorf("creating history dir: %w", err)
 	}
 
 	// Archive the baseline with timestamp filename
-	mpkPath := filepath.Join(cfg.Regression.Directory, id+".mpk")
+	mpkPath := filepath.Join(cfg.RegressionsDir(), id+".mpk")
 	f, err := os.Create(mpkPath)
 	if err != nil {
 		return "", fmt.Errorf("creating history entry: %w", err)
@@ -72,7 +72,7 @@ func ListHistory(regressionDir string) ([]string, error) {
 
 // RollbackToEntry restores a history entry as the active baseline.
 func RollbackToEntry(cfg *config.LitmusConfig, id string) error {
-	srcMpk := filepath.Join(cfg.Regression.Directory, id+".mpk")
+	srcMpk := filepath.Join(cfg.RegressionsDir(), id+".mpk")
 
 	// Load the tests from the historical baseline
 	tests, err := LoadBaseline(srcMpk)
@@ -89,20 +89,20 @@ func RollbackToEntry(cfg *config.LitmusConfig, id string) error {
 
 // cleanupOldEntries removes old entries keeping only the latest `keep` versions.
 func cleanupOldEntries(cfg *config.LitmusConfig) error {
-	ids, err := ListHistory(cfg.Regression.Directory)
+	ids, err := ListHistory(cfg.RegressionsDir())
 	if err != nil {
 		return err
 	}
 
-	if len(ids) <= cfg.Regression.Keep {
+	if len(ids) <= cfg.Workspace.History {
 		return nil
 	}
 
 	// IDs are sorted newest-first; remove older ones
-	toDelete := ids[cfg.Regression.Keep:]
+	toDelete := ids[cfg.Workspace.History:]
 
 	for _, id := range toDelete {
-		path := filepath.Join(cfg.Regression.Directory, id+".mpk")
+		path := filepath.Join(cfg.RegressionsDir(), id+".mpk")
 		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("deleting old entry %q: %w", id, err)
 		}
@@ -118,7 +118,7 @@ func RunHistoryList(cmd *cobra.Command) error {
 		return fmt.Errorf("loading litmus config: %w", err)
 	}
 
-	ids, err := ListHistory(litmusConfig.Regression.Directory)
+	ids, err := ListHistory(litmusConfig.RegressionsDir())
 	if err != nil {
 		return err
 	}
@@ -156,7 +156,7 @@ func RunHistoryRollback(cmd *cobra.Command, id string) error {
 		return fmt.Errorf("loading litmus config: %w", err)
 	}
 
-	ids, err := ListHistory(litmusConfig.Regression.Directory)
+	ids, err := ListHistory(litmusConfig.RegressionsDir())
 	if err != nil {
 		return err
 	}

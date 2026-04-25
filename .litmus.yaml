@@ -1,17 +1,16 @@
-
-config:
-    directory: config
-    file: alertmanager.yaml
-    templates: templates/
+workspace:
+  root: "config" # The Root Package directory
+  fragments: "fragments/*" # Glob pattern (Relative to root by default)
+  history: 5 # Number of regression baselines to keep
 global_labels:
-    cluster: production
-    severity: warning
+  cluster: production
+  severity: warning
+policy:
+  require_tests: true
+  enforce_matchers:
+    - severity
+    - label_team
 mimir:
-    address: "localhost:8080"
-    api_key: ""
-    tenant_id: ""
-regression:
-    directory: config/regressions/
-    keep: 5
-tests:
-    directory: config/tests/
+  address: "localhost:8080"
+  api_key: ""
+  tenant_id: ""

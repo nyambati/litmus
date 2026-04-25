@@ -41,6 +41,7 @@ type SanityResult struct {
 	ShadowedIssues   []string `json:"shadowed_issues,omitempty"`
 	OrphanIssues     []string `json:"orphan_issues,omitempty"`
 	InhibitionIssues []string `json:"inhibition_issues,omitempty"`
+	PolicyIssues     []string `json:"policy_issues,omitempty"`
 }
 
 // TestFailure holds structured detail for a single test failure.
@@ -82,9 +83,9 @@ func RunCheck(format string, showDiff bool, tags []string) (CheckExitCode, error
 		return 1, fmt.Errorf("loading litmus config: %w", err)
 	}
 
-	alertConfig, _, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
+	alertConfig, fragments, _, err := litmusConfig.LoadAssembledConfig()
 	if err != nil {
-		return 1, fmt.Errorf("loading alertmanager config: %w", err)
+		return 1, fmt.Errorf("loading assembled alertmanager config: %w", err)
 	}
 
 	if alertConfig.Route == nil {
@@ -94,8 +95,13 @@ func RunCheck(format string, showDiff bool, tags []string) (CheckExitCode, error
 	router := pipeline.NewRouter(alertConfig.Route)
 
 	sanityResult := RunSanityChecks(alertConfig)
+	checker := sanity.NewPolicyChecker(litmusConfig.Policy)
+	sanityResult.PolicyIssues = checker.Check(fragments)
+	if len(sanityResult.PolicyIssues) > 0 {
+		sanityResult.Passed = false
+	}
 	regressionResult := RunRegressionTests(ctx, litmusConfig, router, tags)
-	behavioralResult := RunBehavioralTests(ctx, litmusConfig, router, alertConfig.InhibitRules, tags)
+	behavioralResult := RunBehavioralTests(ctx, litmusConfig, fragments, router, alertConfig.InhibitRules, tags)
 
 	passed := sanityResult.Passed && regressionResult.Passed && behavioralResult.Passed
 
@@ -155,7 +161,6 @@ func RunSanityChecks(alertConfig *amconfig.Config) SanityResult {
 	if len(result.ShadowedIssues)+len(result.OrphanIssues)+len(result.InhibitionIssues) > 0 {
 		result.Passed = false
 	}
-
 	return result
 }
 
@@ -200,15 +205,25 @@ func RunRegressionTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 }
 
 // RunBehavioralTests loads and executes all behavioral unit tests.
-func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, router *pipeline.Router, inhibitRules []amconfig.InhibitRule, tags []string) BehavioralResult {
+func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, fragments []*config.Fragment, router *pipeline.Router, inhibitRules []amconfig.InhibitRule, tags []string) BehavioralResult {
 	result := BehavioralResult{Passed: true}
 
 	loader := behavioral.NewBehavioralTestLoader()
 	tests, err := loader.LoadFromDirectory(litmusConfig.TestsDir())
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
-			fmt.Fprintf(os.Stderr, "WARN: could not load behavioral tests: %v\n", err)
+			fmt.Fprintf(os.Stderr, "WARN: could not load behavioral tests from root: %v\n", err)
 		}
+	}
+
+	// Aggregate tests from fragments
+	for _, frag := range fragments {
+		if frag.Tests != nil {
+			tests = append(tests, frag.Tests...)
+		}
+	}
+
+	if len(tests) == 0 {
 		return result
 	}
 
@@ -277,6 +292,7 @@ func PrintCheckResult(r CheckResult, showDiff bool) {
 	printSanityCategory("No shadowed routes detected", r.Sanity.ShadowedIssues)
 	printSanityCategory("No orphan receivers", r.Sanity.OrphanIssues)
 	printSanityCategory("No inhibition cycles", r.Sanity.InhibitionIssues)
+	printSanityCategory("No policy violations", r.Sanity.PolicyIssues)
 	fmt.Println()
 
 	// 2. Regressions
@@ -405,7 +421,7 @@ func formatSummary(r CheckResult) string {
 	if n := len(r.Regression.Failures); n > 0 {
 		parts = append(parts, fmt.Sprintf("%d Regression%s", n, plural(n)))
 	}
-	sanityWarnings := len(r.Sanity.ShadowedIssues) + len(r.Sanity.OrphanIssues) + len(r.Sanity.InhibitionIssues)
+	sanityWarnings := len(r.Sanity.ShadowedIssues) + len(r.Sanity.OrphanIssues) + len(r.Sanity.InhibitionIssues) + len(r.Sanity.PolicyIssues)
 	if sanityWarnings > 0 {
 		parts = append(parts, fmt.Sprintf("%d Sanity Warning%s", sanityWarnings, plural(sanityWarnings)))
 	}

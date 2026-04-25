@@ -22,6 +22,17 @@ import (
 	"github.com/prometheus/common/model"
 )
 
+// loadAssembled loads the assembled alertmanager config and fragments, writing
+// an error response and returning false on failure.
+func loadAssembled(c *gin.Context, litmusConfig *config.LitmusConfig) (*amconfig.Config, []*config.Fragment, bool) {
+	alertConfig, fragments, _, err := litmusConfig.LoadAssembledConfig()
+	if err != nil {
+		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading alertmanager config: %v", err))
+		return nil, nil, false
+	}
+	return alertConfig, fragments, true
+}
+
 func getLitmusConfig(c *gin.Context) *config.LitmusConfig {
 	val, exists := c.Get(string(LitmusConfigKey))
 	if !exists {
@@ -71,13 +82,13 @@ func testsHandler(c *gin.Context) {
 	default:
 		loader := behavioral.NewBehavioralTestLoader()
 		tests, err := loader.LoadFromDirectory(litmusConfig.TestsDir())
-		if err != nil {
-			if errors.Is(err, os.ErrNotExist) {
-				c.JSON(http.StatusOK, []types.TestCase{})
-				return
-			}
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			c.String(http.StatusInternalServerError, fmt.Sprintf("Loading tests: %v", err))
 			return
+		}
+		frags, _ := config.LoadFragments(litmusConfig.FragmentsPath())
+		for _, frag := range frags {
+			tests = append(tests, frag.Tests...)
 		}
 		c.JSON(http.StatusOK, tests)
 	}
@@ -89,9 +100,8 @@ func runTestsHandler(c *gin.Context) {
 		return
 	}
 
-	alertConfig, _, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
-	if err != nil {
-		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading alertmanager config: %v", err))
+	alertConfig, fragments, ok := loadAssembled(c, litmusConfig)
+	if !ok {
 		return
 	}
 
@@ -128,13 +138,12 @@ func runTestsHandler(c *gin.Context) {
 	default:
 		loader := behavioral.NewBehavioralTestLoader()
 		tests, err := loader.LoadFromDirectory(litmusConfig.TestsDir())
-		if err != nil {
-			if errors.Is(err, os.ErrNotExist) {
-				c.JSON(http.StatusOK, []*types.TestResult{})
-				return
-			}
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			c.String(http.StatusInternalServerError, fmt.Sprintf("Loading tests: %v", err))
 			return
+		}
+		for _, frag := range fragments {
+			tests = append(tests, frag.Tests...)
 		}
 		executor := behavioral.NewBehavioralTestExecutor(alertConfig.InhibitRules)
 		if name != "" {
@@ -169,9 +178,8 @@ func evaluateHandler(c *gin.Context) {
 	}
 
 	// Reload config on every request for "live" feel
-	alertConfig, _, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
-	if err != nil {
-		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading alertmanager config: %v", err))
+	alertConfig, _, ok := loadAssembled(c, litmusConfig)
+	if !ok {
 		return
 	}
 
@@ -204,9 +212,8 @@ func suggestHandler(c *gin.Context) {
 	if litmusConfig == nil {
 		return
 	}
-	alertConfig, _, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
-	if err != nil {
-		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading alertmanager config: %v", err))
+	alertConfig, fragments, ok := loadAssembled(c, litmusConfig)
+	if !ok {
 		return
 	}
 
@@ -241,9 +248,12 @@ func suggestHandler(c *gin.Context) {
 	walkRoute(alertConfig.Route)
 
 	loader := behavioral.NewBehavioralTestLoader()
-	tests, err := loader.LoadFromDirectory(litmusConfig.Tests.Directory)
+	tests, err := loader.LoadFromDirectory(litmusConfig.TestsDir())
 	if err != nil {
 		log.Printf("warning: failed to load tests for suggestions: %v", err)
+	}
+	for _, frag := range fragments {
+		tests = append(tests, frag.Tests...)
 	}
 	for _, test := range tests {
 		if test.Alert == nil {
@@ -306,9 +316,8 @@ func diffHandler(c *gin.Context) {
 	if litmusConfig == nil {
 		return
 	}
-	alertConfig, _, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
-	if err != nil {
-		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading alertmanager config: %v", err))
+	alertConfig, _, ok := loadAssembled(c, litmusConfig)
+	if !ok {
 		return
 	}
 
