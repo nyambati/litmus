@@ -6,11 +6,14 @@ import (
 )
 
 // sanityMatcher captures a single label constraint with its match polarity.
-// Negative is true for != and !~ matchers.
+// isNeg is true for != and !~ matchers. isRegex is true for =~ and !~ matchers.
+// source is the receiver name of the route that introduced this matcher.
 type sanityMatcher struct {
-	name  string
-	value string
-	isNeg bool
+	name    string
+	value   string
+	isNeg   bool
+	isRegex bool
+	source  string
 }
 
 // sanityPath holds a root-to-leaf path through the route tree with typed matchers.
@@ -45,17 +48,19 @@ func (ri *routeInspector) walk(route *config.Route, inherited []sanityMatcher, p
 	}
 	current := append([]sanityMatcher{}, inherited...)
 
+	src := route.Receiver
 	for k, v := range route.Match {
-		current = append(current, sanityMatcher{name: k, value: v, isNeg: false})
+		current = append(current, sanityMatcher{name: k, value: v, source: src})
 	}
 
 	for k, v := range route.MatchRE {
-		current = append(current, sanityMatcher{name: k, value: v.String(), isNeg: false})
+		current = append(current, sanityMatcher{name: k, value: v.String(), isRegex: true, source: src})
 	}
 
 	for _, m := range route.Matchers {
 		isNeg := m.Type == labels.MatchNotEqual || m.Type == labels.MatchNotRegexp
-		current = append(current, sanityMatcher{name: m.Name, value: m.Value, isNeg: isNeg})
+		isRegex := m.Type == labels.MatchRegexp || m.Type == labels.MatchNotRegexp
+		current = append(current, sanityMatcher{name: m.Name, value: m.Value, isNeg: isNeg, isRegex: isRegex, source: src})
 	}
 
 	if len(route.Routes) == 0 {
