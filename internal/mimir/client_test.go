@@ -27,8 +27,9 @@ func TestClientPush(t *testing.T) {
 				if got := r.Header.Get("X-Scope-OrgID"); got != "anonymous" {
 					t.Errorf("X-Scope-OrgID: got %q, want %q", got, "anonymous")
 				}
-				if got := r.Header.Get("Authorization"); got != "Bearer secret" {
-					t.Errorf("Authorization: got %q, want %q", got, "Bearer secret")
+				// Basic auth: base64("anonymous:secret")
+				if got := r.Header.Get("Authorization"); got != "Basic YW5vbnltb3VzOnNlY3JldA==" {
+					t.Errorf("Authorization: got %q, want Basic YW5vbnltb3VzOnNlY3JldA==", got)
 				}
 				if got := r.Header.Get("Content-Type"); got != "application/json" {
 					t.Errorf("Content-Type: got %q, want %q", got, "application/json")

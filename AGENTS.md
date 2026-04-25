@@ -72,7 +72,6 @@ Read `GEMINI.md` for absolute procedural rules. Highlights:
 - **Complexity**: < 10 cyclomatic. Break into helpers.
 - **Errors**: Wrap with context (`fmt.Errorf`)
 - **No global state**. No `init()` setup. Inject all deps.
-- **No co-authors in commits** (LIT-17 pre-hooks run fmt/vet/tests)
 - **Graph-aware**: Run `graphify query` before cross-cutting changes
 - **Parity rule**: Use shared pipeline for all alert logic
 - **Isolation**: BUT run in isolated State Stores

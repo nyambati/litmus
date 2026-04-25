@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log"
@@ -54,17 +55,32 @@ func testsHandler(c *gin.Context) {
 	if litmusConfig == nil {
 		return
 	}
-	loader := behavioral.NewBehavioralTestLoader()
-	tests, err := loader.LoadFromDirectory(litmusConfig.Tests.Directory)
-	if err != nil {
-		if strings.Contains(err.Error(), "no such file or directory") {
-			c.JSON(http.StatusOK, []types.TestCase{})
+
+	switch c.DefaultQuery("type", "behavioral") {
+	case "regression":
+		state, err := cli.LoadRegressionState(litmusConfig.RegressionsYamlFilePath())
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				c.JSON(http.StatusOK, []types.TestCase{})
+				return
+			}
+			c.String(http.StatusInternalServerError, fmt.Sprintf("Loading regressions: %v", err))
 			return
 		}
-		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading tests: %v", err))
-		return
+		c.JSON(http.StatusOK, state.Tests)
+	default:
+		loader := behavioral.NewBehavioralTestLoader()
+		tests, err := loader.LoadFromDirectory(litmusConfig.TestsDir())
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				c.JSON(http.StatusOK, []types.TestCase{})
+				return
+			}
+			c.String(http.StatusInternalServerError, fmt.Sprintf("Loading tests: %v", err))
+			return
+		}
+		c.JSON(http.StatusOK, tests)
 	}
-	c.JSON(http.StatusOK, tests)
 }
 
 func runTestsHandler(c *gin.Context) {
@@ -73,45 +89,70 @@ func runTestsHandler(c *gin.Context) {
 		return
 	}
 
-	alertConfig, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
+	alertConfig, _, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
 	if err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading alertmanager config: %v", err))
 		return
 	}
 
-	loader := behavioral.NewBehavioralTestLoader()
-	tests, err := loader.LoadFromDirectory(litmusConfig.Tests.Directory)
-	if err != nil {
-		if strings.Contains(err.Error(), "no such file or directory") {
-			c.JSON(http.StatusOK, []*types.TestResult{})
+	router := pipeline.NewRouter(alertConfig.Route)
+	name := c.Query("name")
+
+	switch c.DefaultQuery("type", "behavioral") {
+	case "regression":
+		state, err := cli.LoadRegressionState(litmusConfig.RegressionsYamlFilePath())
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				c.JSON(http.StatusOK, []*types.TestResult{})
+				return
+			}
+			c.String(http.StatusInternalServerError, fmt.Sprintf("Loading regressions: %v", err))
 			return
 		}
-		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading tests: %v", err))
-		return
-	}
-
-	router := pipeline.NewRouter(alertConfig.Route)
-	executor := behavioral.NewBehavioralTestExecutor(alertConfig.InhibitRules)
-
-	// If ?name= is provided, run only that test
-	if name := c.Query("name"); name != "" {
-		for _, test := range tests {
-			if test.Name == name {
-				result := executor.Execute(context.Background(), test, router)
-				c.JSON(http.StatusOK, []*types.TestResult{result})
+		tests := state.Tests
+		if name != "" {
+			found := false
+			for i, t := range tests {
+				if t.Name == name {
+					tests = tests[i : i+1]
+					found = true
+					break
+				}
+			}
+			if !found {
+				c.String(http.StatusNotFound, fmt.Sprintf("Test not found: %s", name))
 				return
 			}
 		}
-		c.String(http.StatusNotFound, fmt.Sprintf("Test not found: %s", name))
-		return
+		c.JSON(http.StatusOK, snapshot.NewRegressionTestExecutor().Execute(context.Background(), tests, router))
+	default:
+		loader := behavioral.NewBehavioralTestLoader()
+		tests, err := loader.LoadFromDirectory(litmusConfig.TestsDir())
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				c.JSON(http.StatusOK, []*types.TestResult{})
+				return
+			}
+			c.String(http.StatusInternalServerError, fmt.Sprintf("Loading tests: %v", err))
+			return
+		}
+		executor := behavioral.NewBehavioralTestExecutor(alertConfig.InhibitRules)
+		if name != "" {
+			for _, test := range tests {
+				if test.Name == name {
+					c.JSON(http.StatusOK, []*types.TestResult{executor.Execute(context.Background(), test, router)})
+					return
+				}
+			}
+			c.String(http.StatusNotFound, fmt.Sprintf("Test not found: %s", name))
+			return
+		}
+		results := make([]*types.TestResult, 0, len(tests))
+		for _, test := range tests {
+			results = append(results, executor.Execute(context.Background(), test, router))
+		}
+		c.JSON(http.StatusOK, results)
 	}
-
-	results := make([]*types.TestResult, 0, len(tests))
-	for _, test := range tests {
-		results = append(results, executor.Execute(context.Background(), test, router))
-	}
-
-	c.JSON(http.StatusOK, results)
 }
 
 func evaluateHandler(c *gin.Context) {
@@ -128,7 +169,7 @@ func evaluateHandler(c *gin.Context) {
 	}
 
 	// Reload config on every request for "live" feel
-	alertConfig, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
+	alertConfig, _, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
 	if err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading alertmanager config: %v", err))
 		return
@@ -163,7 +204,7 @@ func suggestHandler(c *gin.Context) {
 	if litmusConfig == nil {
 		return
 	}
-	alertConfig, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
+	alertConfig, _, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
 	if err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading alertmanager config: %v", err))
 		return
@@ -244,75 +285,14 @@ func suggestHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-func regressionsHandler(c *gin.Context) {
-	litmusConfig := getLitmusConfig(c)
-	if litmusConfig == nil {
-		return
-	}
-
-	tests, err := cli.LoadBaselineYAML(litmusConfig.RegressionsYamlFilePath())
-	if err != nil {
-		if strings.Contains(err.Error(), "no such file or directory") {
-			c.JSON(http.StatusOK, []types.TestCase{})
-			return
-		}
-		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading regressions: %v", err))
-		return
-	}
-	c.JSON(http.StatusOK, tests)
-}
-
-func regressionsRunHandler(c *gin.Context) {
-	litmusConfig := getLitmusConfig(c)
-	if litmusConfig == nil {
-		return
-	}
-	alertConfig, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
-	if err != nil {
-		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading alertmanager config: %v", err))
-		return
-	}
-
-	tests, err := cli.LoadBaselineYAML(litmusConfig.RegressionsYamlFilePath())
-	if err != nil {
-		if strings.Contains(err.Error(), "no such file or directory") {
-			c.JSON(http.StatusOK, []*types.TestResult{})
-			return
-		}
-		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading regressions: %v", err))
-		return
-	}
-
-	if name := c.Query("name"); name != "" {
-		found := false
-		for i, t := range tests {
-			if t.Name == name {
-				tests = tests[i : i+1]
-				found = true
-				break
-			}
-		}
-		if !found {
-			c.String(http.StatusNotFound, fmt.Sprintf("Test not found: %s", name))
-			return
-		}
-	}
-
-	router := pipeline.NewRouter(alertConfig.Route)
-	executor := snapshot.NewRegressionTestExecutor()
-	raw := executor.Execute(context.Background(), tests, router)
-
-	c.JSON(http.StatusOK, raw)
-}
-
 func generateRegressionsHandler(c *gin.Context) {
 	litmusConfig := getLitmusConfig(c)
 	if litmusConfig == nil {
 		return
 	}
-	_, err := os.Stat(litmusConfig.RegressionsBinaryFilePath())
+	_, err := os.Stat(litmusConfig.RegressionsYamlFilePath())
 
-	update := c.Query("update") == "true" || os.IsNotExist(err)
+	update := c.Query("update") == "true" || errors.Is(err, os.ErrNotExist)
 
 	if err := cli.RunSnapshot(update, false); err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Snapshot failed: %v", err))
@@ -326,7 +306,7 @@ func diffHandler(c *gin.Context) {
 	if litmusConfig == nil {
 		return
 	}
-	alertConfig, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
+	alertConfig, _, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
 	if err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading alertmanager config: %v", err))
 		return
@@ -355,14 +335,21 @@ func diffHandler(c *gin.Context) {
 		Results: make([]*deltaResult, 0),
 	}
 
-	baseline, err := cli.LoadBaseline(litmusConfig.RegressionsBinaryFilePath())
+	state, err := cli.LoadRegressionState(litmusConfig.RegressionsYamlFilePath())
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, os.ErrNotExist) {
 			resp.Total = 0
 			c.JSON(http.StatusOK, resp)
 			return
 		}
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading baseline: %v", err))
+		return
+	}
+
+	baseline := state.Tests
+	if len(baseline) == 0 {
+		resp.Total = 0
+		c.JSON(http.StatusOK, resp)
 		return
 	}
 

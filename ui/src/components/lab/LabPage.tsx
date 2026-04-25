@@ -71,8 +71,8 @@ export const LabPage = () => {
     setLoading(true);
     try {
       const [unitSettled, regressionSettled] = await Promise.allSettled([
-        fetch(`${API}/api/v1/tests`).then((r) => r.json()),
-        fetch(`${API}/api/v1/regressions`).then((r) => r.json()),
+        fetch(`${API}/api/v1/tests?type=behavioral`).then((r) => r.json()),
+        fetch(`${API}/api/v1/tests?type=regression`).then((r) => r.json()),
       ]);
 
       const unitData: Test[] =
@@ -142,7 +142,7 @@ export const LabPage = () => {
       if (filter === "all" || filter === "unit") {
         toRun.push(
           minDelay(
-            fetch(`${API}/api/v1/tests/run`, { method: "POST" }).then((r) => {
+            fetch(`${API}/api/v1/tests/run?type=behavioral`, { method: "POST" }).then((r) => {
               if (!r.ok) throw new Error("Failed to run unit tests");
               return r.json();
             }),
@@ -152,7 +152,7 @@ export const LabPage = () => {
       if (filter === "all" || filter === "regression") {
         toRun.push(
           minDelay(
-            fetch(`${API}/api/v1/regressions/run`, { method: "POST" }).then(
+            fetch(`${API}/api/v1/tests/run?type=regression`, { method: "POST" }).then(
               (r) => {
                 if (!r.ok) throw new Error("Failed to run regression tests");
                 return r.json();
@@ -196,8 +196,8 @@ export const LabPage = () => {
     try {
       const endpoint =
         testType === "regression"
-          ? `${API}/api/v1/regressions/run?name=${encodeURIComponent(testName)}`
-          : `${API}/api/v1/tests/run?name=${encodeURIComponent(testName)}`;
+          ? `${API}/api/v1/tests/run?type=regression&name=${encodeURIComponent(testName)}`
+          : `${API}/api/v1/tests/run?type=behavioral&name=${encodeURIComponent(testName)}`;
       const resp = await minDelay(fetch(endpoint, { method: "POST" }));
       if (!resp.ok) throw new Error(await resp.text());
       const data = await resp.json();

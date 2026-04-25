@@ -14,12 +14,12 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	cfg, err := LoadConfig()
 	require.NoError(t, err)
 
-	assert.Equal(t, "config", cfg.Config.Directory)
-	assert.Equal(t, "alertmanager.yml", cfg.Config.File)
-	assert.Equal(t, "templates/", cfg.Config.Templates)
-	assert.Equal(t, "regressions", cfg.Regression.Directory)
-	assert.Equal(t, 5, cfg.Regression.MaxSamples)
-	assert.Equal(t, "tests", cfg.Tests.Directory)
+	assert.Equal(t, defaultConfigDir, cfg.Config.Directory)
+	assert.Equal(t, defaultConfigFile, cfg.Config.File)
+	assert.Equal(t, defaultConfigTemplatesDir, cfg.Config.Templates)
+	assert.Equal(t, defaultRegressionDir, cfg.Regression.Directory)
+	assert.Equal(t, defaultRegressionKeep, cfg.Regression.Keep)
+	assert.Equal(t, defaultTestsDir, cfg.Tests.Directory)
 }
 
 func TestLoadConfig_EnvOverrides(t *testing.T) {
@@ -90,7 +90,7 @@ receivers:
 	require.NoError(t, err)
 	f.Close()
 
-	cfg, err := LoadAlertmanagerConfig(f.Name())
+	cfg, _, err := LoadAlertmanagerConfig(f.Name())
 	require.NoError(t, err)
 	assert.Equal(t, "test-key-123", string(cfg.Global.OpsGenieAPIKey))
 }

@@ -17,8 +17,8 @@ type (
 
 	// RegressionConfig defines the regression test parameters.
 	RegressionConfig struct {
-		MaxSamples int    `yaml:"max_samples" mapstructure:"max_samples"`
-		Directory  string `yaml:"directory" mapstructure:"directory"`
+		Directory string `yaml:"directory" mapstructure:"directory"`
+		Keep      int    `yaml:"keep" mapstructure:"keep"`
 	}
 
 	// TestsConfig defines the behavioral unit test parameters.
