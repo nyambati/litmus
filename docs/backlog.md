@@ -2,17 +2,6 @@
 
 This document tracks high-value features and research areas for `litmus` that are planned for future releases.
 
-## Completed
-
-### 6. Baseline History & Rollback ✅
-*   **Status:** Completed in v0.2.0
-*   **Feature:** Support for baseline versioning, allowing rollback to previous baselines without re-synthesis.
-*   **Implementation:** Timestamped baselines stored in `.litmus/history/` with a pointer to the current baseline.
-*   **Usage:**
-    - `litmus snapshot history` — List available baselines
-    - `litmus snapshot rollback <id>` — Restore a previous baseline version
-*   **Mechanism:** When `litmus snapshot --update` is executed, the new baseline is archived to `.litmus/history/` with a timestamp, and the `current` pointer file is updated to track the active baseline.
-
 ## Important (Blocking / Critical Gaps)
 
 ## 4. Modular Configuration Support
