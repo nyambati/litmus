@@ -2,10 +2,10 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/nyambati/litmus/internal/config"
@@ -25,8 +25,7 @@ func RunSnapshot(update, strict bool) error {
 		return fmt.Errorf("loading litmus config: %w", err)
 	}
 
-	alertConfigPath := filepath.Join(litmusConfig.Config.Directory, litmusConfig.Config.File)
-	alertConfig, err := config.LoadAlertmanagerConfig(alertConfigPath)
+	alertConfig, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
 	if err != nil {
 		return fmt.Errorf("loading alertmanager config: %w", err)
 	}
@@ -51,13 +50,11 @@ func RunSnapshot(update, strict bool) error {
 
 	regTests := BuildRegressionTests(outcomes, litmusConfig.GlobalLabels)
 
-	// Load existing baseline from regressions.litmus.yml
 	var existing []*types.TestCase
-	ymlPath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.yml")
-	state, err := LoadRegressionState(ymlPath)
+	state, err := LoadRegressionState(litmusConfig.RegressionsYamlFilePath())
 	if err == nil && state != nil {
 		existing = state.Tests
-	} else if err != nil && !os.IsNotExist(err) {
+	} else if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("reading existing baseline: %w", err)
 	}
 
@@ -95,12 +92,11 @@ func RunSnapshot(update, strict bool) error {
 		}
 	} else {
 		// Not creating new MPK, but update tests in state file with existing ID
-		ymlPath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.yml")
-		state, err := LoadRegressionState(ymlPath)
+		state, err := LoadRegressionState(litmusConfig.RegressionsYamlFilePath())
 		if err == nil {
 			// Keep existing ID, update tests only
 			state.Tests = regTests
-			if err := SaveRegressionState(ymlPath, state); err != nil {
+			if err := SaveRegressionState(litmusConfig.RegressionsYamlFilePath(), state); err != nil {
 				return fmt.Errorf("updating tests in state: %w", err)
 			}
 		}

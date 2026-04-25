@@ -3,9 +3,9 @@ package cli
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -82,8 +82,7 @@ func RunCheck(format string, showDiff bool, tags []string) (CheckExitCode, error
 		return 1, fmt.Errorf("loading litmus config: %w", err)
 	}
 
-	alertConfigPath := filepath.Join(litmusConfig.Config.Directory, litmusConfig.Config.File)
-	alertConfig, err := config.LoadAlertmanagerConfig(alertConfigPath)
+	alertConfig, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
 	if err != nil {
 		return 1, fmt.Errorf("loading alertmanager config: %w", err)
 	}
@@ -111,7 +110,7 @@ func RunCheck(format string, showDiff bool, tags []string) (CheckExitCode, error
 
 	result := CheckResult{
 		Passed:     passed,
-		ConfigPath: alertConfigPath,
+		ConfigPath: litmusConfig.FilePath(),
 		Sanity:     sanityResult,
 		Regression: regressionResult,
 		Behavioral: behavioralResult,
@@ -164,11 +163,9 @@ func RunSanityChecks(alertConfig *amconfig.Config) SanityResult {
 func RunRegressionTests(ctx context.Context, litmusConfig *config.LitmusConfig, router *pipeline.Router, tags []string) RegressionResult {
 	result := RegressionResult{Passed: true}
 
-	// Load baseline from regressions.litmus.yml
-	ymlPath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.yml")
-	state, err := LoadRegressionState(ymlPath)
+	state, err := LoadRegressionState(litmusConfig.RegressionsYamlFilePath())
 	if err != nil {
-		if !os.IsNotExist(err) {
+		if !errors.Is(err, os.ErrNotExist) {
 			fmt.Fprintf(os.Stderr, "WARN: could not read regression baseline: %v\n", err)
 		}
 		return result
@@ -207,9 +204,9 @@ func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 	result := BehavioralResult{Passed: true}
 
 	loader := behavioral.NewBehavioralTestLoader()
-	tests, err := loader.LoadFromDirectory(litmusConfig.Tests.Directory)
+	tests, err := loader.LoadFromDirectory(litmusConfig.TestsDir())
 	if err != nil {
-		if !os.IsNotExist(err) {
+		if !errors.Is(err, os.ErrNotExist) {
 			fmt.Fprintf(os.Stderr, "WARN: could not load behavioral tests: %v\n", err)
 		}
 		return result

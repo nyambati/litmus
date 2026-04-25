@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log"
@@ -59,7 +60,7 @@ func testsHandler(c *gin.Context) {
 	case "regression":
 		state, err := cli.LoadRegressionState(litmusConfig.RegressionsYamlFilePath())
 		if err != nil {
-			if os.IsNotExist(err) {
+			if errors.Is(err, os.ErrNotExist) {
 				c.JSON(http.StatusOK, []types.TestCase{})
 				return
 			}
@@ -69,9 +70,9 @@ func testsHandler(c *gin.Context) {
 		c.JSON(http.StatusOK, state.Tests)
 	default:
 		loader := behavioral.NewBehavioralTestLoader()
-		tests, err := loader.LoadFromDirectory(litmusConfig.Tests.Directory)
+		tests, err := loader.LoadFromDirectory(litmusConfig.TestsDir())
 		if err != nil {
-			if strings.Contains(err.Error(), "no such file or directory") {
+			if errors.Is(err, os.ErrNotExist) {
 				c.JSON(http.StatusOK, []types.TestCase{})
 				return
 			}
@@ -101,7 +102,7 @@ func runTestsHandler(c *gin.Context) {
 	case "regression":
 		state, err := cli.LoadRegressionState(litmusConfig.RegressionsYamlFilePath())
 		if err != nil {
-			if os.IsNotExist(err) {
+			if errors.Is(err, os.ErrNotExist) {
 				c.JSON(http.StatusOK, []*types.TestResult{})
 				return
 			}
@@ -126,9 +127,9 @@ func runTestsHandler(c *gin.Context) {
 		c.JSON(http.StatusOK, snapshot.NewRegressionTestExecutor().Execute(context.Background(), tests, router))
 	default:
 		loader := behavioral.NewBehavioralTestLoader()
-		tests, err := loader.LoadFromDirectory(litmusConfig.Tests.Directory)
+		tests, err := loader.LoadFromDirectory(litmusConfig.TestsDir())
 		if err != nil {
-			if strings.Contains(err.Error(), "no such file or directory") {
+			if errors.Is(err, os.ErrNotExist) {
 				c.JSON(http.StatusOK, []*types.TestResult{})
 				return
 			}
@@ -284,16 +285,14 @@ func suggestHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-
 func generateRegressionsHandler(c *gin.Context) {
 	litmusConfig := getLitmusConfig(c)
 	if litmusConfig == nil {
 		return
 	}
-	ymlPath := fmt.Sprintf("%s/regressions.litmus.yml", litmusConfig.Regression.Directory)
-	_, err := os.Stat(ymlPath)
+	_, err := os.Stat(litmusConfig.RegressionsYamlFilePath())
 
-	update := c.Query("update") == "true" || os.IsNotExist(err)
+	update := c.Query("update") == "true" || errors.Is(err, os.ErrNotExist)
 
 	if err := cli.RunSnapshot(update, false); err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Snapshot failed: %v", err))
@@ -336,10 +335,9 @@ func diffHandler(c *gin.Context) {
 		Results: make([]*deltaResult, 0),
 	}
 
-	ymlPath := fmt.Sprintf("%s/regressions.litmus.yml", litmusConfig.Regression.Directory)
-	state, err := cli.LoadRegressionState(ymlPath)
+	state, err := cli.LoadRegressionState(litmusConfig.RegressionsYamlFilePath())
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, os.ErrNotExist) {
 			resp.Total = 0
 			c.JSON(http.StatusOK, resp)
 			return

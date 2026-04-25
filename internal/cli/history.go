@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,20 +18,15 @@ import (
 
 const historyTimeFormat = "20060102-150405"
 
-func historyDir(regressionDir string) string {
-	return regressionDir
-}
-
 // ArchiveBaseline saves tests as a new history entry and writes regressions.litmus.yml.
 func ArchiveBaseline(cfg *config.LitmusConfig, tests []*types.TestCase) (string, error) {
 	id := time.Now().Format(historyTimeFormat)
-	dir := historyDir(cfg.Regression.Directory)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(cfg.Regression.Directory, 0755); err != nil {
 		return "", fmt.Errorf("creating history dir: %w", err)
 	}
 
 	// Archive the baseline with timestamp filename
-	mpkPath := filepath.Join(dir, id+".mpk")
+	mpkPath := filepath.Join(cfg.Regression.Directory, id+".mpk")
 	f, err := os.Create(mpkPath)
 	if err != nil {
 		return "", fmt.Errorf("creating history entry: %w", err)
@@ -41,9 +37,7 @@ func ArchiveBaseline(cfg *config.LitmusConfig, tests []*types.TestCase) (string,
 		return "", fmt.Errorf("encoding history entry: %w", err)
 	}
 
-	// Write regressions.litmus.yml with ID and tests
-	ymlPath := filepath.Join(dir, "regressions.litmus.yml")
-	if err := SaveRegressionState(ymlPath, &RegressionState{ID: id, Tests: tests}); err != nil {
+	if err := SaveRegressionState(cfg.RegressionsYamlFilePath(), &RegressionState{ID: id, Tests: tests}); err != nil {
 		return "", fmt.Errorf("writing regression state: %w", err)
 	}
 
@@ -57,10 +51,9 @@ func ArchiveBaseline(cfg *config.LitmusConfig, tests []*types.TestCase) (string,
 
 // ListHistory returns history entry IDs sorted newest-first.
 func ListHistory(regressionDir string) ([]string, error) {
-	dir := historyDir(regressionDir)
-	entries, err := os.ReadDir(dir)
+	entries, err := os.ReadDir(regressionDir)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, os.ErrNotExist) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("reading history dir: %w", err)
@@ -79,8 +72,7 @@ func ListHistory(regressionDir string) ([]string, error) {
 
 // RollbackToEntry restores a history entry as the active baseline.
 func RollbackToEntry(cfg *config.LitmusConfig, id string) error {
-	dir := historyDir(cfg.Regression.Directory)
-	srcMpk := filepath.Join(dir, id+".mpk")
+	srcMpk := filepath.Join(cfg.Regression.Directory, id+".mpk")
 
 	// Load the tests from the historical baseline
 	tests, err := LoadBaseline(srcMpk)
@@ -88,9 +80,7 @@ func RollbackToEntry(cfg *config.LitmusConfig, id string) error {
 		return fmt.Errorf("loading history entry %q: %w", id, err)
 	}
 
-	// Write regressions.litmus.yml with the rolled-back ID and tests
-	ymlPath := filepath.Join(dir, "regressions.litmus.yml")
-	if err := SaveRegressionState(ymlPath, &RegressionState{ID: id, Tests: tests}); err != nil {
+	if err := SaveRegressionState(cfg.RegressionsYamlFilePath(), &RegressionState{ID: id, Tests: tests}); err != nil {
 		return fmt.Errorf("writing regression state: %w", err)
 	}
 
@@ -110,11 +100,10 @@ func cleanupOldEntries(cfg *config.LitmusConfig) error {
 
 	// IDs are sorted newest-first; remove older ones
 	toDelete := ids[cfg.Regression.Keep:]
-	dir := historyDir(cfg.Regression.Directory)
 
 	for _, id := range toDelete {
-		path := filepath.Join(dir, id+".mpk")
-		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		path := filepath.Join(cfg.Regression.Directory, id+".mpk")
+		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("deleting old entry %q: %w", id, err)
 		}
 	}
@@ -140,8 +129,7 @@ func RunHistoryList(cmd *cobra.Command) error {
 	}
 
 	// Load current ID from regressions.litmus.yml
-	ymlPath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.yml")
-	state, err := LoadRegressionState(ymlPath)
+	state, err := LoadRegressionState(litmusConfig.RegressionsYamlFilePath())
 	var current string
 	if err == nil {
 		current = state.ID

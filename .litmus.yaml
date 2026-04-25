@@ -13,6 +13,5 @@ mimir:
 regression:
     directory: config/regressions/
     keep: 5
-    max_samples: 5
 tests:
     directory: config/tests/

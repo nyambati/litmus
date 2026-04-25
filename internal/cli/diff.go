@@ -2,9 +2,9 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -29,8 +29,7 @@ func RunDiff() error {
 		return fmt.Errorf("loading litmus config: %w", err)
 	}
 
-	alertConfigPath := filepath.Join(litmusConfig.Config.Directory, litmusConfig.Config.File)
-	alertConfig, err := config.LoadAlertmanagerConfig(alertConfigPath)
+	alertConfig, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
 	if err != nil {
 		return fmt.Errorf("loading alertmanager config: %w", err)
 	}
@@ -50,10 +49,9 @@ func RunDiff() error {
 
 	currentTests := BuildRegressionTests(outcomes, litmusConfig.GlobalLabels)
 
-	ymlPath := filepath.Join(litmusConfig.Regression.Directory, "regressions.litmus.yml")
-	state, err := LoadRegressionState(ymlPath)
+	state, err := LoadRegressionState(litmusConfig.RegressionsYamlFilePath())
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("no baseline found — run 'litmus snapshot' to create one")
 		}
 		return fmt.Errorf("loading baseline: %w", err)

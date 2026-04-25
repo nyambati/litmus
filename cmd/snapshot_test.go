@@ -27,7 +27,7 @@ config:
 global_labels:
   severity: "warning"
 regression:
-  max_samples: 5
+  keep: 3
   directory: "regressions"
 tests:
   directory: "tests/"
@@ -79,7 +79,7 @@ config:
 global_labels:
   severity: "warning"
 regression:
-  max_samples: 5
+  keep: 3
   directory: "regressions"
 tests:
   directory: "tests/"
@@ -144,7 +144,7 @@ config:
 global_labels:
   severity: "warning"
 regression:
-  max_samples: 5
+  keep: 3
   directory: "regressions"
 tests:
   directory: "tests/"
@@ -210,7 +210,7 @@ config:
 global_labels:
   severity: "warning"
 regression:
-  max_samples: 5
+  keep: 3
   directory: "regressions"
 tests:
   directory: "tests/"
@@ -287,7 +287,7 @@ config:
 global_labels:
   severity: "warning"
 regression:
-  max_samples: 5
+  keep: 3
   directory: "regressions"
 tests:
   directory: "tests/"
@@ -376,7 +376,7 @@ config:
 global_labels:
   severity: "warning"
 regression:
-  max_samples: 5
+  keep: 3
   directory: "regressions"
 tests:
   directory: "tests/"
@@ -436,7 +436,7 @@ config:
 global_labels:
   severity: "warning"
 regression:
-  max_samples: 5
+  keep: 3
   directory: "regressions"
 tests:
   directory: "tests/"

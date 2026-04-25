@@ -183,6 +183,10 @@ func (c *LitmusConfig) TemplatesDir() string {
 	return filepath.Join(c.Config.Directory, c.Config.Templates)
 }
 
+func (c *LitmusConfig) TestsDir() string {
+	return c.Tests.Directory
+}
+
 func (m *MimirConfig) Validate() error {
 	// Validate required field
 	if m.Address == "" {
