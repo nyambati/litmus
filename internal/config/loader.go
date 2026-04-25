@@ -79,9 +79,9 @@ func LoadConfig() (*LitmusConfig, error) {
 	return &cfg, nil
 }
 
-// ExpandAlertmanagerConfig reads and env-expands alertmanager YAML without parsing.
-// Returns the expanded raw YAML string for use in API payloads.
-func ExpandAlertmanagerConfig(path string) (string, error) {
+// expandAlertmanagerConfig reads and env-expands alertmanager YAML without parsing.
+// Returns the expanded raw YAML string.
+func expandAlertmanagerConfig(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("reading alertmanager config: %w", err)
@@ -99,7 +99,7 @@ func ExpandAlertmanagerConfig(path string) (string, error) {
 // Alertmanager YAML using alertmanager's own loader (applies validation and defaults).
 // Returns the parsed config, raw expanded YAML, and any error.
 func LoadAlertmanagerConfig(path string) (*amconfig.Config, string, error) {
-	expanded, err := ExpandAlertmanagerConfig(path)
+	expanded, err := expandAlertmanagerConfig(path)
 	if err != nil {
 		return nil, "", err
 	}
