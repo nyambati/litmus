@@ -5,27 +5,50 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newSnapshotCmd creates the snapshot command.
+// newSnapshotCmd creates the snapshot command group.
 func newSnapshotCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "snapshot",
-		Short: "Capture regression baseline",
-		Long:  "Captures current alertmanager routing behavior as regression baseline. Use --update to accept changes.",
-		// Default to capture when no subcommand is specified (backward compatible)
+		Use:          "snapshot",
+		Short:        "Manage regression baseline",
+		Long:         "Manage alertmanager routing regression baseline.",
+		SilenceUsage: true,
+	}
+
+	cmd.AddCommand(newSnapshotCaptureCmd())
+	cmd.AddCommand(newSnapshotUpdateCmd())
+	return cmd
+}
+
+// newSnapshotCaptureCmd creates the snapshot capture subcommand.
+func newSnapshotCaptureCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:          "capture",
+		Short:        "Capture current routing behavior as baseline",
+		Long:         "Captures current alertmanager routing behavior as regression baseline.",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Check if a subcommand was invoked
-			if len(args) > 0 {
-				return cmd.Usage()
-			}
-			update, _ := cmd.Flags().GetBool("update")
 			strict, _ := cmd.Flags().GetBool("strict")
-			return cli.RunSnapshot(update, strict)
+			return cli.RunSnapshot(false, strict)
 		},
 	}
 
-	// Add flags for backward compatibility
-	cmd.Flags().BoolP("update", "u", false, "Update baseline with current behavior")
+	cmd.Flags().BoolP("strict", "s", false, "Fail and show diff if drift is detected (useful for CI)")
+	return cmd
+}
+
+// newSnapshotUpdateCmd creates the snapshot update subcommand.
+func newSnapshotUpdateCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:          "update",
+		Short:        "Update baseline with current routing behavior",
+		Long:         "Updates baseline with current alertmanager routing behavior.",
+		SilenceUsage: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			strict, _ := cmd.Flags().GetBool("strict")
+			return cli.RunSnapshot(true, strict)
+		},
+	}
+
 	cmd.Flags().BoolP("strict", "s", false, "Fail and show diff if drift is detected (useful for CI)")
 	return cmd
 }

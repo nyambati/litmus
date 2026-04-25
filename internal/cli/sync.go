@@ -37,17 +37,14 @@ func RunSync(address, tenantID, apiKey string, skipValidate, dryRun bool) error 
 		return fmt.Errorf("mimir address not configured: set LITMUS_MIMIR_ADDRESS env var, provide --address flag, or add mimir.address to .litmus.yaml")
 	}
 
-	// Resolve paths
-	alertConfigPath := filepath.Join(litmusConfig.Config.Directory, litmusConfig.Config.File)
-
 	// Expand alertmanager config (raw YAML for API body)
-	rawYAML, err := config.ExpandAlertmanagerConfig(alertConfigPath)
+	rawYAML, err := config.ExpandAlertmanagerConfig(litmusConfig.FilePath())
 	if err != nil {
 		return fmt.Errorf("expanding alertmanager config: %w", err)
 	}
 
 	// Load alertmanager config (parsed for sanity + templates list)
-	alertConfig, err := config.LoadAlertmanagerConfig(alertConfigPath)
+	alertConfig, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
 	if err != nil {
 		return fmt.Errorf("loading alertmanager config: %w", err)
 	}
@@ -67,15 +64,13 @@ func RunSync(address, tenantID, apiKey string, skipValidate, dryRun bool) error 
 
 	// Load templates from disk
 	templates := make(map[string]string)
-	templatesDir := filepath.Join(litmusConfig.Config.Directory, litmusConfig.Config.Templates)
 
 	for _, filename := range alertConfig.Templates {
 		// Support both absolute and relative paths
-		var filePath string
+		filePath := filepath.Join(litmusConfig.TemplatesDir(), filename)
+
 		if filepath.IsAbs(filename) {
 			filePath = filename
-		} else {
-			filePath = filepath.Join(templatesDir, filename)
 		}
 
 		data, err := os.ReadFile(filePath)

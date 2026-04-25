@@ -48,7 +48,7 @@ receivers:
 	require.NoError(t, err)
 
 	cmd := newSnapshotCmd()
-	cmd.SetArgs([]string{})
+	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 
 	require.NoError(t, err)
@@ -100,7 +100,7 @@ receivers:
 
 	// Generate initial baseline
 	cmd := newSnapshotCmd()
-	cmd.SetArgs([]string{})
+	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 	require.NoError(t, err)
 
@@ -122,7 +122,7 @@ receivers:
 
 	// Run snapshot again without --strict (should succeed with warning)
 	cmd = newSnapshotCmd()
-	cmd.SetArgs([]string{})
+	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 
 	require.NoError(t, err)
@@ -165,7 +165,7 @@ receivers:
 
 	// Generate initial baseline
 	cmd := newSnapshotCmd()
-	cmd.SetArgs([]string{})
+	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 	require.NoError(t, err)
 
@@ -187,7 +187,7 @@ receivers:
 
 	// Run snapshot with --strict (should fail due to drift)
 	cmd = newSnapshotCmd()
-	cmd.SetArgs([]string{"--strict"})
+	cmd.SetArgs([]string{"capture", "--strict"})
 	err = cmd.Execute()
 
 	require.Error(t, err)
@@ -231,7 +231,7 @@ receivers:
 
 	// Generate initial baseline
 	cmd := newSnapshotCmd()
-	cmd.SetArgs([]string{})
+	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 	require.NoError(t, err)
 
@@ -251,9 +251,9 @@ receivers:
 `), 0600)
 	require.NoError(t, err)
 
-	// Run snapshot with --update (should succeed)
+	// Run snapshot with update (should succeed)
 	cmd = newSnapshotCmd()
-	cmd.SetArgs([]string{"--update"})
+	cmd.SetArgs([]string{"update"})
 	err = cmd.Execute()
 
 	require.NoError(t, err)
@@ -308,7 +308,7 @@ receivers:
 
 	// Generate initial baseline
 	cmd := newSnapshotCmd()
-	cmd.SetArgs([]string{})
+	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 	require.NoError(t, err)
 
@@ -324,9 +324,9 @@ receivers:
 	}
 	require.Equal(t, 1, mpkCount, "should have exactly 1 baseline version after initial snapshot")
 
-	// Run snapshot with --update (no config changes, so no drift)
+	// Run snapshot with update (no config changes, so no drift)
 	cmd = newSnapshotCmd()
-	cmd.SetArgs([]string{"--update"})
+	cmd.SetArgs([]string{"update"})
 	err = cmd.Execute()
 
 	require.NoError(t, err)
@@ -352,7 +352,7 @@ func TestSnapshotCommand_MissingConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	cmd := newSnapshotCmd()
-	cmd.SetArgs([]string{})
+	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 
 	// Should fail because config/alertmanager.yml is missing
@@ -397,7 +397,7 @@ receivers:
 
 	// Generate initial baseline
 	cmd := newSnapshotCmd()
-	cmd.SetArgs([]string{})
+	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 	require.NoError(t, err)
 
@@ -457,7 +457,7 @@ receivers:
 
 	// Generate initial baseline
 	cmd := newSnapshotCmd()
-	cmd.SetArgs([]string{})
+	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 	require.NoError(t, err)
 
@@ -494,7 +494,7 @@ receivers:
 
 	// Update baseline
 	cmd = newSnapshotCmd()
-	cmd.SetArgs([]string{"--update"})
+	cmd.SetArgs([]string{"update"})
 	err = cmd.Execute()
 	require.NoError(t, err)
 

@@ -178,3 +178,15 @@ func (c *LitmusConfig) FilePath() string {
 func (c *LitmusConfig) RegressionsYamlFilePath() string {
 	return filepath.Join(c.Regression.Directory, defaultRegressionYamlFile)
 }
+
+func (c *LitmusConfig) TemplatesDir() string {
+	return filepath.Join(c.Config.Directory, c.Config.Templates)
+}
+
+func (m *MimirConfig) Validate() error {
+	// Validate required field
+	if m.Address == "" {
+		return fmt.Errorf("mimir address not configured: set LITMUS_MIMIR_ADDRESS env var, provide --address flag, or add mimir.address to .litmus.yaml")
+	}
+	return nil
+}

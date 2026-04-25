@@ -71,7 +71,7 @@ func RunSnapshot(update, strict bool) error {
 				return fmt.Errorf("drift detected in routing behavior")
 			}
 			if !update {
-				fmt.Fprintf(os.Stderr, "WARN: drift detected in routing behavior; run with --update to accept changes, or 'litmus diff' to inspect\n")
+				fmt.Fprintf(os.Stderr, "WARN: drift detected in routing behavior; run 'litmus snapshot update' to accept changes, or 'litmus diff' to inspect\n")
 			}
 		}
 	}
