@@ -43,7 +43,8 @@ type (
 		Routes       []*amconfig.Route      `yaml:"routes"`
 		Receivers    []amconfig.Receiver    `yaml:"receivers"`
 		InhibitRules []amconfig.InhibitRule `yaml:"inhibit_rules"`
-		// Tests are co-located tests within the fragment file.
-		Tests []*types.TestCase `yaml:"tests"`
+		// Tests are discovered from sibling *-tests.yml files and tests/ subdirectory.
+		// Never parsed from the fragment definition file itself.
+		Tests []*types.TestCase `yaml:"-"`
 	}
 )

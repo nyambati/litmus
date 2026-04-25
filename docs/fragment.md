@@ -49,13 +49,14 @@ config/                        # ROOT PACKAGE
 ├── regressions/               # Global regression baseline & history
 │   └── regressions.litmus.yml
 └── fragments/                 # Team fragment packages
-    ├── database/              # Folder package (merged at load time)
+    ├── database/              # Folder package (all YAMLs merged at load time)
     │   ├── receivers.yml
     │   ├── routes.yml
-    │   ├── routes-tests.yml   # Sibling test file (auto-discovered)
-    │   └── tests/             # Tests subdirectory (auto-discovered)
+    │   ├── routes-tests.yml   # Sibling test file — matched by *-tests.yml pattern
+    │   └── tests/             # Tests subdirectory — all YAMLs loaded as tests
     │       └── unit.yml
     └── networking.yml         # Single-file package
+        # networking-tests.yml  ← sibling test file would live here
 ```
 
 ## 4. Fragment Format
@@ -63,6 +64,7 @@ config/                        # ROOT PACKAGE
 A fragment file (or any YAML in a folder package) may define:
 
 ```yaml
+# db-team.yml
 name: "db-team"              # Optional; defaults to filename/folder name
 namespace: "db"              # Prefixes all receiver names: db-critical, db-warning, etc.
 mount_point:                 # Labels identifying the anchor route in the base tree
@@ -78,17 +80,21 @@ receivers:
     slack_configs: [...]
 
 inhibit_rules: []
+```
 
-tests:                       # Co-located tests (also loaded from tests/ subdir)
-  - name: "mysql routes to db-critical"
-    alert:
-      labels:
-        scope: "teams"
-        service: "mysql"
-    expect:
-      outcome: active
-      receivers:
-        - db-critical        # namespace applied automatically in test runner
+Tests are always in separate files — never embedded in the fragment definition:
+
+```yaml
+# db-team-tests.yml  (sibling file, auto-discovered)
+- name: "mysql routes to db-critical"
+  alert:
+    labels:
+      scope: "teams"
+      service: "mysql"
+  expect:
+    outcome: active
+    receivers:
+      - db-critical        # namespace applied automatically in test runner
 ```
 
 ## 5. Virtual Assembly

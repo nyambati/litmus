@@ -62,17 +62,18 @@ routes:
       service: "mysql"
 receivers:
   - name: "db-critical"
-tests:
-  - name: "mysql routes to db-critical"
-    type: "unit"
-    alert:
-      labels:
-        scope: "teams"
-        service: "mysql"
-    expect:
-      outcome: "active"
-      receivers:
-        - "db-critical"
+`), 0600))
+	require.NoError(t, os.WriteFile("config/fragments/db-tests.yml", []byte(`
+- name: "mysql routes to db-critical"
+  type: "unit"
+  alert:
+    labels:
+      scope: "teams"
+      service: "mysql"
+  expect:
+    outcome: "active"
+    receivers:
+      - "db-critical"
 `), 0600))
 
 	cfg, err := config.LoadConfig()

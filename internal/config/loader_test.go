@@ -260,9 +260,10 @@ routes:
       service: "mysql"
 receivers:
   - name: "critical"
-tests:
-  - name: "mysql test"
-    expect: {outcome: active}
+`), 0600))
+	require.NoError(t, os.WriteFile(filepath.Join("config", "fragments", "db-tests.yml"), []byte(`
+- name: "mysql test"
+  expect: {outcome: active}
 `), 0600))
 
 	cfg, err := LoadConfig()
