@@ -365,9 +365,8 @@ func TestDeadReceiverDetector_MatcherFormats(t *testing.T) {
 		require.True(t, isDeadReceiver(issues, "child"))
 	})
 
-	t.Run("parent_regex_child_exact_not_flagged", func(t *testing.T) {
-		// parent: service=~"api" (regex) — cannot statically prove conflict with child service=db
-		// regex matchers are skipped to avoid false positives
+	t.Run("parent_pos_regex_child_exact_no_match_flagged", func(t *testing.T) {
+		// parent: service=~"api" (pos regex), child: service="db" — "db" does not match "api"
 		root := &config.Route{Receiver: "root", Routes: []*config.Route{
 			{
 				Receiver: "parent",
@@ -375,12 +374,13 @@ func TestDeadReceiverDetector_MatcherFormats(t *testing.T) {
 				Routes:   []*config.Route{{Receiver: "child", Match: map[string]string{"service": "db"}}},
 			},
 		}}
-		require.Len(t, detectDeadRoutes(root), 0)
+		issues := detectDeadRoutes(root)
+		require.Len(t, issues, 1)
+		require.True(t, isDeadReceiver(issues, "child"))
 	})
 
-	t.Run("parent_exact_child_regex_not_flagged", func(t *testing.T) {
-		// parent: service=api (exact), child: service=~"db|cache" (regex)
-		// child's regex matcher skipped — no false positive
+	t.Run("parent_exact_child_pos_regex_no_match_flagged", func(t *testing.T) {
+		// parent: service="api" (exact), child: service=~"db|cache" — "api" does not match "db|cache"
 		root := &config.Route{Receiver: "root", Routes: []*config.Route{
 			{
 				Receiver: "parent",
@@ -393,7 +393,9 @@ func TestDeadReceiverDetector_MatcherFormats(t *testing.T) {
 				},
 			},
 		}}
-		require.Len(t, detectDeadRoutes(root), 0)
+		issues := detectDeadRoutes(root)
+		require.Len(t, issues, 1)
+		require.True(t, isDeadReceiver(issues, "child"))
 	})
 
 	t.Run("both_regex_same_label_not_flagged", func(t *testing.T) {
@@ -413,9 +415,8 @@ func TestDeadReceiverDetector_MatcherFormats(t *testing.T) {
 		require.Len(t, detectDeadRoutes(root), 0)
 	})
 
-	t.Run("neg_regex_not_flagged_against_pos_exact", func(t *testing.T) {
-		// parent: service!~"api" (neg regex), child: service=api (pos exact)
-		// neg regex skipped — no false positive (can't statically evaluate regex)
+	t.Run("parent_neg_regex_child_exact_matches_flagged", func(t *testing.T) {
+		// parent: service!~"api" (neg regex), child: service="api" — "api" is excluded by ancestor
 		root := &config.Route{Receiver: "root", Routes: []*config.Route{
 			{
 				Receiver: "parent",
@@ -423,7 +424,9 @@ func TestDeadReceiverDetector_MatcherFormats(t *testing.T) {
 				Routes:   []*config.Route{{Receiver: "child", Match: map[string]string{"service": "api"}}},
 			},
 		}}
-		require.Len(t, detectDeadRoutes(root), 0)
+		issues := detectDeadRoutes(root)
+		require.Len(t, issues, 1)
+		require.True(t, isDeadReceiver(issues, "child"))
 	})
 }
 
@@ -533,5 +536,427 @@ func TestDeadReceiverDetector_EdgeCases(t *testing.T) {
 			},
 		}}
 		require.Len(t, detectDeadRoutes(root), 0)
+	})
+}
+
+// TestDeadReceiverDetector_MessageFormat asserts Bundle 1 source attribution strings.
+func TestDeadReceiverDetector_MessageFormat(t *testing.T) {
+	t.Run("pos_pos_cross_route_names_ancestor", func(t *testing.T) {
+		root := &config.Route{
+			Receiver: "root",
+			Routes: []*config.Route{
+				{
+					Receiver: "api-team",
+					Matchers: config.Matchers{mustMatcher(t, labels.MatchEqual, "service", "api")},
+					Routes: []*config.Route{
+						{
+							Receiver: "db-team",
+							Matchers: config.Matchers{mustMatcher(t, labels.MatchEqual, "service", "db")},
+						},
+					},
+				},
+			},
+		}
+		issues := detectDeadRoutes(root)
+		require.Len(t, issues, 1)
+		require.Contains(t, issues[0], `"api-team"`, "message must attribute ancestor receiver")
+		require.Contains(t, issues[0], `"db-team"`, "message must name dead receiver")
+	})
+
+	t.Run("pos_neg_cross_route_names_ancestor", func(t *testing.T) {
+		root := &config.Route{
+			Receiver: "root",
+			Routes: []*config.Route{
+				{
+					Receiver: "prod-team",
+					Matchers: config.Matchers{mustMatcher(t, labels.MatchEqual, "env", "prod")},
+					Routes: []*config.Route{
+						{
+							Receiver: "no-prod",
+							Matchers: config.Matchers{mustMatcher(t, labels.MatchNotEqual, "env", "prod")},
+						},
+					},
+				},
+			},
+		}
+		issues := detectDeadRoutes(root)
+		require.Len(t, issues, 1)
+		require.Contains(t, issues[0], `"prod-team"`, "message must attribute ancestor receiver")
+		require.Contains(t, issues[0], `"no-prod"`, "message must name dead receiver")
+		require.Contains(t, issues[0], "excludes", "message must say excludes for neg contradiction")
+	})
+
+	t.Run("pos_neg_same_route_self_contradiction", func(t *testing.T) {
+		root := &config.Route{
+			Receiver: "root",
+			Routes: []*config.Route{
+				{
+					Receiver: "self-dead",
+					Matchers: config.Matchers{
+						mustMatcher(t, labels.MatchEqual, "env", "prod"),
+						mustMatcher(t, labels.MatchNotEqual, "env", "prod"),
+					},
+				},
+			},
+		}
+		issues := detectDeadRoutes(root)
+		require.Len(t, issues, 1)
+		require.Contains(t, issues[0], `"self-dead"`)
+		require.NotContains(t, issues[0], `"root"`)
+	})
+
+	t.Run("neg_ancestor_pos_child_names_neg_ancestor", func(t *testing.T) {
+		// ancestor "no-api" has service!=api; child "api-team" has service=api.
+		// Bug regression: message must NOT say "excluded by this route" — exclusion is from ancestor.
+		root := &config.Route{
+			Receiver: "root",
+			Routes: []*config.Route{
+				{
+					Receiver: "no-api",
+					Matchers: config.Matchers{mustMatcher(t, labels.MatchNotEqual, "service", "api")},
+					Routes: []*config.Route{
+						{
+							Receiver: "api-team",
+							Matchers: config.Matchers{mustMatcher(t, labels.MatchEqual, "service", "api")},
+						},
+					},
+				},
+			},
+		}
+		issues := detectDeadRoutes(root)
+		require.Len(t, issues, 1)
+		require.Contains(t, issues[0], `"no-api"`, "must name the ancestor that excludes the value")
+		require.NotContains(t, issues[0], "by this route", "exclusion is from ancestor, not this route")
+	})
+}
+
+// TestDeadReceiverDetector_RegexContradictions covers Bundle 2: regex-vs-exact detection.
+func TestDeadReceiverDetector_RegexContradictions(t *testing.T) {
+	// helpers: regex matchers using modern syntax
+	posRE := func(name, pat string) *labels.Matcher { return mustMatcher(t, labels.MatchRegexp, name, pat) }
+	negRE := func(name, pat string) *labels.Matcher { return mustMatcher(t, labels.MatchNotRegexp, name, pat) }
+	posEQ := func(name, val string) *labels.Matcher { return mustMatcher(t, labels.MatchEqual, name, val) }
+
+	t.Run("pos_regex_ancestor_exact_child_no_match_dead", func(t *testing.T) {
+		// ancestor: service=~"api|web", child: service="db" — "db" never matches "api|web"
+		root := &config.Route{
+			Receiver: "root",
+			Routes: []*config.Route{
+				{
+					Receiver: "web-api-parent",
+					Matchers: config.Matchers{posRE("service", "api|web")},
+					Routes: []*config.Route{
+						{Receiver: "db-team", Matchers: config.Matchers{posEQ("service", "db")}},
+					},
+				},
+			},
+		}
+		issues := detectDeadRoutes(root)
+		require.Len(t, issues, 1)
+		require.True(t, isDeadReceiver(issues, "db-team"))
+	})
+
+	t.Run("neg_regex_ancestor_exact_child_matches_dead", func(t *testing.T) {
+		// ancestor: service!~"api|web", child: service="api" — "api" is excluded
+		root := &config.Route{
+			Receiver: "root",
+			Routes: []*config.Route{
+				{
+					Receiver: "non-web-parent",
+					Matchers: config.Matchers{negRE("service", "api|web")},
+					Routes: []*config.Route{
+						{Receiver: "api-team", Matchers: config.Matchers{posEQ("service", "api")}},
+					},
+				},
+			},
+		}
+		issues := detectDeadRoutes(root)
+		require.Len(t, issues, 1)
+		require.True(t, isDeadReceiver(issues, "api-team"))
+	})
+
+	t.Run("pos_regex_ancestor_exact_child_matches_reachable", func(t *testing.T) {
+		// ancestor: service=~"api|web", child: service="api" — "api" matches, fine
+		root := &config.Route{
+			Receiver: "root",
+			Routes: []*config.Route{
+				{
+					Receiver: "web-api-parent",
+					Matchers: config.Matchers{posRE("service", "api|web")},
+					Routes: []*config.Route{
+						{Receiver: "api-team", Matchers: config.Matchers{posEQ("service", "api")}},
+					},
+				},
+			},
+		}
+		require.Len(t, detectDeadRoutes(root), 0)
+	})
+
+	t.Run("neg_regex_ancestor_exact_child_no_match_reachable", func(t *testing.T) {
+		// ancestor: service!~"api|web", child: service="db" — "db" not excluded, fine
+		root := &config.Route{
+			Receiver: "root",
+			Routes: []*config.Route{
+				{
+					Receiver: "non-web-parent",
+					Matchers: config.Matchers{negRE("service", "api|web")},
+					Routes: []*config.Route{
+						{Receiver: "db-team", Matchers: config.Matchers{posEQ("service", "db")}},
+					},
+				},
+			},
+		}
+		require.Len(t, detectDeadRoutes(root), 0)
+	})
+
+	t.Run("pos_exact_ancestor_pos_regex_child_no_match_dead", func(t *testing.T) {
+		// ancestor: service="api", child: service=~"db|cache" — "api" never matches "db|cache"
+		root := &config.Route{
+			Receiver: "root",
+			Routes: []*config.Route{
+				{
+					Receiver: "api-parent",
+					Matchers: config.Matchers{posEQ("service", "api")},
+					Routes: []*config.Route{
+						{Receiver: "db-cache-team", Matchers: config.Matchers{posRE("service", "db|cache")}},
+					},
+				},
+			},
+		}
+		issues := detectDeadRoutes(root)
+		require.Len(t, issues, 1)
+		require.True(t, isDeadReceiver(issues, "db-cache-team"))
+	})
+
+	t.Run("pos_exact_ancestor_neg_regex_child_matches_dead", func(t *testing.T) {
+		// ancestor: service="api", child: service!~"api|web" — excludes "api" which is required
+		root := &config.Route{
+			Receiver: "root",
+			Routes: []*config.Route{
+				{
+					Receiver: "api-parent",
+					Matchers: config.Matchers{posEQ("service", "api")},
+					Routes: []*config.Route{
+						{Receiver: "no-web-api", Matchers: config.Matchers{negRE("service", "api|web")}},
+					},
+				},
+			},
+		}
+		issues := detectDeadRoutes(root)
+		require.Len(t, issues, 1)
+		require.True(t, isDeadReceiver(issues, "no-web-api"))
+	})
+
+	t.Run("pos_exact_ancestor_neg_regex_child_no_match_reachable", func(t *testing.T) {
+		// ancestor: service="api", child: service!~"db|cache" — "api" not excluded, fine
+		root := &config.Route{
+			Receiver: "root",
+			Routes: []*config.Route{
+				{
+					Receiver: "api-parent",
+					Matchers: config.Matchers{posEQ("service", "api")},
+					Routes: []*config.Route{
+						{Receiver: "no-db-cache", Matchers: config.Matchers{negRE("service", "db|cache")}},
+					},
+				},
+			},
+		}
+		require.Len(t, detectDeadRoutes(root), 0)
+	})
+
+	t.Run("regex_only_no_exact_not_flagged", func(t *testing.T) {
+		// two regex matchers, no exact — can't statically resolve
+		root := &config.Route{
+			Receiver: "root",
+			Routes: []*config.Route{
+				{
+					Receiver: "parent",
+					Matchers: config.Matchers{posRE("service", "api|web")},
+					Routes: []*config.Route{
+						{Receiver: "child", Matchers: config.Matchers{posRE("service", "db|cache")}},
+					},
+				},
+			},
+		}
+		require.Len(t, detectDeadRoutes(root), 0)
+	})
+
+	t.Run("legacy_match_re_pos_regex_no_match_dead", func(t *testing.T) {
+		// uses legacy MatchRE map format — "db" does not match "api|web"
+		root := &config.Route{
+			Receiver: "root",
+			Routes: []*config.Route{
+				{
+					Receiver: "web-api-parent",
+					MatchRE:  config.MatchRegexps{"service": mustRegexp("api|web")},
+					Routes: []*config.Route{
+						{Receiver: "db-team", Matchers: config.Matchers{posEQ("service", "db")}},
+					},
+				},
+			},
+		}
+		issues := detectDeadRoutes(root)
+		require.Len(t, issues, 1)
+		require.True(t, isDeadReceiver(issues, "db-team"))
+	})
+}
+
+// TestDeadReceiverDetector_RegexMessageFormat asserts Bundle 2 message strings.
+func TestDeadReceiverDetector_RegexMessageFormat(t *testing.T) {
+	posRE := func(name, pat string) *labels.Matcher { return mustMatcher(t, labels.MatchRegexp, name, pat) }
+	negRE := func(name, pat string) *labels.Matcher { return mustMatcher(t, labels.MatchNotRegexp, name, pat) }
+	posEQ := func(name, val string) *labels.Matcher { return mustMatcher(t, labels.MatchEqual, name, val) }
+
+	t.Run("pos_regex_ancestor_message_names_ancestor_and_pattern", func(t *testing.T) {
+		root := &config.Route{
+			Receiver: "root",
+			Routes: []*config.Route{
+				{
+					Receiver: "web-api-parent",
+					Matchers: config.Matchers{posRE("service", "api|web")},
+					Routes: []*config.Route{
+						{Receiver: "db-team", Matchers: config.Matchers{posEQ("service", "db")}},
+					},
+				},
+			},
+		}
+		issues := detectDeadRoutes(root)
+		require.Len(t, issues, 1)
+		require.Contains(t, issues[0], `"web-api-parent"`, "must name regex ancestor")
+		require.Contains(t, issues[0], `"db-team"`, "must name dead receiver")
+		require.Contains(t, issues[0], "api|web", "must include regex pattern")
+	})
+
+	t.Run("neg_regex_ancestor_message_names_ancestor_and_pattern", func(t *testing.T) {
+		root := &config.Route{
+			Receiver: "root",
+			Routes: []*config.Route{
+				{
+					Receiver: "non-web-parent",
+					Matchers: config.Matchers{negRE("service", "api|web")},
+					Routes: []*config.Route{
+						{Receiver: "api-team", Matchers: config.Matchers{posEQ("service", "api")}},
+					},
+				},
+			},
+		}
+		issues := detectDeadRoutes(root)
+		require.Len(t, issues, 1)
+		require.Contains(t, issues[0], `"non-web-parent"`, "must name regex ancestor")
+		require.Contains(t, issues[0], `"api-team"`, "must name dead receiver")
+		require.Contains(t, issues[0], "api|web", "must include regex pattern")
+	})
+
+	t.Run("pos_exact_ancestor_neg_regex_child_message", func(t *testing.T) {
+		root := &config.Route{
+			Receiver: "root",
+			Routes: []*config.Route{
+				{
+					Receiver: "api-parent",
+					Matchers: config.Matchers{posEQ("service", "api")},
+					Routes: []*config.Route{
+						{Receiver: "no-web-api", Matchers: config.Matchers{negRE("service", "api|web")}},
+					},
+				},
+			},
+		}
+		issues := detectDeadRoutes(root)
+		require.Len(t, issues, 1)
+		require.Contains(t, issues[0], `"api-parent"`, "must name exact-value ancestor")
+		require.Contains(t, issues[0], `"no-web-api"`, "must name dead receiver")
+		require.Contains(t, issues[0], "api|web", "must include regex pattern")
+	})
+}
+
+// TestDeadReceiverDetector_Breadcrumb asserts Bundle 4: path breadcrumb in issue messages.
+func TestDeadReceiverDetector_Breadcrumb(t *testing.T) {
+	t.Run("direct_child_shows_root_to_dead", func(t *testing.T) {
+		// root → dead-child (depth 1): breadcrumb = "root → dead-child"
+		root := &config.Route{
+			Receiver: "root",
+			Routes: []*config.Route{
+				{
+					Receiver: "dead-child",
+					Matchers: config.Matchers{
+						mustMatcher(t, labels.MatchEqual, "service", "api"),
+						mustMatcher(t, labels.MatchEqual, "service", "db"),
+					},
+				},
+			},
+		}
+		issues := detectDeadRoutes(root)
+		require.Len(t, issues, 1)
+		require.Contains(t, issues[0], "root → dead-child")
+	})
+
+	t.Run("one_level_deep_shows_intermediate", func(t *testing.T) {
+		// root → api-team → db-team (depth 2): breadcrumb = "root → api-team → db-team"
+		root := &config.Route{
+			Receiver: "root",
+			Routes: []*config.Route{
+				{
+					Receiver: "api-team",
+					Matchers: config.Matchers{mustMatcher(t, labels.MatchEqual, "service", "api")},
+					Routes: []*config.Route{
+						{
+							Receiver: "db-team",
+							Matchers: config.Matchers{mustMatcher(t, labels.MatchEqual, "service", "db")},
+						},
+					},
+				},
+			},
+		}
+		issues := detectDeadRoutes(root)
+		require.Len(t, issues, 1)
+		require.Contains(t, issues[0], "root → api-team → db-team")
+	})
+
+	t.Run("two_levels_deep_shows_full_path", func(t *testing.T) {
+		// root → env-prod → api-team → db-team (depth 3)
+		root := &config.Route{
+			Receiver: "root",
+			Routes: []*config.Route{
+				{
+					Receiver: "env-prod",
+					Matchers: config.Matchers{mustMatcher(t, labels.MatchEqual, "env", "prod")},
+					Routes: []*config.Route{
+						{
+							Receiver: "api-team",
+							Matchers: config.Matchers{mustMatcher(t, labels.MatchEqual, "service", "api")},
+							Routes: []*config.Route{
+								{
+									Receiver: "db-team",
+									Matchers: config.Matchers{mustMatcher(t, labels.MatchEqual, "service", "db")},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		issues := detectDeadRoutes(root)
+		require.Len(t, issues, 1)
+		require.Contains(t, issues[0], "root → env-prod → api-team → db-team")
+	})
+
+	t.Run("sibling_dead_routes_each_have_correct_path", func(t *testing.T) {
+		// root → parent → [dead-a, dead-b]: each should carry their own path
+		root := &config.Route{
+			Receiver: "root",
+			Routes: []*config.Route{
+				{
+					Receiver: "parent",
+					Matchers: config.Matchers{mustMatcher(t, labels.MatchEqual, "service", "api")},
+					Routes: []*config.Route{
+						{Receiver: "dead-a", Matchers: config.Matchers{mustMatcher(t, labels.MatchEqual, "service", "db")}},
+						{Receiver: "dead-b", Matchers: config.Matchers{mustMatcher(t, labels.MatchEqual, "service", "web")}},
+					},
+				},
+			},
+		}
+		issues := detectDeadRoutes(root)
+		require.Len(t, issues, 2)
+		require.Contains(t, issues[0], "root → parent → dead-a")
+		require.Contains(t, issues[1], "root → parent → dead-b")
 	})
 }
