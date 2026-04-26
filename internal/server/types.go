@@ -43,12 +43,12 @@ type ConfigResponse struct {
 
 // FragmentInfo is a summary of a single loaded fragment.
 type FragmentInfo struct {
-	Name      string            `json:"name"`
-	Namespace string            `json:"namespace,omitempty"`
+	Name      string             `json:"name"`
+	Namespace string             `json:"namespace,omitempty"`
 	Group     *FragmentGroupInfo `json:"group,omitempty"`
-	Routes    int               `json:"routes"`
-	Receivers int               `json:"receivers"`
-	Tests     int               `json:"tests"`
+	Routes    int                `json:"routes"`
+	Receivers int                `json:"receivers"`
+	Tests     int                `json:"tests"`
 }
 
 // FragmentGroupInfo is the group block exposed by the fragments endpoint.
