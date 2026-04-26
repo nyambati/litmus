@@ -42,20 +42,16 @@ global:
   resolve_timeout: 5m
 route:
   receiver: 'default'
-  routes:
-    - receiver: 'platform'
-      match:
-        scope: 'teams'
 receivers:
   - name: 'default'
-  - name: 'platform'
 `), 0600))
 
 	require.NoError(t, os.MkdirAll("config/fragments", 0755))
 	require.NoError(t, os.WriteFile("config/fragments/db.yml", []byte(`
 name: "db-team"
-mount_point:
-  scope: "teams"
+group:
+  match:
+    scope: "teams"
 routes:
   - receiver: "db-critical"
     match:

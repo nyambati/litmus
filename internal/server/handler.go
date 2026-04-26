@@ -86,7 +86,10 @@ func testsHandler(c *gin.Context) {
 			c.String(http.StatusInternalServerError, fmt.Sprintf("Loading tests: %v", err))
 			return
 		}
-		frags, _ := config.LoadFragments(litmusConfig.FragmentsPath())
+		frags, err := config.LoadFragments(litmusConfig.FragmentsPath())
+		if err != nil {
+			log.Printf("warn: loading fragments for tests: %v", err)
+		}
 		for _, frag := range frags {
 			tests = append(tests, frag.Tests...)
 		}

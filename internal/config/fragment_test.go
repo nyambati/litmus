@@ -177,6 +177,26 @@ func TestLoadFragments_SiblingTestYAMLExtension(t *testing.T) {
 	assert.Equal(t, "yaml ext test", frags[0].Tests[0].Name)
 }
 
+func TestLoadFragments_GroupConflict_ReturnsError(t *testing.T) {
+	tmpDir := t.TempDir()
+	fragDir := filepath.Join(tmpDir, "db-team")
+	require.NoError(t, os.MkdirAll(fragDir, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(fragDir, "receivers.yml"), []byte(`
+group:
+  match: {scope: teams}
+receivers: [{name: critical}]
+`), 0600))
+	require.NoError(t, os.WriteFile(filepath.Join(fragDir, "routes.yml"), []byte(`
+group:
+  match: {scope: platform}
+routes:
+  - receiver: critical
+`), 0600))
+
+	_, err := LoadFragments(filepath.Join(tmpDir, "*"))
+	assert.Error(t, err, "conflicting group definitions in folder package must return an error")
+}
+
 func TestLoadFragments_MalformedYAML_ReturnsError(t *testing.T) {
 	// A folder package containing a file with invalid YAML must propagate an error.
 	tmpDir := t.TempDir()

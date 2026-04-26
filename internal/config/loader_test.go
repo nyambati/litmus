@@ -241,19 +241,15 @@ global:
   resolve_timeout: 5m
 route:
   receiver: 'default'
-  routes:
-    - receiver: 'platform'
-      match:
-        scope: 'teams'
 receivers:
   - name: 'default'
-  - name: 'platform'
 `), 0600))
 	require.NoError(t, os.WriteFile(filepath.Join("config", "fragments", "db.yml"), []byte(`
 name: "db-team"
 namespace: "db"
-mount_point:
-  scope: "teams"
+group:
+  match:
+    scope: "teams"
 routes:
   - receiver: "critical"
     match:
@@ -279,17 +275,18 @@ receivers:
 	}
 	assert.Contains(t, receiverNames, "db-critical")
 
-	// Fragment route mounted under scope=teams
+	// Group creates synthetic parent with scope=teams; db-critical route is its child
+	require.Len(t, assembled.Route.Routes, 1)
 	teamsRoute := assembled.Route.Routes[0]
-	assert.Len(t, teamsRoute.Routes, 1)
+	assert.Equal(t, map[string]string{"scope": "teams"}, teamsRoute.Match)
+	require.Len(t, teamsRoute.Routes, 1)
 	assert.Equal(t, "db-critical", teamsRoute.Routes[0].Receiver)
 
-	// root frag + db-team frag returned; root has base routes populated
+	// root frag + db-team frag returned; root has no pre-assembly sub-routes
 	require.Len(t, fragments, 2)
 	rootFrag := fragments[0]
 	assert.Equal(t, "root", rootFrag.Name)
-	assert.Len(t, rootFrag.Routes, 1, "root fragment must carry pre-assembly base routes")
-	assert.Equal(t, "platform", rootFrag.Routes[0].Receiver)
+	assert.Empty(t, rootFrag.Routes, "base config has no sub-routes")
 
 	// Fragment test included
 	var testNames []string

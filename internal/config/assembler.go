@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	amconfig "github.com/prometheus/alertmanager/config"
@@ -19,19 +20,63 @@ func NewAssembler(base *amconfig.Config) *Assembler {
 
 // Assemble merges the provided fragments into the base configuration.
 func (a *Assembler) Assemble(fragments []*Fragment) (*amconfig.Config, error) {
+	type groupEntry struct {
+		route    *amconfig.Route
+		receiver string
+	}
+	grouped := map[string]*groupEntry{}
+	groupOrder := []string{}
+
 	for _, frag := range fragments {
 		a.applyNamespace(frag)
 
-		// 1. Merge Receivers
 		a.base.Receivers = append(a.base.Receivers, frag.Receivers...)
-
-		// 2. Merge Inhibit Rules
 		a.base.InhibitRules = append(a.base.InhibitRules, frag.InhibitRules...)
 
-		// 3. Hierarchical Mounting of Routes
-		if err := a.mountRoutes(frag); err != nil {
-			return nil, fmt.Errorf("mounting routes for fragment %s: %w", frag.Name, err)
+		if len(frag.Routes) == 0 {
+			continue
 		}
+
+		if frag.Group == nil {
+			a.base.Route.Routes = append(a.base.Route.Routes, frag.Routes...)
+			continue
+		}
+
+		key := groupKey(frag.Group.Match)
+		entry, exists := grouped[key]
+		if !exists {
+			entry = &groupEntry{
+				route: &amconfig.Route{
+					Match: frag.Group.Match,
+				},
+				receiver: frag.Group.Receiver,
+			}
+			grouped[key] = entry
+			groupOrder = append(groupOrder, key)
+		}
+
+		if frag.Group.Receiver != "" {
+			if entry.receiver == "" {
+				entry.receiver = frag.Group.Receiver
+			} else if entry.receiver != frag.Group.Receiver {
+				return nil, fmt.Errorf(
+					"group %q: conflicting receivers %q and %q",
+					key, entry.receiver, frag.Group.Receiver,
+				)
+			}
+		}
+
+		entry.route.Routes = append(entry.route.Routes, frag.Routes...)
+	}
+
+	for _, key := range groupOrder {
+		entry := grouped[key]
+		if entry.receiver != "" {
+			entry.route.Receiver = entry.receiver
+		} else {
+			entry.route.Receiver = a.base.Route.Receiver
+		}
+		a.base.Route.Routes = append(a.base.Route.Routes, entry.route)
 	}
 
 	return a.base, nil
@@ -68,66 +113,16 @@ func (a *Assembler) prefixRouteReceivers(route *amconfig.Route, prefix string) {
 	}
 }
 
-// mountRoutes finds the anchor point in the base tree and attaches fragment routes.
-func (a *Assembler) mountRoutes(frag *Fragment) error {
-	if len(frag.Routes) == 0 {
-		return nil
+// groupKey produces a stable string key from a label map.
+func groupKey(labels map[string]string) string {
+	keys := make([]string, 0, len(labels))
+	for k := range labels {
+		keys = append(keys, k)
 	}
-
-	anchor := a.findAnchor(a.base.Route, frag.MountPoint)
-	if anchor == nil {
-		return fmt.Errorf("mount point %v not found in base routing tree", frag.MountPoint)
+	sort.Strings(keys)
+	parts := make([]string, 0, len(keys))
+	for _, k := range keys {
+		parts = append(parts, k+"="+labels[k])
 	}
-
-	anchor.Routes = append(anchor.Routes, frag.Routes...)
-	return nil
-}
-
-// findAnchor recursively searches for a route matching all mount point labels.
-func (a *Assembler) findAnchor(root *amconfig.Route, mountPoint map[string]string) *amconfig.Route {
-	if root == nil {
-		return nil
-	}
-
-	if len(mountPoint) == 0 {
-		return root // Default to root if no mount point specified
-	}
-
-	if a.matchesMountPoint(root, mountPoint) {
-		return root
-	}
-
-	for _, child := range root.Routes {
-		if found := a.findAnchor(child, mountPoint); found != nil {
-			return found
-		}
-	}
-
-	return nil
-}
-
-func (a *Assembler) matchesMountPoint(route *amconfig.Route, mountPoint map[string]string) bool {
-	if len(route.Match) == 0 && len(route.MatchRE) == 0 && len(route.Matchers) == 0 {
-		return false // Root route usually has no matchers, don't match it unless mountPoint is empty
-	}
-
-	for k, v := range mountPoint {
-		matched := false
-		if val, ok := route.Match[k]; ok && val == v {
-			matched = true
-		} else if val, ok := route.MatchRE[k]; ok && val.String() == v {
-			matched = true
-		} else {
-			for _, m := range route.Matchers {
-				if m.Name == k && m.Value == v {
-					matched = true
-					break
-				}
-			}
-		}
-		if !matched {
-			return false
-		}
-	}
-	return true
+	return strings.Join(parts, ",")
 }

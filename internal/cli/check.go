@@ -216,11 +216,8 @@ func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 		}
 	}
 
-	// Aggregate tests from fragments
 	for _, frag := range fragments {
-		if frag.Tests != nil {
-			tests = append(tests, frag.Tests...)
-		}
+		tests = append(tests, frag.Tests...)
 	}
 
 	if len(tests) == 0 {

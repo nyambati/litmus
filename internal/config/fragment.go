@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"sort"
@@ -9,6 +10,11 @@ import (
 
 	"github.com/nyambati/litmus/internal/types"
 	"gopkg.in/yaml.v3"
+)
+
+const (
+	testSuffixYML  = "-tests.yml"
+	testSuffixYAML = "-tests.yaml"
 )
 
 // LoadFragments discovers and loads all fragments matching the configured pattern.
@@ -37,7 +43,7 @@ func LoadFragments(pattern string) ([]*Fragment, error) {
 			}
 		} else if strings.HasSuffix(path, ".yml") || strings.HasSuffix(path, ".yaml") {
 			// Single file mode
-			if strings.HasSuffix(path, "-tests.yml") || strings.HasSuffix(path, "-tests.yaml") {
+			if strings.HasSuffix(path, testSuffixYML) || strings.HasSuffix(path, testSuffixYAML) {
 				continue // Skip sibling test files, they are loaded by the definition file logic
 			}
 			frag, err := loadFragmentFromFile(path)
@@ -68,19 +74,14 @@ func loadFragmentFromFile(path string) (*Fragment, error) {
 
 	// Sibling test file discovery
 	base := strings.TrimSuffix(path, filepath.Ext(path))
-	siblingTest := base + "-tests.yml"
-	if _, err := os.Stat(siblingTest); err == nil {
-		tests, err := loadTestsFromFile(siblingTest)
-		if err == nil {
-			frag.Tests = append(frag.Tests, tests...)
-		}
-	} else {
-		siblingTest = base + "-tests.yaml"
+	for _, suffix := range []string{testSuffixYML, testSuffixYAML} {
+		siblingTest := base + suffix
 		if _, err := os.Stat(siblingTest); err == nil {
 			tests, err := loadTestsFromFile(siblingTest)
 			if err == nil {
 				frag.Tests = append(frag.Tests, tests...)
 			}
+			break
 		}
 	}
 
@@ -155,8 +156,12 @@ func loadFragmentFromFolder(path string) (*Fragment, error) {
 		if part.Namespace != "" && composite.Namespace == "" {
 			composite.Namespace = part.Namespace
 		}
-		if len(part.MountPoint) > 0 && len(composite.MountPoint) == 0 {
-			composite.MountPoint = part.MountPoint
+		if part.Group != nil {
+			if composite.Group == nil {
+				composite.Group = part.Group
+			} else if !maps.Equal(composite.Group.Match, part.Group.Match) {
+				return nil, fmt.Errorf("conflicting group definitions in folder package %s", path)
+			}
 		}
 	}
 

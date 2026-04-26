@@ -35,11 +35,18 @@ type (
 		Mimir        MimirConfig       `yaml:"mimir" mapstructure:"mimir"`
 	}
 
+	// FragmentGroup defines a synthetic parent route created during assembly.
+	// Match uses exact label matching only — no regex support on the synthetic parent.
+	FragmentGroup struct {
+		Match    map[string]string `yaml:"match"`
+		Receiver string            `yaml:"receiver"`
+	}
+
 	// Fragment represents a team-level configuration fragment.
 	Fragment struct {
 		Name         string                 `yaml:"name"`
 		Namespace    string                 `yaml:"namespace"`
-		MountPoint   map[string]string      `yaml:"mount_point"`
+		Group        *FragmentGroup         `yaml:"group"`
 		Routes       []*amconfig.Route      `yaml:"routes"`
 		Receivers    []amconfig.Receiver    `yaml:"receivers"`
 		InhibitRules []amconfig.InhibitRule `yaml:"inhibit_rules"`

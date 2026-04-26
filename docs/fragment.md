@@ -67,8 +67,10 @@ A fragment file (or any YAML in a folder package) may define:
 # db-team.yml
 name: "db-team"              # Optional; defaults to filename/folder name
 namespace: "db"              # Prefixes all receiver names: db-critical, db-warning, etc.
-mount_point:                 # Labels identifying the anchor route in the base tree
-  scope: "teams"
+group:                       # Optional. Creates a synthetic parent route for this fragment's routes.
+  match:                     # Exact-match labels on the synthetic parent route
+    scope: "teams"
+  receiver: "teams-fallback" # Optional; defaults to root route's receiver
 
 routes:
   - receiver: "critical"
@@ -109,7 +111,8 @@ Discovery
 
 Assembly
   1. Receiver namespacing   fragment namespace + "-" + receiver name
-  2. Route mounting         fragment routes appended under mount_point anchor
+  2. Route grouping         fragments with same group.match share one synthetic parent route
+                            fragments with no group are merged flat into root
   3. Inhibit rule merge     fragment rules appended to base rules
 
 Execution (all against assembled config)
@@ -125,13 +128,18 @@ All receiver names and route receiver references within a fragment are prefixed 
 in the assembled config. No double-prefixing: the assembler checks for the prefix before
 applying it.
 
-### Mount point resolution
+### Group routing
 
-`mount_point` is a map of label key/value pairs. The assembler walks the base route tree
-and finds the first route whose matchers satisfy all pairs. Fragment routes are appended as
-children of that anchor. If no mount point is specified, fragments are mounted at root.
+`group` is optional. When present, the assembler creates a single synthetic parent route
+with `group.match` as its exact-match label matchers and appends all fragment routes as
+children of that parent. `group.receiver` sets the parent's receiver — omit to inherit
+the root receiver.
 
-If the anchor is not found, assembly fails with an explicit error.
+Two fragments with identical `group.match` labels share one synthetic parent (their routes
+are co-located under it). Two fragments with the same match but different `group.receiver`
+values → assembly error.
+
+A fragment with no `group` has its routes merged flat into root — no synthetic parent created.
 
 ## 6. Policy Enforcement
 

@@ -36,43 +36,103 @@ func TestAssembler(t *testing.T) {
 			},
 		},
 		{
-			name: "Hierarchical Mounting",
-			base: &amconfig.Config{
-				Route: &amconfig.Route{
-					Receiver: "default",
-					Routes: []*amconfig.Route{
-						{
-							Receiver: "platform-fallback",
-							Match:    map[string]string{"scope": "teams"},
-						},
-					},
-				},
-			},
-			fragments: []*Fragment{
-				{
-					Name:       "db-team",
-					MountPoint: map[string]string{"scope": "teams"},
-					Routes:     []*amconfig.Route{{Receiver: "db-receiver"}},
-				},
-			},
-			validate: func(t *testing.T, assembled *amconfig.Config) {
-				t.Helper()
-				teamsRoute := assembled.Route.Routes[0]
-				assert.Equal(t, "platform-fallback", teamsRoute.Receiver)
-				assert.Len(t, teamsRoute.Routes, 1)
-				assert.Equal(t, "db-receiver", teamsRoute.Routes[0].Receiver)
-			},
-		},
-		{
-			name: "Mount Point Not Found",
+			name: "No Group — Flat Merge to Root",
 			base: &amconfig.Config{
 				Route: &amconfig.Route{Receiver: "default"},
 			},
 			fragments: []*Fragment{
 				{
-					Name:       "db-team",
-					MountPoint: map[string]string{"nonexistent": "label"},
-					Routes:     []*amconfig.Route{{Receiver: "db-receiver"}},
+					Name:   "db-team",
+					Routes: []*amconfig.Route{{Receiver: "db-receiver"}},
+				},
+			},
+			validate: func(t *testing.T, assembled *amconfig.Config) {
+				t.Helper()
+				require.Len(t, assembled.Route.Routes, 1)
+				assert.Equal(t, "db-receiver", assembled.Route.Routes[0].Receiver)
+			},
+		},
+		{
+			name: "Group — Synthetic Parent Created",
+			base: &amconfig.Config{
+				Route: &amconfig.Route{Receiver: "default"},
+			},
+			fragments: []*Fragment{
+				{
+					Name:   "db-team",
+					Group:  &FragmentGroup{Match: map[string]string{"scope": "teams"}},
+					Routes: []*amconfig.Route{{Receiver: "db-receiver"}},
+				},
+			},
+			validate: func(t *testing.T, assembled *amconfig.Config) {
+				t.Helper()
+				require.Len(t, assembled.Route.Routes, 1)
+				parent := assembled.Route.Routes[0]
+				assert.Equal(t, map[string]string{"scope": "teams"}, parent.Match)
+				assert.Equal(t, "default", parent.Receiver, "inherits root receiver")
+				require.Len(t, parent.Routes, 1)
+				assert.Equal(t, "db-receiver", parent.Routes[0].Receiver)
+			},
+		},
+		{
+			name: "Group Receiver Explicit",
+			base: &amconfig.Config{
+				Route: &amconfig.Route{Receiver: "default"},
+			},
+			fragments: []*Fragment{
+				{
+					Name: "db-team",
+					Group: &FragmentGroup{
+						Match:   map[string]string{"scope": "teams"},
+						Receiver: "teams-fallback",
+					},
+					Routes: []*amconfig.Route{{Receiver: "db-receiver"}},
+				},
+			},
+			validate: func(t *testing.T, assembled *amconfig.Config) {
+				t.Helper()
+				assert.Equal(t, "teams-fallback", assembled.Route.Routes[0].Receiver)
+			},
+		},
+		{
+			name: "Two Fragments Same Group — Co-located",
+			base: &amconfig.Config{
+				Route: &amconfig.Route{Receiver: "default"},
+			},
+			fragments: []*Fragment{
+				{
+					Name:   "db-team",
+					Group:  &FragmentGroup{Match: map[string]string{"scope": "teams"}},
+					Routes: []*amconfig.Route{{Receiver: "db-receiver"}},
+				},
+				{
+					Name:   "net-team",
+					Group:  &FragmentGroup{Match: map[string]string{"scope": "teams"}},
+					Routes: []*amconfig.Route{{Receiver: "net-receiver"}},
+				},
+			},
+			validate: func(t *testing.T, assembled *amconfig.Config) {
+				t.Helper()
+				require.Len(t, assembled.Route.Routes, 1, "single synthetic parent for same group")
+				parent := assembled.Route.Routes[0]
+				require.Len(t, parent.Routes, 2)
+			},
+		},
+		{
+			name: "Group Receiver Conflict — Error",
+			base: &amconfig.Config{
+				Route: &amconfig.Route{Receiver: "default"},
+			},
+			fragments: []*Fragment{
+				{
+					Name:   "db-team",
+					Group:  &FragmentGroup{Match: map[string]string{"scope": "teams"}, Receiver: "fallback-a"},
+					Routes: []*amconfig.Route{{Receiver: "db-receiver"}},
+				},
+				{
+					Name:   "net-team",
+					Group:  &FragmentGroup{Match: map[string]string{"scope": "teams"}, Receiver: "fallback-b"},
+					Routes: []*amconfig.Route{{Receiver: "net-receiver"}},
 				},
 			},
 			wantErr: true,
