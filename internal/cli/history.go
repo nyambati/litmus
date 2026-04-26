@@ -16,11 +16,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const historyTimeFormat = "20060102-150405"
+const historyTimeFormat = "20060102-150405.000000"
+
+var timeNow = time.Now
 
 // ArchiveBaseline saves tests as a new history entry and writes regressions.litmus.yml.
 func ArchiveBaseline(cfg *config.LitmusConfig, tests []*types.TestCase) (string, error) {
-	id := time.Now().Format(historyTimeFormat)
+	id := timeNow().Format(historyTimeFormat)
 	if err := os.MkdirAll(cfg.RegressionsDir(), 0755); err != nil {
 		return "", fmt.Errorf("creating history dir: %w", err)
 	}

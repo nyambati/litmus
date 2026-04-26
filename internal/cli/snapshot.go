@@ -51,6 +51,9 @@ func RunSnapshot(update, strict bool) error {
 	regTests := BuildRegressionTests(outcomes, litmusConfig.GlobalLabels)
 
 	var existing []*types.TestCase
+	existingHistory, err := ListHistory(litmusConfig.RegressionsDir())
+	hasHistory := err == nil && len(existingHistory) > 0
+
 	state, err := LoadRegressionState(litmusConfig.RegressionsYamlFilePath())
 	if err == nil && state != nil {
 		existing = state.Tests
@@ -67,9 +70,6 @@ func RunSnapshot(update, strict bool) error {
 				PrintDiffReport(d)
 				return fmt.Errorf("drift detected in routing behavior")
 			}
-			if !update {
-				fmt.Fprintf(os.Stderr, "WARN: drift detected in routing behavior; run 'litmus snapshot update' to accept changes, or 'litmus diff' to inspect\n")
-			}
 		}
 	}
 
@@ -77,33 +77,32 @@ func RunSnapshot(update, strict bool) error {
 		return fmt.Errorf("creating regression directory: %w", err)
 	}
 
-	// Decide whether to update baseline
-	shouldUpdate := existing == nil || (update && hasDrift)
-	if update && existing != nil && !hasDrift {
+	if !hasHistory {
+		if _, err := ArchiveBaseline(litmusConfig, regTests); err != nil {
+			return fmt.Errorf("creating initial baseline: %w", err)
+		}
+		fmt.Println("✓ Baseline created") //nolint:forbidigo
+		return nil
+	}
+
+	if hasDrift {
+		if !update {
+			fmt.Fprintf(os.Stderr, "WARN: drift detected in routing behavior; run 'litmus snapshot update' to accept changes, or 'litmus diff' to inspect\n")
+			return nil
+		}
+		if _, err := ArchiveBaseline(litmusConfig, regTests); err != nil {
+			return fmt.Errorf("archiving baseline to history: %w", err)
+		}
+		fmt.Println("✓ Baseline updated") //nolint:forbidigo
+		return nil
+	}
+
+	if update {
 		fmt.Println("✓ No changes detected; baseline is up to date") //nolint:forbidigo
 		return nil
 	}
 
-	// Archive baseline to history only on actual updates (new baseline or drift+update)
-	// This creates a new timestamped MPK and updates the ID
-	if shouldUpdate {
-		if _, err := ArchiveBaseline(litmusConfig, regTests); err != nil {
-			return fmt.Errorf("archiving baseline to history: %w", err)
-		}
-	} else {
-		// Not creating new MPK, but update tests in state file with existing ID
-		state, err := LoadRegressionState(litmusConfig.RegressionsYamlFilePath())
-		if err == nil {
-			// Keep existing ID, update tests only
-			state.Tests = regTests
-			if err := SaveRegressionState(litmusConfig.RegressionsYamlFilePath(), state); err != nil {
-				return fmt.Errorf("updating tests in state: %w", err)
-			}
-		}
-	}
-
-	fmt.Println("✓ Snapshot processed successfully") //nolint:forbidigo
-
+	fmt.Println("✓ Baseline is current") //nolint:forbidigo
 	return nil
 }
 
