@@ -45,6 +45,7 @@ func LoadConfig() (*LitmusConfig, error) {
 	v.SetDefault("mimir.address", "")
 	v.SetDefault("mimir.tenant_id", "")
 	v.SetDefault("mimir.api_key", "")
+	v.SetDefault("policy.enforce.strict", true)
 
 	// 2. Environment Variables
 	v.SetEnvPrefix("LITMUS")

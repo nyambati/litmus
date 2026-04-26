@@ -20,11 +20,17 @@ type (
 		History   int    `yaml:"history" mapstructure:"history"`
 	}
 
+	// EnforceConfig defines matcher enforcement rules for fragment routes.
+	EnforceConfig struct {
+		Strict   bool     `yaml:"strict"   mapstructure:"strict"`
+		Matchers []string `yaml:"matchers" mapstructure:"matchers"`
+	}
+
 	// PolicyConfig defines global rules for fragments.
 	PolicyConfig struct {
-		EnforceMatchers []string `yaml:"enforce_matchers" mapstructure:"enforce_matchers"`
-		RequireTests    bool     `yaml:"require_tests"     mapstructure:"require_tests"`
-		SkipRoot        bool     `yaml:"skip_root"         mapstructure:"skip_root"`
+		RequireTests bool          `yaml:"require_tests" mapstructure:"require_tests"`
+		SkipRoot     bool          `yaml:"skip_root"     mapstructure:"skip_root"`
+		Enforce      EnforceConfig `yaml:"enforce"      mapstructure:"enforce"`
 	}
 
 	// LitmusConfig is the root configuration object.
