@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Search, FlaskConical, History, Activity } from "lucide-react";
+import { Search, FlaskConical, History, Activity, Layers } from "lucide-react";
 import { cn } from "../../utils/ui";
 
 export const Sidebar = () => {
@@ -9,6 +9,7 @@ export const Sidebar = () => {
     { name: "Explorer", path: "/", icon: Search, description: "Route evaluator" },
     { name: "Lab", path: "/lab", icon: FlaskConical, description: "Test runner" },
     { name: "Regression", path: "/regression", icon: History, description: "Drift detection" },
+    { name: "Fragments", path: "/fragments", icon: Layers, description: "Config packages" },
   ];
 
   return (

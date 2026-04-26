@@ -8,8 +8,9 @@ import { Header } from "../layout/Header";
 import { EmptyState } from "../ui/EmptyState";
 import { FilterTabs } from "../ui/Tabs";
 import { TestCaseCard, type Test, type TestResult } from "./TestCase";
+import { FragmentGroup, type FragmentTestGroup } from "./FragmentGroup";
 
-type FilterType = "all" | "unit" | "regression";
+type FilterType = "all" | "fragments" | "regression";
 
 interface TestWithType extends Test {
   type: "unit" | "regression";
@@ -22,10 +23,12 @@ interface TestRunResult extends TestResult {
 export const LabPage = () => {
   const { results, setResults, lastRunTs, setLastRunTs } = useLabStore();
   const [tests, setTests] = useState<TestWithType[]>([]);
+  const [groupedTests, setGroupedTests] = useState<FragmentTestGroup[]>([]);
   const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState(false);
   const [snapshotting, setSnapshotting] = useState(false);
   const [runningTest, setRunningTest] = useState<string | null>(null);
+  const [runningFragment, setRunningFragment] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterType>("all");
   const [activeAction, setActiveAction] = useState<"run" | "snapshot">("run");
   const [showDropdown, setShowDropdown] = useState(false);
@@ -101,6 +104,43 @@ export const LabPage = () => {
     }
   }, []);
 
+  const fetchGroupedTests = useCallback(async () => {
+    try {
+      const data: FragmentTestGroup[] = await fetch(
+        `${API}/api/v1/tests/grouped`,
+      ).then((r) => r.json());
+      setGroupedTests(data ?? []);
+    } catch (err) {
+      console.error("Failed to fetch grouped tests:", err);
+    }
+  }, []);
+
+  const runFragment = async (fragmentName: string) => {
+    setRunningFragment(fragmentName);
+    setNotification(null);
+    try {
+      const resp = await minDelay(
+        fetch(
+          `${API}/api/v1/tests/run?type=behavioral&fragment=${encodeURIComponent(fragmentName)}`,
+          { method: "POST" },
+        ),
+      );
+      if (!resp.ok) throw new Error(await resp.text());
+      const data: TestRunResult[] = await resp.json();
+      applyResults(data);
+      const passed = data.filter((r) => r.pass).length;
+      setNotification({
+        type: "success",
+        message: `${fragmentName}: ${passed}/${data.length} passed`,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setNotification({ type: "error", message: `Fragment run failed: ${msg}` });
+    } finally {
+      setRunningFragment(null);
+    }
+  };
+
   const runSnapshot = async () => {
     setSnapshotting(true);
     setNotification(null);
@@ -139,7 +179,7 @@ export const LabPage = () => {
     setNotification(null);
     try {
       const toRun: Promise<TestRunResult[]>[] = [];
-      if (filter === "all" || filter === "unit") {
+      if (filter === "all" || filter === "fragments") {
         toRun.push(
           minDelay(
             fetch(`${API}/api/v1/tests/run?type=behavioral`, { method: "POST" }).then((r) => {
@@ -225,7 +265,8 @@ export const LabPage = () => {
   const filteredTests = tests
     .filter((test) => {
       if (filter === "all") return true;
-      return getTestType(test) === filter;
+      if (filter === "regression") return getTestType(test) === "regression";
+      return false;
     })
     .sort((a, b) => {
       const resA = results[a.name];
@@ -247,14 +288,20 @@ export const LabPage = () => {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchTests();
-  }, [fetchTests]);
+    fetchGroupedTests();
+  }, [fetchTests, fetchGroupedTests]);
+
+  const totalGroupedTests = groupedTests.reduce(
+    (sum, g) => sum + g.tests.length,
+    0,
+  );
 
   const filterTabs = [
     { label: "All", value: "all" as FilterType, count: tests.length },
     {
-      label: "Unit",
-      value: "unit" as FilterType,
-      count: tests.filter((t) => getTestType(t) === "unit").length,
+      label: "By Fragment",
+      value: "fragments" as FilterType,
+      count: totalGroupedTests,
     },
     {
       label: "Regression",
@@ -298,14 +345,16 @@ export const LabPage = () => {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <h3 className="text-[#d9d9d9] font-semibold text-sm">
-              {filter === "unit"
-                ? "Unit Tests"
-                : filter === "regression"
-                  ? "Regression Tests"
+              {filter === "regression"
+                ? "Regression Tests"
+                : filter === "fragments"
+                  ? "Tests by Fragment"
                   : "All Tests"}
             </h3>
             <span className="text-[11px] text-[#8e9193]">
-              {filteredTests.length} of {tests.length}
+              {filter === "fragments"
+                ? `${totalGroupedTests} tests · ${groupedTests.length} fragments`
+                : `${filteredTests.length} of ${tests.length}`}
             </span>
             <LastUpdated ts={lastRunTs} />
           </div>
@@ -390,7 +439,30 @@ export const LabPage = () => {
         <FilterTabs tabs={filterTabs} active={filter} onChange={setFilter} />
 
         {/* Content */}
-        {loading ? (
+        {filter === "fragments" ? (
+          groupedTests.length === 0 ? (
+            <EmptyState
+              icon={FlaskConical}
+              title="No fragment tests found"
+              description="Add YAML test files alongside your fragment definitions"
+            />
+          ) : (
+            <div className="space-y-3 animate-fade-in-up">
+              {groupedTests.map((group) => (
+                <FragmentGroup
+                  key={group.name}
+                  group={group}
+                  results={results}
+                  runningFragment={runningFragment}
+                  runningTest={runningTest}
+                  globalRunning={running}
+                  onRunFragment={runFragment}
+                  onRunTest={runSingleTest}
+                />
+              ))}
+            </div>
+          )
+        ) : loading ? (
           <div className="flex items-center justify-center h-48">
             <GfSpinner size="lg" />
           </div>

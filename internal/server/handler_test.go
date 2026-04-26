@@ -139,3 +139,47 @@ func TestTestsHandler_IncludesFragmentTests(t *testing.T) {
 	assert.Contains(t, names, "mysql routes to db-critical",
 		"tests endpoint must include tests from fragments")
 }
+
+func TestConfigHandler_ExposesWorkspaceAndFragmentCount(t *testing.T) {
+	cfg := setupFragmentWorkspace(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/config", nil)
+	c, w := newTestCtx(cfg, req)
+	configHandler(c)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var resp ConfigResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.True(t, resp.Ready)
+	assert.NotEmpty(t, resp.ConfigPath)
+	assert.Equal(t, "config", resp.Workspace.Root)
+	assert.Equal(t, "fragments/*", resp.Workspace.Fragments)
+	assert.Equal(t, 2, resp.FragmentCount, "root + db-team fragment")
+}
+
+func TestFragmentsHandler_ListsFragmentsWithMetadata(t *testing.T) {
+	cfg := setupFragmentWorkspace(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/fragments", nil)
+	c, w := newTestCtx(cfg, req)
+	fragmentsHandler(c)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var frags []FragmentInfo
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &frags))
+
+	require.Len(t, frags, 2, "root + db-team")
+
+	var dbFrag *FragmentInfo
+	for i := range frags {
+		if frags[i].Name == "db-team" {
+			dbFrag = &frags[i]
+		}
+	}
+	require.NotNil(t, dbFrag, "db-team fragment must be present")
+	assert.Equal(t, 1, dbFrag.Routes)
+	assert.Equal(t, 1, dbFrag.Receivers)
+	assert.Equal(t, 1, dbFrag.Tests)
+	require.NotNil(t, dbFrag.Group)
+	assert.Equal(t, map[string]string{"scope": "teams"}, dbFrag.Group.Match)
+}

@@ -17,7 +17,7 @@ export interface TestResult {
   error?: string;
   expected?: string[];
   actual?: string[];
-  labels?: Record<string, unknown>;
+  labels?: Record<string, string>;
 }
 
 export interface Test {
@@ -28,7 +28,6 @@ export interface Test {
   alert?: { labels?: Record<string, unknown> };
   state?: { silences?: unknown[]; active_alerts?: unknown[] };
   labels?: Record<string, string>[];
-  expected?: string[];
 }
 
 interface TestCaseShellProps {
@@ -142,6 +141,12 @@ interface TestCaseProps {
   onRun: () => void;
 }
 
+const outcomeColors: Record<string, string> = {
+  active: "bg-[#73bf69]/10 border-[#73bf69]/25 text-[#73bf69]",
+  silenced: "bg-[#f5a623]/10 border-[#f5a623]/25 text-[#f5a623]",
+  inhibited: "bg-[#f46800]/10 border-[#f46800]/25 text-[#f46800]",
+};
+
 const UnitTestCase = ({
   test,
   result,
@@ -156,11 +161,6 @@ const UnitTestCase = ({
     test.state &&
     ((test.state.silences?.length ?? 0) > 0 || (test.state.active_alerts?.length ?? 0) > 0);
 
-  const outcomeColors: Record<string, string> = {
-    active: "bg-[#73bf69]/10 border-[#73bf69]/25 text-[#73bf69]",
-    silenced: "bg-[#f5a623]/10 border-[#f5a623]/25 text-[#f5a623]",
-    inhibited: "bg-[#f46800]/10 border-[#f46800]/25 text-[#f46800]",
-  };
   const outcomeColor =
     outcomeColors[outcome as string] ??
     "bg-[#22252b] border-[#34383e] text-[#8e9193]";
@@ -232,7 +232,10 @@ const RegressionTestCase = ({
   onRun,
 }: TestCaseProps) => {
   const labelSets: Record<string, string>[] = test.labels || [];
-  const expected: string[] = test.expected || [];
+  const expected: string[] = test.expect?.receivers ?? [];
+  const outcome = test.expect?.outcome ?? "active";
+  const outcomeColor =
+    outcomeColors[outcome] ?? "bg-[#22252b] border-[#34383e] text-[#8e9193]";
 
   return (
     <TestCaseShell
@@ -257,10 +260,15 @@ const RegressionTestCase = ({
           </div>
         ))}
 
-        {/* Expected receivers */}
+        {/* Expected outcome + receivers */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] text-[#8e9193]/50 uppercase font-bold tracking-wider">
-            expect
+          <span
+            className={cn(
+              "text-[10px] font-bold uppercase px-2 py-0.5 rounded-[2px] border tracking-wider",
+              outcomeColor,
+            )}
+          >
+            {outcome}
           </span>
           {expected.map((r, i) => (
             <ReceiverChip key={`${r}-${i}`} name={r} variant="purple" />

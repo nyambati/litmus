@@ -83,7 +83,7 @@ func TestAssembler(t *testing.T) {
 				{
 					Name: "db-team",
 					Group: &FragmentGroup{
-						Match:   map[string]string{"scope": "teams"},
+						Match:    map[string]string{"scope": "teams"},
 						Receiver: "teams-fallback",
 					},
 					Routes: []*amconfig.Route{{Receiver: "db-receiver"}},

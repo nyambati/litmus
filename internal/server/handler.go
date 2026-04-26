@@ -52,13 +52,51 @@ func getLitmusConfig(c *gin.Context) *config.LitmusConfig {
 func configHandler(c *gin.Context) {
 	litmusConfig := getLitmusConfig(c)
 	if litmusConfig == nil {
-		return // getLitmusConfig already handled the error
+		return
+	}
+	_, fragments, _, err := litmusConfig.LoadAssembledConfig()
+	if err != nil {
+		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading config: %v", err))
+		return
 	}
 	resp := ConfigResponse{
-		ConfigPath: litmusConfig.FilePath(),
-		Ready:      true,
+		ConfigPath:    litmusConfig.FilePath(),
+		Ready:         true,
+		FragmentCount: len(fragments),
 	}
+	resp.Workspace.Root = litmusConfig.Workspace.Root
+	resp.Workspace.Fragments = litmusConfig.Workspace.Fragments
 	c.JSON(http.StatusOK, resp)
+}
+
+func fragmentsHandler(c *gin.Context) {
+	litmusConfig := getLitmusConfig(c)
+	if litmusConfig == nil {
+		return
+	}
+	_, fragments, _, err := litmusConfig.LoadAssembledConfig()
+	if err != nil {
+		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading config: %v", err))
+		return
+	}
+	infos := make([]*FragmentInfo, 0, len(fragments))
+	for _, frag := range fragments {
+		info := &FragmentInfo{
+			Name:      frag.Name,
+			Namespace: frag.Namespace,
+			Routes:    len(frag.Routes),
+			Receivers: len(frag.Receivers),
+			Tests:     len(frag.Tests),
+		}
+		if frag.Group != nil {
+			info.Group = &FragmentGroupInfo{
+				Match:    frag.Group.Match,
+				Receiver: frag.Group.Receiver,
+			}
+		}
+		infos = append(infos, info)
+	}
+	c.JSON(http.StatusOK, infos)
 }
 
 func testsHandler(c *gin.Context) {
@@ -80,21 +118,48 @@ func testsHandler(c *gin.Context) {
 		}
 		c.JSON(http.StatusOK, state.Tests)
 	default:
-		loader := behavioral.NewBehavioralTestLoader()
-		tests, err := loader.LoadFromDirectory(litmusConfig.TestsDir())
-		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			c.String(http.StatusInternalServerError, fmt.Sprintf("Loading tests: %v", err))
+		_, fragments, _, err := litmusConfig.LoadAssembledConfig()
+		if err != nil {
+			c.String(http.StatusInternalServerError, fmt.Sprintf("Loading config: %v", err))
 			return
 		}
-		frags, err := config.LoadFragments(litmusConfig.FragmentsPath())
-		if err != nil {
-			log.Printf("warn: loading fragments for tests: %v", err)
-		}
-		for _, frag := range frags {
+		var tests []*types.TestCase
+		for _, frag := range fragments {
 			tests = append(tests, frag.Tests...)
 		}
 		c.JSON(http.StatusOK, tests)
 	}
+}
+
+func groupedTestsHandler(c *gin.Context) {
+	litmusConfig := getLitmusConfig(c)
+	if litmusConfig == nil {
+		return
+	}
+	_, fragments, _, err := litmusConfig.LoadAssembledConfig()
+	if err != nil {
+		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading config: %v", err))
+		return
+	}
+	groups := make([]*FragmentTestGroup, 0, len(fragments))
+	for _, frag := range fragments {
+		if len(frag.Tests) == 0 {
+			continue
+		}
+		group := &FragmentTestGroup{
+			Name:      frag.Name,
+			Namespace: frag.Namespace,
+			Tests:     frag.Tests,
+		}
+		if frag.Group != nil {
+			group.Group = &FragmentGroupInfo{
+				Match:    frag.Group.Match,
+				Receiver: frag.Group.Receiver,
+			}
+		}
+		groups = append(groups, group)
+	}
+	c.JSON(http.StatusOK, groups)
 }
 
 func runTestsHandler(c *gin.Context) {
@@ -139,6 +204,24 @@ func runTestsHandler(c *gin.Context) {
 		}
 		c.JSON(http.StatusOK, snapshot.NewRegressionTestExecutor().Execute(context.Background(), tests, router))
 	default:
+		executor := behavioral.NewBehavioralTestExecutor(alertConfig.InhibitRules)
+
+		// Fragment-scoped run: only execute tests from the named fragment.
+		if fragmentName := c.Query("fragment"); fragmentName != "" {
+			for _, frag := range fragments {
+				if frag.Name == fragmentName {
+					results := make([]*types.TestResult, 0, len(frag.Tests))
+					for _, test := range frag.Tests {
+						results = append(results, executor.Execute(context.Background(), test, router))
+					}
+					c.JSON(http.StatusOK, results)
+					return
+				}
+			}
+			c.String(http.StatusNotFound, fmt.Sprintf("Fragment not found: %s", fragmentName))
+			return
+		}
+
 		loader := behavioral.NewBehavioralTestLoader()
 		tests, err := loader.LoadFromDirectory(litmusConfig.TestsDir())
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -148,7 +231,6 @@ func runTestsHandler(c *gin.Context) {
 		for _, frag := range fragments {
 			tests = append(tests, frag.Tests...)
 		}
-		executor := behavioral.NewBehavioralTestExecutor(alertConfig.InhibitRules)
 		if name != "" {
 			for _, test := range tests {
 				if test.Name == name {

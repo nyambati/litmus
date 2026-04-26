@@ -1,5 +1,7 @@
 package server
 
+import "github.com/nyambati/litmus/internal/types"
+
 // RouteNode represents a node in the route tree with evaluation details.
 type RouteNode struct {
 	Receiver       string       `json:"receiver,omitempty"`
@@ -30,8 +32,37 @@ type SuppressionInfo struct {
 
 // ConfigResponse returns metadata about the current workspace.
 type ConfigResponse struct {
-	ConfigPath string `json:"config_path"`
-	Ready      bool   `json:"ready"`
+	ConfigPath    string `json:"config_path"`
+	Ready         bool   `json:"ready"`
+	FragmentCount int    `json:"fragment_count"`
+	Workspace     struct {
+		Root      string `json:"root"`
+		Fragments string `json:"fragments"`
+	} `json:"workspace"`
+}
+
+// FragmentInfo is a summary of a single loaded fragment.
+type FragmentInfo struct {
+	Name      string            `json:"name"`
+	Namespace string            `json:"namespace,omitempty"`
+	Group     *FragmentGroupInfo `json:"group,omitempty"`
+	Routes    int               `json:"routes"`
+	Receivers int               `json:"receivers"`
+	Tests     int               `json:"tests"`
+}
+
+// FragmentGroupInfo is the group block exposed by the fragments endpoint.
+type FragmentGroupInfo struct {
+	Match    map[string]string `json:"match"`
+	Receiver string            `json:"receiver,omitempty"`
+}
+
+// FragmentTestGroup is a fragment paired with its behavioral tests.
+type FragmentTestGroup struct {
+	Name      string             `json:"name"`
+	Namespace string             `json:"namespace,omitempty"`
+	Group     *FragmentGroupInfo `json:"group,omitempty"`
+	Tests     []*types.TestCase  `json:"tests"`
 }
 
 // MatcherMismatch describes a single matcher in a route that no longer matches the label set.

@@ -10,6 +10,7 @@ policy:
   enforce_matchers:
     - severity
     - label_team
+  skip_root: true
 mimir:
   address: "localhost:8080"
   api_key: ""
