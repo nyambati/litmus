@@ -29,7 +29,7 @@ func RunDiff() error {
 		return fmt.Errorf("loading litmus config: %w", err)
 	}
 
-	alertConfig, _, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
+	alertConfig, _, _, err := litmusConfig.LoadAssembledConfig()
 	if err != nil {
 		return fmt.Errorf("loading alertmanager config: %w", err)
 	}

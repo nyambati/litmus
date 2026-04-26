@@ -45,7 +45,9 @@ func RunUIServer(port int, dev bool) error {
 	api := router.Group("/api/v1")
 	{
 		api.GET("/config", configHandler)
+		api.GET("/fragments", fragmentsHandler)
 		api.GET("/tests", testsHandler)
+		api.GET("/tests/grouped", groupedTestsHandler)
 		api.POST("/tests/run", runTestsHandler)
 		api.POST("/evaluate", evaluateHandler)
 		api.GET("/label_values", suggestHandler)

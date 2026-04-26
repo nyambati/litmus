@@ -3,11 +3,16 @@ import {
   AlertCircle,
   GitCompare,
   AlertTriangle,
+  Layers,
+  GitBranch,
+  FlaskConical,
+  Radio,
 } from "lucide-react";
 import { cn, formatAge } from "../../utils/ui";
 import { useExplorerStore } from "../../stores/useExplorerStore";
 import { useLabStore } from "../../stores/useLabStore";
 import { useRegressionStore } from "../../stores/useRegressionStore";
+import { useFragmentsStore } from "../../stores/useFragmentsStore";
 import { StatPanel } from "./StatsSidebar";
 import { StatusDot } from "../ui/Status";
 import { ReceiverChip } from "../ui/Chips";
@@ -152,6 +157,41 @@ export const LabStats = () => {
         label="Success Rate"
         value={total > 0 ? `${Math.round((passed / total) * 100)}%` : "—"}
         color={total > 0 ? (failed === 0 ? "green" : "default") : "default"}
+      />
+    </div>
+  );
+};
+
+export const FragmentsStats = () => {
+  const fragments = useFragmentsStore((s) => s.fragments);
+  const teamFragments = fragments.filter((f) => f.name !== "root");
+  const totalRoutes = fragments.reduce((sum, f) => sum + f.routes, 0);
+  const totalTests = fragments.reduce((sum, f) => sum + f.tests, 0);
+  const totalReceivers = teamFragments.reduce((sum, f) => sum + f.receivers, 0);
+
+  return (
+    <div className="space-y-3">
+      <StatPanel
+        label="Fragments"
+        value={teamFragments.length || "—"}
+        icon={<Layers size={20} />}
+      />
+      <StatPanel
+        label="Routes"
+        value={totalRoutes || "—"}
+        color="orange"
+        icon={<GitBranch size={20} />}
+      />
+      <StatPanel
+        label="Receivers"
+        value={totalReceivers || "—"}
+        icon={<Radio size={20} />}
+      />
+      <StatPanel
+        label="Tests"
+        value={totalTests || "—"}
+        color={totalTests > 0 ? "green" : "default"}
+        icon={<FlaskConical size={20} />}
       />
     </div>
   );

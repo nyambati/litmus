@@ -37,8 +37,9 @@ func RunSync(address, tenantID, apiKey string, skipValidate, dryRun bool) error 
 		return err
 	}
 
-	// Load alertmanager config (returns both parsed and raw)
-	alertConfig, rawYAML, err := config.LoadAlertmanagerConfig(litmusConfig.FilePath())
+	// Load and assemble config (validates against full assembled routing tree).
+	// rawYAML is the base alertmanager.yml — that is what gets pushed to Mimir.
+	alertConfig, _, rawYAML, err := litmusConfig.LoadAssembledConfig()
 	if err != nil {
 		return fmt.Errorf("loading alertmanager config: %w", err)
 	}

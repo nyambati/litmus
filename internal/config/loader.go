@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/joho/godotenv"
+	"github.com/nyambati/litmus/internal/engine/behavioral"
 	amconfig "github.com/prometheus/alertmanager/config"
 	"github.com/spf13/viper"
 )
@@ -17,12 +18,14 @@ const (
 	// DefaultConfigName is the base name of the configuration file.
 	defaultConfigName         = ".litmus"
 	defaultRegressionYamlFile = "regressions.litmus.yml"
-	defaultRegressionKeep     = 3
 	defaultRegressionDir      = "regressions"
 	defaultConfigDir          = "config"
 	defaultConfigFile         = "alertmanager.yml"
+	defaultConfigFileAlt      = "alertmanager.yaml"
 	defaultConfigTemplatesDir = "templates"
 	defaultTestsDir           = "tests"
+	defaultFragmentsPattern   = "fragments/*"
+	defaultHistoryKeep        = 5
 )
 
 // envPattern matches env(VAR_NAME) where VAR_NAME is an uppercase env var identifier.
@@ -36,12 +39,9 @@ func LoadConfig() (*LitmusConfig, error) {
 	v := viper.New()
 
 	// 1. Set Defaults
-	v.SetDefault("config.directory", defaultConfigDir)
-	v.SetDefault("config.file", defaultConfigFile)
-	v.SetDefault("config.templates", defaultConfigTemplatesDir)
-	v.SetDefault("regression.directory", defaultRegressionDir)
-	v.SetDefault("regression.keep", defaultRegressionKeep)
-	v.SetDefault("tests.directory", defaultTestsDir)
+	v.SetDefault("workspace.root", defaultConfigDir)
+	v.SetDefault("workspace.fragments", defaultFragmentsPattern)
+	v.SetDefault("workspace.history", defaultHistoryKeep)
 	v.SetDefault("mimir.address", "")
 	v.SetDefault("mimir.tenant_id", "")
 	v.SetDefault("mimir.api_key", "")
@@ -95,10 +95,10 @@ func expandAlertmanagerConfig(path string) (string, error) {
 	return expanded, nil
 }
 
-// LoadAlertmanagerConfig reads, expands env(VAR) placeholders, and parses the
+// loadAlertmanagerConfig reads, expands env(VAR) placeholders, and parses the
 // Alertmanager YAML using alertmanager's own loader (applies validation and defaults).
 // Returns the parsed config, raw expanded YAML, and any error.
-func LoadAlertmanagerConfig(path string) (*amconfig.Config, string, error) {
+func loadAlertmanagerConfig(path string) (*amconfig.Config, string, error) {
 	expanded, err := expandAlertmanagerConfig(path)
 	if err != nil {
 		return nil, "", err
@@ -115,11 +115,8 @@ func LoadAlertmanagerConfig(path string) (*amconfig.Config, string, error) {
 // expandEnv applies env(VAR) substitution to all string fields in LitmusConfig.
 func (c *LitmusConfig) expandEnv() error {
 	fields := []*string{
-		&c.Config.Directory,
-		&c.Config.File,
-		&c.Config.Templates,
-		&c.Regression.Directory,
-		&c.Tests.Directory,
+		&c.Workspace.Root,
+		&c.Workspace.Fragments,
 		&c.Mimir.Address,
 		&c.Mimir.TenantID,
 		&c.Mimir.APIKey,
@@ -172,20 +169,89 @@ func expandEnvVars(s string) (string, error) {
 }
 
 // methods
+
+// FilePath returns the path to the alertmanager config file, preferring .yml
+// but falling back to .yaml if the .yml variant does not exist.
 func (c *LitmusConfig) FilePath() string {
-	return filepath.Join(c.Config.Directory, c.Config.File)
+	primary := filepath.Join(c.Workspace.Root, defaultConfigFile)
+	if _, err := os.Stat(primary); err == nil {
+		return primary
+	}
+	alt := filepath.Join(c.Workspace.Root, defaultConfigFileAlt)
+	if _, err := os.Stat(alt); err == nil {
+		return alt
+	}
+	return primary // return primary so callers get a meaningful "not found" path in errors
+}
+
+func (c *LitmusConfig) RegressionsDir() string {
+	return filepath.Join(c.Workspace.Root, defaultRegressionDir)
 }
 
 func (c *LitmusConfig) RegressionsYamlFilePath() string {
-	return filepath.Join(c.Regression.Directory, defaultRegressionYamlFile)
+	// Regressions always live in the root package's regressions/ directory
+	return filepath.Join(c.Workspace.Root, defaultRegressionDir, defaultRegressionYamlFile)
 }
 
 func (c *LitmusConfig) TemplatesDir() string {
-	return filepath.Join(c.Config.Directory, c.Config.Templates)
+	return filepath.Join(c.Workspace.Root, defaultConfigTemplatesDir)
 }
 
 func (c *LitmusConfig) TestsDir() string {
-	return c.Tests.Directory
+	return filepath.Join(c.Workspace.Root, defaultTestsDir)
+}
+
+// LoadAssembledConfig loads the base Alertmanager config and all fragments,
+// performing virtual assembly and namespacing.
+func (c *LitmusConfig) LoadAssembledConfig() (*amconfig.Config, []*Fragment, string, error) {
+	// 1. Load Base Config Package
+	base, raw, err := loadAlertmanagerConfig(c.FilePath())
+	if err != nil {
+		return nil, nil, "", err
+	}
+
+	// 2. Discover Fragments
+	fragments, err := LoadFragments(c.FragmentsPath())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "WARN: loading fragments: %v\n", err)
+	}
+
+	// Capture base routes before assembly (shallow copy — assembly appends to the slice
+	// in place and would otherwise pollute the root fragment with mounted fragment routes).
+	baseRoutes := make([]*amconfig.Route, len(base.Route.Routes))
+	copy(baseRoutes, base.Route.Routes)
+
+	// Load tests from the root tests/ directory.
+	rootTests, _ := behavioral.NewBehavioralTestLoader().LoadFromDirectory(c.TestsDir())
+
+	rootFrag := &Fragment{
+		Name:   "root",
+		Tests:  rootTests,
+		Routes: baseRoutes,
+	}
+
+	allFragments := append([]*Fragment{rootFrag}, fragments...)
+
+	if len(fragments) == 0 {
+		// No assembly needed, but always return allFragments so policy can run on root.
+		return base, allFragments, raw, nil
+	}
+
+	// 3. Assemble
+	assembler := NewAssembler(base)
+	assembled, err := assembler.Assemble(fragments)
+	if err != nil {
+		return nil, nil, "", fmt.Errorf("assembling fragments: %w", err)
+	}
+
+	return assembled, allFragments, raw, nil
+}
+
+func (c *LitmusConfig) FragmentsPath() string {
+	if filepath.IsAbs(c.Workspace.Fragments) {
+		return c.Workspace.Fragments
+	}
+	return filepath.Join(c.Workspace.Root, c.Workspace.Fragments)
 }
 
 func (m *MimirConfig) Validate() error {

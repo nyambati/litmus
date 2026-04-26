@@ -1,28 +1,26 @@
 # Litmus Configuration
 # See https://github.com/nyambati/litmus for documentation
 
-config:
-  directory: config # Alertmanager config directory
-  file: alertmanager.yml # Config filename
-  templates: templates/ # Templates directory (relative to config.directory)
+workspace:
+  root: "config" # The Root Package directory (contains alertmanager.yml, tests, regressions)
+  fragments: "fragments/*" # Discovery pattern for team fragments (relative to root)
+  history: 5 # Number of regression baselines to keep
 
 # Global Test Labels: These labels are automatically added to
 # EVERY synthesized alert during the 'snapshot' process.
 global_labels:
-  severity: "warning"
-  cluster: "production"
+
+# Policy Configuration (optional, enforced during 'litmus check')
+# Applies to both root package and all fragments by default.
+# policy:
+#   require_tests: true          # Root and every fragment must have at least one test
+#   enforce_matchers:            # Root and fragment routes must match on at least one of these labels
+#     - team
+#     - service
+#   skip_root: false             # Set true to exempt the root package from policy checks
 
 # Mimir Configuration (optional, used for 'litmus sync')
-mimir:
-  address: ""
-  tenant_id: ""
-  api_key: ""
-
-# Regression Settings
-regression:
-  directory: regressions/ # Baseline directory
-  keep: 3
-
-# Behavioral Unit Test (BUT) Settings
-tests:
-  directory: tests/ # Behavioral tests directory
+# mimir:
+#   address: ""
+#   tenant_id: ""
+#   api_key: ""

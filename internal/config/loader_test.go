@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,23 +15,20 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	cfg, err := LoadConfig()
 	require.NoError(t, err)
 
-	assert.Equal(t, defaultConfigDir, cfg.Config.Directory)
-	assert.Equal(t, defaultConfigFile, cfg.Config.File)
-	assert.Equal(t, defaultConfigTemplatesDir, cfg.Config.Templates)
-	assert.Equal(t, defaultRegressionDir, cfg.Regression.Directory)
-	assert.Equal(t, defaultRegressionKeep, cfg.Regression.Keep)
-	assert.Equal(t, defaultTestsDir, cfg.Tests.Directory)
+	assert.Equal(t, defaultConfigDir, cfg.Workspace.Root)
+	assert.Equal(t, defaultFragmentsPattern, cfg.Workspace.Fragments)
+	assert.Equal(t, defaultHistoryKeep, cfg.Workspace.History)
 }
 
 func TestLoadConfig_EnvOverrides(t *testing.T) {
 	os.Clearenv()
-	os.Setenv("LITMUS_CONFIG_DIRECTORY", "custom-config")
+	os.Setenv("LITMUS_WORKSPACE_ROOT", "custom-root")
 	os.Setenv("LITMUS_MIMIR_ADDRESS", "https://mimir.io")
 
 	cfg, err := LoadConfig()
 	require.NoError(t, err)
 
-	assert.Equal(t, "custom-config", cfg.Config.Directory)
+	assert.Equal(t, "custom-root", cfg.Workspace.Root)
 	assert.Equal(t, "https://mimir.io", cfg.Mimir.Address)
 }
 
@@ -70,7 +68,7 @@ mimir:
 	assert.Contains(t, err.Error(), "MISSING_VAR")
 }
 
-func TestLoadAlertmanagerConfig_EnvSubstitution(t *testing.T) {
+func TestAlertmanagerConfig_EnvSubstitution(t *testing.T) {
 	os.Setenv("AM_OPSGENIE_KEY", "test-key-123")
 	defer os.Unsetenv("AM_OPSGENIE_KEY")
 
@@ -90,7 +88,7 @@ receivers:
 	require.NoError(t, err)
 	f.Close()
 
-	cfg, _, err := LoadAlertmanagerConfig(f.Name())
+	cfg, _, err := loadAlertmanagerConfig(f.Name())
 	require.NoError(t, err)
 	assert.Equal(t, "test-key-123", string(cfg.Global.OpsGenieAPIKey))
 }
@@ -160,4 +158,142 @@ func TestExpandEnvVars(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestFilePath_YAMLFallback(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldCwd) }()
+	require.NoError(t, os.Chdir(tmpDir))
+
+	require.NoError(t, os.WriteFile(".litmus.yaml", []byte(`
+workspace:
+  root: "config"
+`), 0600))
+	require.NoError(t, os.MkdirAll("config", 0755))
+
+	cfg, err := LoadConfig()
+	require.NoError(t, err)
+
+	// No .yml file — FilePath should return primary path (not found yet)
+	assert.Equal(t, filepath.Join("config", "alertmanager.yml"), cfg.FilePath())
+
+	// Create .yaml variant — FilePath should now resolve to it
+	require.NoError(t, os.WriteFile(filepath.Join("config", "alertmanager.yaml"), []byte{}, 0600))
+	assert.Equal(t, filepath.Join("config", "alertmanager.yaml"), cfg.FilePath())
+
+	// Create .yml variant — .yml takes precedence over .yaml
+	require.NoError(t, os.WriteFile(filepath.Join("config", "alertmanager.yml"), []byte{}, 0600))
+	assert.Equal(t, filepath.Join("config", "alertmanager.yml"), cfg.FilePath())
+}
+
+func TestLoadAssembledConfig_NoFragments(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldCwd) }()
+	require.NoError(t, os.Chdir(tmpDir))
+
+	require.NoError(t, os.WriteFile(".litmus.yaml", []byte(`
+workspace:
+  root: "config"
+  fragments: "fragments/*"
+`), 0600))
+	require.NoError(t, os.MkdirAll("config", 0755))
+	require.NoError(t, os.WriteFile("config/alertmanager.yml", []byte(`
+global:
+  resolve_timeout: 5m
+route:
+  receiver: 'default'
+receivers:
+  - name: 'default'
+`), 0600))
+	require.NoError(t, os.MkdirAll("config/fragments", 0755))
+
+	cfg, err := LoadConfig()
+	require.NoError(t, err)
+
+	assembled, fragments, _, err := cfg.LoadAssembledConfig()
+	require.NoError(t, err)
+	assert.NotNil(t, assembled)
+	assert.Equal(t, "default", assembled.Route.Receiver)
+	// no team fragments — root fragment always returned for policy checks
+	require.Len(t, fragments, 1)
+	assert.Equal(t, "root", fragments[0].Name)
+}
+
+func TestLoadAssembledConfig_WithFragments(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldCwd) }()
+	require.NoError(t, os.Chdir(tmpDir))
+
+	require.NoError(t, os.WriteFile(".litmus.yaml", []byte(`
+workspace:
+  root: "config"
+  fragments: "fragments/*"
+`), 0600))
+	require.NoError(t, os.MkdirAll("config/fragments", 0755))
+	require.NoError(t, os.WriteFile("config/alertmanager.yml", []byte(`
+global:
+  resolve_timeout: 5m
+route:
+  receiver: 'default'
+receivers:
+  - name: 'default'
+`), 0600))
+	require.NoError(t, os.WriteFile(filepath.Join("config", "fragments", "db.yml"), []byte(`
+name: "db-team"
+namespace: "db"
+group:
+  match:
+    scope: "teams"
+routes:
+  - receiver: "critical"
+    match:
+      service: "mysql"
+receivers:
+  - name: "critical"
+`), 0600))
+	require.NoError(t, os.WriteFile(filepath.Join("config", "fragments", "db-tests.yml"), []byte(`
+- name: "mysql test"
+  expect: {outcome: active}
+`), 0600))
+
+	cfg, err := LoadConfig()
+	require.NoError(t, err)
+
+	assembled, fragments, _, err := cfg.LoadAssembledConfig()
+	require.NoError(t, err)
+
+	// Namespace applied: receiver renamed db-critical
+	receiverNames := make([]string, 0, len(assembled.Receivers))
+	for _, r := range assembled.Receivers {
+		receiverNames = append(receiverNames, r.Name)
+	}
+	assert.Contains(t, receiverNames, "db-critical")
+
+	// Group creates synthetic parent with scope=teams; db-critical route is its child
+	require.Len(t, assembled.Route.Routes, 1)
+	teamsRoute := assembled.Route.Routes[0]
+	assert.Equal(t, map[string]string{"scope": "teams"}, teamsRoute.Match)
+	require.Len(t, teamsRoute.Routes, 1)
+	assert.Equal(t, "db-critical", teamsRoute.Routes[0].Receiver)
+
+	// root frag + db-team frag returned; root has no pre-assembly sub-routes
+	require.Len(t, fragments, 2)
+	rootFrag := fragments[0]
+	assert.Equal(t, "root", rootFrag.Name)
+	assert.Empty(t, rootFrag.Routes, "base config has no sub-routes")
+
+	// Fragment test included
+	var testNames []string
+	for _, frag := range fragments {
+		for _, tc := range frag.Tests {
+			testNames = append(testNames, tc.Name)
+		}
+	}
+	assert.Contains(t, testNames, "mysql test")
 }

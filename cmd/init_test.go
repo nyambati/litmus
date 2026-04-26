@@ -24,8 +24,8 @@ func TestInitCommand_CreatesFiles(t *testing.T) {
 	require.FileExists(t, ".litmus.yaml")
 	require.DirExists(t, "config")
 	require.DirExists(t, "config/templates")
-	require.DirExists(t, "regressions")
-	require.DirExists(t, "tests")
+	require.DirExists(t, "config/regressions")
+	require.DirExists(t, "config/tests")
 }
 
 func TestInitCommand_LitmusYAML(t *testing.T) {
@@ -44,11 +44,10 @@ func TestInitCommand_LitmusYAML(t *testing.T) {
 
 	content, err := os.ReadFile(".litmus.yaml")
 	require.NoError(t, err)
-	require.Contains(t, string(content), "config:")
-	require.Contains(t, string(content), "directory: config")
+	require.Contains(t, string(content), "workspace:")
+	require.Contains(t, string(content), "root: \"config\"")
+	require.Contains(t, string(content), "history: 5")
 	require.Contains(t, string(content), "global_labels:")
-	require.Contains(t, string(content), "regression:")
-	require.Contains(t, string(content), "tests:")
 }
 
 func TestInitCommand_TestsDirectory(t *testing.T) {
@@ -64,7 +63,7 @@ func TestInitCommand_TestsDirectory(t *testing.T) {
 	err = cmd.Execute()
 
 	require.NoError(t, err)
-	require.FileExists(t, filepath.Join("tests", "README.md"))
+	require.FileExists(t, filepath.Join("config", "tests", "README.md"))
 }
 
 func TestInitCommand_DoesNotOverwrite(t *testing.T) {

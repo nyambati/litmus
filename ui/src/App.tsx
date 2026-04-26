@@ -6,12 +6,14 @@ import {
   ExplorerStats,
   LabStats,
   RegressionStats,
+  FragmentsStats,
 } from "./components/layout/PageStats";
 
 // Page components
 import { ExplorerPage } from "./components/explorer/ExplorerPage";
 import { LabPage } from "./components/lab/LabPage";
 import { RegressionPage } from "./components/regression/RegressionPage";
+import { FragmentsPage } from "./components/fragments/FragmentsPage";
 
 function App() {
   return (
@@ -40,6 +42,15 @@ function App() {
           element={
             <AppLayout stats={<RegressionStats />}>
               <RegressionPage />
+            </AppLayout>
+          }
+        />
+
+        <Route
+          path="/fragments"
+          element={
+            <AppLayout stats={<FragmentsStats />}>
+              <FragmentsPage />
             </AppLayout>
           }
         />
