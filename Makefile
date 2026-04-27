@@ -17,9 +17,7 @@ install-hooks:
 	@echo "Installing git hooks..."
 	@mkdir -p .git/hooks
 	@cp .git-hooks/pre-commit .git/hooks/pre-commit
-	@cp .git-hooks/commit-msg .git/hooks/commit-msg
 	@chmod +x .git/hooks/pre-commit
-	@chmod +x .git/hooks/commit-msg
 	@echo "✓ Git hooks installed"
 
 test:
@@ -27,8 +25,13 @@ test:
 	@go test ./... -v
 
 fmt:
-	@echo "Formatting code..."
-	@go fmt ./...
+	@echo "Checking formatting..."
+	@if [ -n "$$(gofmt -l .)" ]; then \
+		echo "✗ Formatting issues found:"; \
+		gofmt -l .; \
+		exit 1; \
+	fi
+	@echo "✓ Code is formatted"
 
 vet:
 	@echo "Running go vet..."

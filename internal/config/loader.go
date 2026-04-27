@@ -59,7 +59,7 @@ func LoadConfig() (*LitmusConfig, error) {
 
 	if err := v.ReadInConfig(); err != nil {
 		var notFoundErr viper.ConfigFileNotFoundError
-		if errors.Is(err, &notFoundErr) {
+		if errors.As(err, &notFoundErr) {
 			fmt.Fprintf(os.Stderr, "WARN: .litmus.yaml not found, using defaults\n")
 		} else {
 			return nil, fmt.Errorf("failed to read config: %w", err)
@@ -217,7 +217,7 @@ func (c *LitmusConfig) LoadAssembledConfig() (*AlertmanagerConfig, []*Fragment, 
 	}
 
 	rootTests, err := behavioral.NewBehavioralTestLoader().LoadFromDirectory(c.TestsDir())
-	if err != nil {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		fmt.Fprintf(os.Stderr, "WARN: could not load behavioral tests: %v\n", err)
 	}
 
@@ -230,7 +230,7 @@ func (c *LitmusConfig) LoadAssembledConfig() (*AlertmanagerConfig, []*Fragment, 
 	allFragments := append([]*Fragment{rootFrag}, fragments...)
 
 	if len(fragments) == 0 {
-		amCfg, err := ToAMConfig(base)
+		amCfg, err := base.ConvertToAMConfigStruct()
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("converting base config: %w", err)
 		}
@@ -243,7 +243,7 @@ func (c *LitmusConfig) LoadAssembledConfig() (*AlertmanagerConfig, []*Fragment, 
 		return nil, nil, nil, fmt.Errorf("assembling fragments: %w", err)
 	}
 
-	amCfg, err := ToAMConfig(assembled)
+	amCfg, err := assembled.ConvertToAMConfigStruct()
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("converting assembled config: %w", err)
 	}

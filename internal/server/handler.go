@@ -30,7 +30,12 @@ func loadAssembled(c *gin.Context, litmusConfig *config.LitmusConfig) (*amconfig
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading alertmanager config: %v", err))
 		return nil, nil, false
 	}
-	amConf, _ := config.ToAMConfig(amCfg)
+
+	amConf, err := amCfg.ConvertToAMConfigStruct()
+	if err != nil {
+		c.String(http.StatusInternalServerError, fmt.Sprintf("Converting to Alertmanager config: %v", err))
+		return nil, nil, false
+	}
 	return amConf, fragments, true
 }
 

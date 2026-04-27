@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/nyambati/litmus/internal/config"
 )
 
 func TestClientPush(t *testing.T) {
@@ -94,7 +96,11 @@ func TestClientPush(t *testing.T) {
 			}))
 			defer server.Close()
 
-			client := NewClient(server.URL, tt.tenantID, tt.apiKey)
+			client := NewClient(&config.MimirConfig{
+				Address:  server.URL,
+				TenantID: tt.tenantID,
+				APIKey:   tt.apiKey,
+			})
 			payload := PushPayload{
 				Config:    "global:\n  resolve_timeout: 5m\n",
 				Templates: map[string]string{"slack.tpl": "{{ .GroupLabels }}"},

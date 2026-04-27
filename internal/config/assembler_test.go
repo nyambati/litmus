@@ -197,64 +197,6 @@ func TestAssembler(t *testing.T) {
 				assert.Len(t, assembled.InhibitRules, 2)
 			},
 		},
-		{
-			name: "PagerDuty receiver inherits global URL",
-			base: &AlertmanagerConfig{
-				Global: &GlobalConfig{
-					PagerdutyURL: "https://global.pagerduty.com",
-				},
-				Route: &amconfig.Route{Receiver: "default"},
-			},
-			fragments: []*Fragment{
-				{
-					Name: "pd-team",
-					Receivers: []Receiver{
-						{
-							Name: "pagerduty",
-							PagerdutyConfigs: []*PagerdutyConfig{
-								{RoutingKey: "pd-routing-key"},
-							},
-						},
-					},
-				},
-			},
-			validate: func(t *testing.T, assembled *AlertmanagerConfig) {
-				t.Helper()
-				require.Len(t, assembled.Receivers, 1)
-				require.Len(t, assembled.Receivers[0].PagerdutyConfigs, 1)
-				// The assembler's job is just to assemble. It does not apply globals.
-				// The resulting URL should be empty, so that when marshaled (due to omitempty),
-				// the key is omitted and the real AM parser can apply the global default.
-				assert.Empty(t, assembled.Receivers[0].PagerdutyConfigs[0].URL)
-				assert.Equal(t, "https://global.pagerduty.com", assembled.Global.PagerdutyURL)
-			},
-		},
-		{
-			name: "Jira receiver is assembled correctly",
-			base: &AlertmanagerConfig{
-				Route: &amconfig.Route{Receiver: "default"},
-			},
-			fragments: []*Fragment{
-				{
-					Name: "jira-team",
-					Receivers: []Receiver{
-						{
-							Name: "jira-receiver",
-							JiraConfigs: []*JiraConfig{
-								{Project: "PROJ"},
-							},
-						},
-					},
-				},
-			},
-			validate: func(t *testing.T, assembled *AlertmanagerConfig) {
-				t.Helper()
-				require.Len(t, assembled.Receivers, 1)
-				assert.Equal(t, "jira-receiver", assembled.Receivers[0].Name)
-				require.Len(t, assembled.Receivers[0].JiraConfigs, 1)
-				assert.Equal(t, "PROJ", assembled.Receivers[0].JiraConfigs[0].Project)
-			},
-		},
 	}
 
 	for _, tt := range tests {

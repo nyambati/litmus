@@ -29,7 +29,7 @@ func RunSync(address, tenantID, apiKey string, skipValidate, dryRun bool, output
 		litmusConfig.Mimir.APIKey = apiKey
 	}
 
-	amConfig, _, _, err := litmusConfig.LoadAssembledConfig()
+	assembled, _, amConfig, err := litmusConfig.LoadAssembledConfig()
 	if err != nil {
 		return fmt.Errorf("loading alertmanager config: %w", err)
 	}
@@ -39,11 +39,7 @@ func RunSync(address, tenantID, apiKey string, skipValidate, dryRun bool, output
 	}
 
 	if !skipValidate {
-		amCfg, err := config.ToAMConfig(amConfig)
-		if err != nil {
-			return fmt.Errorf("converting config for validation: %w", err)
-		}
-		sanity := RunSanityChecks(amCfg, litmusConfig.Sanity)
+		sanity := RunSanityChecks(amConfig, litmusConfig.Sanity)
 		if !sanity.Passed {
 			fmt.Fprintf(os.Stderr, "Sanity checks failed. Use --skip-validate to bypass.\n")
 			return fmt.Errorf("sanity check failures")
@@ -51,18 +47,26 @@ func RunSync(address, tenantID, apiKey string, skipValidate, dryRun bool, output
 	}
 
 	if dryRun {
-		return outputAssembledConfig(amConfig, output)
+		return outputAssembledConfig(assembled, output)
 	}
 
 	if err := litmusConfig.Mimir.Validate(); err != nil {
 		return err
 	}
 
-	templates := loadTemplates(litmusConfig, amConfig.Templates)
+	templates, err := loadTemplates(litmusConfig, amConfig.Templates)
+	if err != nil {
+		return err
+	}
 
-	client := mimir.NewClient(litmusConfig.Mimir.Address, litmusConfig.Mimir.TenantID, litmusConfig.Mimir.APIKey)
+	client := mimir.NewClient(&litmusConfig.Mimir)
+	configPayload, err := assembled.String()
+	if err != nil {
+		return fmt.Errorf("converting assembled config to string: %w", err)
+	}
+
 	payload := mimir.PushPayload{
-		Config:    assembleYAML(amConfig),
+		Config:    configPayload,
 		Templates: templates,
 	}
 
@@ -92,16 +96,7 @@ func outputAssembledConfig(amCfg *config.AlertmanagerConfig, output string) erro
 	return nil
 }
 
-func assembleYAML(amCfg *config.AlertmanagerConfig) string {
-	yamlData, err := yaml.Marshal(amCfg)
-	if err != nil {
-		return ""
-	}
-
-	return string(yamlData)
-}
-
-func loadTemplates(litmusConfig *config.LitmusConfig, templateNames []string) map[string]string {
+func loadTemplates(litmusConfig *config.LitmusConfig, templateNames []string) (map[string]string, error) {
 	templates := make(map[string]string)
 
 	for _, filename := range templateNames {
@@ -113,13 +108,12 @@ func loadTemplates(litmusConfig *config.LitmusConfig, templateNames []string) ma
 
 		data, err := os.ReadFile(filePath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "WARN: could not read template %q: %v\n", filename, err)
-			continue
+			return nil, fmt.Errorf("reading template %q: %w", filename, err)
 		}
 
 		key := filepath.Base(filename)
 		templates[key] = string(data)
 	}
 
-	return templates
+	return templates, nil
 }
