@@ -77,65 +77,109 @@ type BehavioralResult struct {
 // the exit code the CLI layer should pass to os.Exit (0 = all passed).
 func RunCheck(format string, showDiff bool, tags []string) (CheckExitCode, error) {
 	start := time.Now()
-	ctx := context.Background()
 
+	litmusConfig, router, fragments, alertConfig, err := loadConfigAndRouter()
+	if err != nil {
+		return 1, err
+	}
+
+	sanityResult := runSanityChecks(litmusConfig, fragments, alertConfig)
+	regressionResult := runRegressionTests(litmusConfig, router, tags)
+	behavioralResult := runBehavioralTests(alertConfig.InhibitRules, litmusConfig, fragments, router, tags)
+
+	result := buildCheckResult(litmusConfig.FilePath(), sanityResult, regressionResult, behavioralResult, time.Since(start))
+
+	code := calculateExitCode(result)
+
+	if err := outputResults(result, format, showDiff); err != nil {
+		return 1, err
+	}
+
+	return code, nil
+}
+
+// loadConfigAndRouter loads the litmus config, assembles alertmanager config, and creates a router.
+func loadConfigAndRouter() (*config.LitmusConfig, *pipeline.Router, []*config.Fragment, *amconfig.Config, error) {
 	litmusConfig, err := config.LoadConfig()
 	if err != nil {
-		return 1, fmt.Errorf("loading litmus config: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("loading litmus config: %w", err)
 	}
 
 	alertConfig, fragments, _, err := litmusConfig.LoadAssembledConfig()
 	if err != nil {
-		return 1, fmt.Errorf("loading assembled alertmanager config: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("loading assembled alertmanager config: %w", err)
 	}
 
 	if alertConfig.Route == nil {
-		return 1, fmt.Errorf("alertmanager config has no route defined")
+		return nil, nil, nil, nil, fmt.Errorf("alertmanager config has no route defined")
 	}
 
 	router := pipeline.NewRouter(alertConfig.Route)
+	return litmusConfig, router, fragments, alertConfig, nil
+}
 
+// runSanityChecks executes all sanity checks including policy enforcement.
+func runSanityChecks(litmusConfig *config.LitmusConfig, fragments []*config.Fragment, alertConfig *amconfig.Config) SanityResult {
 	sanityResult := RunSanityChecks(alertConfig)
 	checker := sanity.NewPolicyChecker(litmusConfig.Policy)
 	sanityResult.PolicyIssues = checker.Check(fragments)
 	if len(sanityResult.PolicyIssues) > 0 {
 		sanityResult.Passed = false
 	}
-	regressionResult := RunRegressionTests(ctx, litmusConfig, router, tags)
-	behavioralResult := RunBehavioralTests(ctx, litmusConfig, fragments, router, alertConfig.InhibitRules, tags)
 
+	return sanityResult
+}
+
+// runRegressionTests executes regression tests against the router.
+func runRegressionTests(litmusConfig *config.LitmusConfig, router *pipeline.Router, tags []string) RegressionResult {
+	ctx := context.Background()
+	return RunRegressionTests(ctx, litmusConfig, router, tags)
+}
+
+// runBehavioralTests executes behavioral tests against the router and inhibit rules.
+func runBehavioralTests(inhibitRules []amconfig.InhibitRule, litmusConfig *config.LitmusConfig, fragments []*config.Fragment, router *pipeline.Router, tags []string) BehavioralResult {
+	ctx := context.Background()
+	return RunBehavioralTests(ctx, litmusConfig, fragments, router, inhibitRules, tags)
+}
+
+// buildCheckResult assembles the final check result from all test results.
+func buildCheckResult(configPath string, sanityResult SanityResult, regressionResult RegressionResult, behavioralResult BehavioralResult, duration time.Duration) CheckResult {
 	passed := sanityResult.Passed && regressionResult.Passed && behavioralResult.Passed
 
-	var code CheckExitCode
-	if !passed {
-		if !sanityResult.Passed {
-			code = 3
-		} else {
-			code = 2
-		}
-	}
-
-	result := CheckResult{
+	return CheckResult{
 		Passed:     passed,
-		ConfigPath: litmusConfig.FilePath(),
+		ConfigPath: configPath,
 		Sanity:     sanityResult,
 		Regression: regressionResult,
 		Behavioral: behavioralResult,
-		Duration:   time.Since(start),
-		ExitCode:   code,
+		Duration:   duration,
+	}
+}
+
+// calculateExitCode determines the exit code based on test results.
+func calculateExitCode(result CheckResult) CheckExitCode {
+	if result.Passed {
+		return 0
 	}
 
+	if !result.Sanity.Passed {
+		return 3
+	}
+	return 2
+}
+
+// outputResults formats and outputs the check results.
+func outputResults(result CheckResult, format string, showDiff bool) error {
 	if format == "json" {
 		data, err := json.MarshalIndent(result, "", "  ")
 		if err != nil {
-			return 1, fmt.Errorf("marshal JSON: %w", err)
+			return fmt.Errorf("marshal JSON: %w", err)
 		}
 		fmt.Println(string(data)) //nolint:forbidigo
 	} else {
 		PrintCheckResult(result, showDiff)
 	}
-
-	return code, nil
+	return nil
 }
 
 // RunSanityChecks runs all static analysis linters, returning per-category results.

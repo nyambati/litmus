@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/nyambati/litmus/internal/labelmatcher"
 	"github.com/nyambati/litmus/internal/stores"
 	amconfig "github.com/prometheus/alertmanager/config"
 	"github.com/prometheus/common/model"
@@ -11,9 +12,16 @@ import (
 
 // Outcome represents result of executing alert through pipeline.
 type Outcome struct {
-	Status    string   // "silenced", "inhibited", or "active"
+	Status    string   // one of StatusSilenced, StatusInhibited, StatusActive
 	Receivers []string // List of receivers if active
 }
+
+// Pipeline status constants
+const (
+	StatusSilenced  = "silenced"
+	StatusInhibited = "inhibited"
+	StatusActive    = "active"
+)
 
 // Runner is unified execution pipeline for routing and suppression.
 type Runner struct {
@@ -40,7 +48,7 @@ func (r *Runner) Execute(ctx context.Context, labels model.LabelSet) (*Outcome, 
 	}
 
 	if r.silenceStore != nil && r.silenceStore.Mutes(ctx, labels) {
-		return &Outcome{Status: "silenced"}, nil
+		return &Outcome{Status: StatusSilenced}, nil
 	}
 
 	if r.alertStore != nil {
@@ -50,7 +58,7 @@ func (r *Runner) Execute(ctx context.Context, labels model.LabelSet) (*Outcome, 
 			activeLabels := model.LabelSet(activeAlert.Labels)
 			if r.isInhibited(activeLabels, labels) {
 				iter.Close()
-				return &Outcome{Status: "inhibited"}, nil
+				return &Outcome{Status: StatusInhibited}, nil
 			}
 		}
 		iter.Close()
@@ -65,7 +73,7 @@ func (r *Runner) Execute(ctx context.Context, labels model.LabelSet) (*Outcome, 
 	}
 
 	return &Outcome{
-		Status:    "active",
+		Status:    StatusActive,
 		Receivers: receivers,
 	}, nil
 }
@@ -73,52 +81,15 @@ func (r *Runner) Execute(ctx context.Context, labels model.LabelSet) (*Outcome, 
 // isInhibited checks if target is inhibited by source using configured rules.
 func (r *Runner) isInhibited(source, target model.LabelSet) bool {
 	for _, rule := range r.inhibitRules {
-		if !r.sourceMatches(rule, source) {
+		if !labelmatcher.SourceMatches(rule, source) {
 			continue
 		}
-		if !r.targetMatches(rule, target) {
+		if !labelmatcher.TargetMatches(rule, target) {
 			continue
 		}
-		if r.equalLabelsMatch(rule.Equal, source, target) {
+		if labelmatcher.EqualLabelsMatch(rule.Equal, source, target) {
 			return true
 		}
 	}
 	return false
-}
-
-func (r *Runner) sourceMatches(rule amconfig.InhibitRule, labels model.LabelSet) bool {
-	for k, v := range rule.SourceMatch {
-		if string(labels[model.LabelName(k)]) != v {
-			return false
-		}
-	}
-	for _, m := range rule.SourceMatchers {
-		if !m.Matches(string(labels[model.LabelName(m.Name)])) {
-			return false
-		}
-	}
-	return true
-}
-
-func (r *Runner) targetMatches(rule amconfig.InhibitRule, labels model.LabelSet) bool {
-	for k, v := range rule.TargetMatch {
-		if string(labels[model.LabelName(k)]) != v {
-			return false
-		}
-	}
-	for _, m := range rule.TargetMatchers {
-		if !m.Matches(string(labels[model.LabelName(m.Name)])) {
-			return false
-		}
-	}
-	return true
-}
-
-func (r *Runner) equalLabelsMatch(equal model.LabelNames, source, target model.LabelSet) bool {
-	for _, name := range equal {
-		if source[name] != target[name] {
-			return false
-		}
-	}
-	return true
 }

@@ -31,7 +31,7 @@ func TestPipeline_Execute_Silenced(t *testing.T) {
 	outcome, err := pipeline.Execute(context.Background(), labels)
 
 	require.NoError(t, err)
-	require.Equal(t, "silenced", outcome.Status)
+	require.Equal(t, StatusSilenced, outcome.Status)
 }
 
 func TestPipeline_Execute_Active(t *testing.T) {
@@ -45,7 +45,7 @@ func TestPipeline_Execute_Active(t *testing.T) {
 	outcome, err := pipeline.Execute(context.Background(), labels)
 
 	require.NoError(t, err)
-	require.Equal(t, "active", outcome.Status)
+	require.Equal(t, StatusActive, outcome.Status)
 	require.Contains(t, outcome.Receivers, "default")
 }
 
@@ -77,5 +77,5 @@ func TestPipeline_Execute_Inhibited(t *testing.T) {
 	outcome, err := pipeline.Execute(context.Background(), labels)
 
 	require.NoError(t, err)
-	require.Equal(t, "inhibited", outcome.Status)
+	require.Equal(t, StatusInhibited, outcome.Status)
 }
