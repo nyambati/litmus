@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	litconfig "github.com/nyambati/litmus/internal/config"
+	labelmatcher "github.com/nyambati/litmus/internal/labelmatcher"
 	amconfig "github.com/prometheus/alertmanager/config"
 )
 
@@ -38,7 +39,7 @@ func (pc *PolicyChecker) Check(fragments []*litconfig.Fragment) []string {
 		if len(pc.policy.Enforce.Matchers) > 0 {
 			var groupInherited map[string]struct{}
 			if frag.Group != nil {
-				groupInherited = labelNamesFromStringMap(frag.Group.Match)
+				groupInherited = labelmatcher.LabelNamesFromStringMap(frag.Group.Match)
 			}
 			issues = append(issues, pc.checkRoutes(frag.Name, frag.Routes, groupInherited)...)
 		}
@@ -52,31 +53,50 @@ func (pc *PolicyChecker) Check(fragments []*litconfig.Fragment) []string {
 // Uncovered routes with children are cleared if all children resolve the coverage gap.
 // Uncovered leaf routes are always violations.
 func (pc *PolicyChecker) checkRoutes(fragName string, routes []*amconfig.Route, inherited map[string]struct{}) []string {
-	var issues []string
+	issues := make([]string, 0, len(routes))
 	for _, route := range routes {
-		union := unionLabelNames(inherited, labelNamesFromRoute(route))
-
-		if pc.isCovered(union) {
-			// This route satisfies the policy — skip descendants (they inherit coverage).
-			continue
-		}
-
-		if len(route.Routes) == 0 {
-			// Leaf route with incomplete coverage — definite violation.
-			issues = append(issues, pc.formatViolation(fragName, route.Receiver, pc.missingMatchers(union)))
-			continue
-		}
-
-		// Has children — check them with the accumulated union.
-		childIssues := pc.checkRoutes(fragName, route.Routes, union)
-		if len(childIssues) == 0 {
-			// All children resolved the coverage gap — parent violation cleared.
-			continue
-		}
-		// At least one child branch remains uncovered — propagate child issues.
-		issues = append(issues, childIssues...)
+		issues = append(issues, pc.checkRoute(fragName, route, inherited)...)
 	}
 	return issues
+}
+
+// checkRoute checks a single route and its children for policy violations.
+func (pc *PolicyChecker) checkRoute(fragName string, route *amconfig.Route, inherited map[string]struct{}) []string {
+	union := labelmatcher.UnionLabelNames(inherited, labelmatcher.LabelNamesFromRoute(route))
+
+	if pc.isCoveredByPolicy(union) {
+		return nil
+	}
+
+	if pc.isLeafRoute(route) {
+		return pc.reportLeafViolation(fragName, route, union)
+	}
+
+	return pc.checkChildRoutes(fragName, route, union)
+}
+
+// isCoveredByPolicy checks if the accumulated label names satisfy the enforce policy.
+func (pc *PolicyChecker) isCoveredByPolicy(labelNames map[string]struct{}) bool {
+	return pc.isCovered(labelNames)
+}
+
+// isLeafRoute checks if the route has no children.
+func (pc *PolicyChecker) isLeafRoute(route *amconfig.Route) bool {
+	return len(route.Routes) == 0
+}
+
+// reportLeafViolation creates a violation for a leaf route that doesn't satisfy the policy.
+func (pc *PolicyChecker) reportLeafViolation(fragName string, route *amconfig.Route, union map[string]struct{}) []string {
+	return []string{pc.formatViolation(fragName, route.Receiver, pc.missingMatchers(union))}
+}
+
+// checkChildRoutes processes child routes with the accumulated union of label names.
+func (pc *PolicyChecker) checkChildRoutes(fragName string, route *amconfig.Route, union map[string]struct{}) []string {
+	childIssues := pc.checkRoutes(fragName, route.Routes, union)
+	if len(childIssues) == 0 {
+		return nil
+	}
+	return childIssues
 }
 
 // missingMatchers returns which required matchers are absent from the accumulated label set.
@@ -116,33 +136,6 @@ func (pc *PolicyChecker) isCovered(labelNames map[string]struct{}) bool {
 	return false
 }
 
-// labelNamesFromRoute returns the set of label names present on a single route's own matchers.
-func labelNamesFromRoute(route *amconfig.Route) map[string]struct{} {
-	names := make(map[string]struct{}, len(route.Match)+len(route.MatchRE)+len(route.Matchers))
-	for k := range route.Match {
-		names[k] = struct{}{}
-	}
-	for k := range route.MatchRE {
-		names[k] = struct{}{}
-	}
-	for _, m := range route.Matchers {
-		names[m.Name] = struct{}{}
-	}
-	return names
-}
-
-// unionLabelNames merges two label name sets into a new set.
-func unionLabelNames(a, b map[string]struct{}) map[string]struct{} {
-	result := make(map[string]struct{}, len(a)+len(b))
-	for k := range a {
-		result[k] = struct{}{}
-	}
-	for k := range b {
-		result[k] = struct{}{}
-	}
-	return result
-}
-
 func (pc *PolicyChecker) formatViolation(fragName, receiver string, missing []string) string {
 	mode := "strict"
 	if !pc.policy.Enforce.Strict {
@@ -152,13 +145,4 @@ func (pc *PolicyChecker) formatViolation(fragName, receiver string, missing []st
 		"fragment %q: route to receiver %q is missing required matchers %v (policy: enforce_matchers, mode: %s)",
 		fragName, receiver, missing, mode,
 	)
-}
-
-// labelNamesFromStringMap returns the set of label names from an exact-match map.
-func labelNamesFromStringMap(m map[string]string) map[string]struct{} {
-	names := make(map[string]struct{}, len(m))
-	for k := range m {
-		names[k] = struct{}{}
-	}
-	return names
 }
