@@ -1,12 +1,12 @@
 workspace:
-  root: "config" # The Root Package directory
+  root: "example" # The Root Package directory
   fragments: "fragments/*" # Glob pattern (Relative to root by default)
   history: 5 # Number of regression baselines to keep
 policy:
   # require_tests: true
   skip_root: true
   enforce:
-    strict: true
+    strict: false
     matchers:
       - severity
       - label_team

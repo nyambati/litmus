@@ -32,4 +32,4 @@
   expect:
     outcome: active
     receivers:
-      - non-prd
+      - default

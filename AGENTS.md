@@ -81,16 +81,9 @@ Read `GEMINI.md` for absolute procedural rules. Highlights:
 This project has a graphify knowledge graph at `graphify-out/`.
 
 Rules:
+- Use engineering standards defined in `docs/engineering/`
 - Before answering architecture questions, read `graphify-out/GRAPH_REPORT.md` for god nodes & community structure
 - If `graphify-out/wiki/index.md` exists, navigate it instead of raw files
 - **After modifying code**, run `graphify update .` to keep graph current (AST-only, no API cost)
 
 ## Documentation Map
-
-- `docs/whitepaper.md`: Vision for deterministic validation
-- `docs/cli/design.md`: Command specs & lockfile philosophy
-- `docs/testing/{regression,behavioral}.md`: Test synthesis logic
-- `docs/technical/pipeline_runner.md`: Pipeline execution details
-- `docs/sanity/static_analysis.md`: Linter rules
-- `docs/tickets/`: Issue tracking (LIT-0 through LIT-17)
-- `docs/backlog.md`: Future enhancements

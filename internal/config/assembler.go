@@ -99,6 +99,11 @@ func (a *Assembler) applyNamespace(frag *Fragment) {
 	for _, route := range frag.Routes {
 		a.prefixRouteReceivers(route, prefix)
 	}
+
+	if frag.Group != nil && frag.Group.Receiver != "" &&
+		!strings.HasPrefix(frag.Group.Receiver, prefix) {
+		frag.Group.Receiver = prefix + frag.Group.Receiver
+	}
 }
 
 func (a *Assembler) prefixRouteReceivers(route *amconfig.Route, prefix string) {

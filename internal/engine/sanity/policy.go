@@ -36,7 +36,11 @@ func (pc *PolicyChecker) Check(fragments []*litconfig.Fragment) []string {
 		}
 
 		if len(pc.policy.Enforce.Matchers) > 0 {
-			issues = append(issues, pc.checkRoutes(frag.Name, frag.Routes, nil)...)
+			var groupInherited map[string]struct{}
+			if frag.Group != nil {
+				groupInherited = labelNamesFromStringMap(frag.Group.Match)
+			}
+			issues = append(issues, pc.checkRoutes(frag.Name, frag.Routes, groupInherited)...)
 		}
 	}
 	return issues
@@ -59,7 +63,7 @@ func (pc *PolicyChecker) checkRoutes(fragName string, routes []*amconfig.Route, 
 
 		if len(route.Routes) == 0 {
 			// Leaf route with incomplete coverage — definite violation.
-			issues = append(issues, pc.formatViolation(fragName, route.Receiver))
+			issues = append(issues, pc.formatViolation(fragName, route.Receiver, pc.missingMatchers(union)))
 			continue
 		}
 
@@ -73,6 +77,23 @@ func (pc *PolicyChecker) checkRoutes(fragName string, routes []*amconfig.Route, 
 		issues = append(issues, childIssues...)
 	}
 	return issues
+}
+
+// missingMatchers returns which required matchers are absent from the accumulated label set.
+// In strict (AND) mode: returns each required label not present in the union.
+// In non-strict (OR) mode: violation means none matched, so all required labels are returned.
+func (pc *PolicyChecker) missingMatchers(labelNames map[string]struct{}) []string {
+	if pc.policy.Enforce.Strict {
+		var missing []string
+		for _, required := range pc.policy.Enforce.Matchers {
+			if _, ok := labelNames[required]; !ok {
+				missing = append(missing, required)
+			}
+		}
+		return missing
+	}
+	// OR mode: violated only when none present — return all as missing.
+	return pc.policy.Enforce.Matchers
 }
 
 // isCovered reports whether the accumulated label names satisfy the enforce policy.
@@ -122,13 +143,22 @@ func unionLabelNames(a, b map[string]struct{}) map[string]struct{} {
 	return result
 }
 
-func (pc *PolicyChecker) formatViolation(fragName, receiver string) string {
+func (pc *PolicyChecker) formatViolation(fragName, receiver string, missing []string) string {
 	mode := "strict"
 	if !pc.policy.Enforce.Strict {
 		mode = "non-strict"
 	}
 	return fmt.Sprintf(
 		"fragment %q: route to receiver %q is missing required matchers %v (policy: enforce_matchers, mode: %s)",
-		fragName, receiver, pc.policy.Enforce.Matchers, mode,
+		fragName, receiver, missing, mode,
 	)
+}
+
+// labelNamesFromStringMap returns the set of label names from an exact-match map.
+func labelNamesFromStringMap(m map[string]string) map[string]struct{} {
+	names := make(map[string]struct{}, len(m))
+	for k := range m {
+		names[k] = struct{}{}
+	}
+	return names
 }
