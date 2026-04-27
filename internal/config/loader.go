@@ -45,6 +45,7 @@ func LoadConfig() (*LitmusConfig, error) {
 	v.SetDefault("mimir.address", "")
 	v.SetDefault("mimir.tenant_id", "")
 	v.SetDefault("mimir.api_key", "")
+	v.SetDefault("policy.enforce.strict", true)
 
 	// 2. Environment Variables
 	v.SetEnvPrefix("LITMUS")
@@ -213,7 +214,8 @@ func (c *LitmusConfig) LoadAssembledConfig() (*amconfig.Config, []*Fragment, str
 	// 2. Discover Fragments
 	fragments, err := LoadFragments(c.FragmentsPath())
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "WARN: loading fragments: %v\n", err)
+		err := fmt.Errorf("WARN: loading fragments: %w", err)
+		return nil, nil, "", err
 	}
 
 	// Capture base routes before assembly (shallow copy — assembly appends to the slice

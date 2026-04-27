@@ -37,11 +37,12 @@ type CheckResult struct {
 
 // SanityResult holds per-category static analysis results.
 type SanityResult struct {
-	Passed           bool     `json:"passed"`
-	ShadowedIssues   []string `json:"shadowed_issues,omitempty"`
-	OrphanIssues     []string `json:"orphan_issues,omitempty"`
-	InhibitionIssues []string `json:"inhibition_issues,omitempty"`
-	PolicyIssues     []string `json:"policy_issues,omitempty"`
+	Passed             bool     `json:"passed"`
+	ShadowedIssues     []string `json:"shadowed_issues,omitempty"`
+	OrphanIssues       []string `json:"orphan_issues,omitempty"`
+	InhibitionIssues   []string `json:"inhibition_issues,omitempty"`
+	PolicyIssues       []string `json:"policy_issues,omitempty"`
+	DeadReceiverIssues []string `json:"dead_receiver_issues,omitempty"`
 }
 
 // TestFailure holds structured detail for a single test failure.
@@ -158,7 +159,10 @@ func RunSanityChecks(alertConfig *amconfig.Config) SanityResult {
 	inhibition := sanity.NewInhibitionCycleDetector(rules)
 	result.InhibitionIssues = inhibition.DetectCycles()
 
-	if len(result.ShadowedIssues)+len(result.OrphanIssues)+len(result.InhibitionIssues) > 0 {
+	dead := sanity.NewDeadReceiverDetector(alertConfig.Route)
+	result.DeadReceiverIssues = dead.Detect()
+
+	if len(result.ShadowedIssues)+len(result.OrphanIssues)+len(result.InhibitionIssues)+len(result.DeadReceiverIssues) > 0 {
 		result.Passed = false
 	}
 	return result
@@ -290,6 +294,7 @@ func PrintCheckResult(r CheckResult, showDiff bool) {
 	printSanityCategory("No orphan receivers", r.Sanity.OrphanIssues)
 	printSanityCategory("No inhibition cycles", r.Sanity.InhibitionIssues)
 	printSanityCategory("No policy violations", r.Sanity.PolicyIssues)
+	printSanityCategory("No dead receivers detected", r.Sanity.DeadReceiverIssues)
 	fmt.Println()
 
 	// 2. Regressions
@@ -418,7 +423,7 @@ func formatSummary(r CheckResult) string {
 	if n := len(r.Regression.Failures); n > 0 {
 		parts = append(parts, fmt.Sprintf("%d Regression%s", n, plural(n)))
 	}
-	sanityWarnings := len(r.Sanity.ShadowedIssues) + len(r.Sanity.OrphanIssues) + len(r.Sanity.InhibitionIssues) + len(r.Sanity.PolicyIssues)
+	sanityWarnings := len(r.Sanity.ShadowedIssues) + len(r.Sanity.OrphanIssues) + len(r.Sanity.InhibitionIssues) + len(r.Sanity.DeadReceiverIssues)
 	if sanityWarnings > 0 {
 		parts = append(parts, fmt.Sprintf("%d Sanity Warning%s", sanityWarnings, plural(sanityWarnings)))
 	}

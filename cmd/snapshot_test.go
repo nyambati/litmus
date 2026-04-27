@@ -523,3 +523,293 @@ receivers:
 	require.NoError(t, err)
 	assert.Contains(t, string(data), "db-critical", "snapshot must capture routes from assembled fragments")
 }
+
+func countHistoryEntries(t *testing.T) int {
+	t.Helper()
+	entries, _ := os.ReadDir(historyDir)
+	count := 0
+	for _, e := range entries {
+		if strings.HasSuffix(e.Name(), ".mpk") && !strings.HasPrefix(e.Name(), "regressions.litmus") {
+			count++
+		}
+	}
+	return count
+}
+
+func getBaselineID(t *testing.T, ymlPath string) string {
+	t.Helper()
+	data, err := os.ReadFile(ymlPath)
+	require.NoError(t, err)
+	for _, line := range strings.Split(string(data), "\n") {
+		if strings.HasPrefix(line, "id:") {
+			return strings.TrimSpace(strings.TrimPrefix(line, "id:"))
+		}
+	}
+	return ""
+}
+
+func TestSnapshotCapture_NoHistory_CreatesBaselineAndHistory(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldCwd) }()
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	err = os.WriteFile(".litmus.yaml", []byte(`
+workspace:
+  root: "config"
+  history: 3
+global_labels:
+  severity: "warning"
+`), 0600)
+	require.NoError(t, err)
+
+	err = os.MkdirAll("config", 0755)
+	require.NoError(t, err)
+	err = os.WriteFile("config/alertmanager.yml", []byte(`
+global:
+  resolve_timeout: 5m
+route:
+  receiver: 'default'
+receivers:
+  - name: 'default'
+`), 0600)
+	require.NoError(t, err)
+
+	cmd := newSnapshotCmd()
+	cmd.SetArgs([]string{"capture"})
+	err = cmd.Execute()
+	require.NoError(t, err)
+
+	require.FileExists(t, filepath.Join(historyDir, "regressions.litmus.yml"))
+
+	historyCount := countHistoryEntries(t)
+	require.Equal(t, 1, historyCount, "should have exactly 1 history entry")
+
+	firstID := getBaselineID(t, filepath.Join(historyDir, "regressions.litmus.yml"))
+	require.NotEmpty(t, firstID, "baseline should have an ID")
+}
+
+func TestSnapshotCapture_WithHistory_DriftDoesNotUpdateBaseline(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldCwd) }()
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	err = os.WriteFile(".litmus.yaml", []byte(`
+workspace:
+  root: "config"
+  history: 3
+global_labels:
+  severity: "warning"
+`), 0600)
+	require.NoError(t, err)
+
+	err = os.MkdirAll("config", 0755)
+	require.NoError(t, err)
+	err = os.WriteFile("config/alertmanager.yml", []byte(`
+global:
+  resolve_timeout: 5m
+route:
+  receiver: 'default'
+receivers:
+  - name: 'default'
+`), 0600)
+	require.NoError(t, err)
+
+	cmd := newSnapshotCmd()
+	cmd.SetArgs([]string{"capture"})
+	err = cmd.Execute()
+	require.NoError(t, err)
+
+	initialID := getBaselineID(t, filepath.Join(historyDir, "regressions.litmus.yml"))
+	historyCountBefore := countHistoryEntries(t)
+
+	err = os.WriteFile("config/alertmanager.yml", []byte(`
+global:
+  resolve_timeout: 5m
+route:
+  receiver: 'default'
+  routes:
+    - receiver: 'api-team'
+      match:
+        service: 'api'
+receivers:
+  - name: 'default'
+  - name: 'api-team'
+`), 0600)
+	require.NoError(t, err)
+
+	cmd = newSnapshotCmd()
+	cmd.SetArgs([]string{"capture"})
+	err = cmd.Execute()
+	require.NoError(t, err)
+
+	currentID := getBaselineID(t, filepath.Join(historyDir, "regressions.litmus.yml"))
+	historyCountAfter := countHistoryEntries(t)
+
+	require.Equal(t, initialID, currentID, "baseline ID should NOT change when drift detected during capture")
+	require.Equal(t, historyCountBefore, historyCountAfter, "history count should NOT change when drift detected during capture")
+}
+
+func TestSnapshotCapture_WithHistory_NoDriftReportsBaselineCurrent(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldCwd) }()
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	err = os.WriteFile(".litmus.yaml", []byte(`
+workspace:
+  root: "config"
+  history: 3
+global_labels:
+  severity: "warning"
+`), 0600)
+	require.NoError(t, err)
+
+	err = os.MkdirAll("config", 0755)
+	require.NoError(t, err)
+	err = os.WriteFile("config/alertmanager.yml", []byte(`
+global:
+  resolve_timeout: 5m
+route:
+  receiver: 'default'
+receivers:
+  - name: 'default'
+`), 0600)
+	require.NoError(t, err)
+
+	cmd := newSnapshotCmd()
+	cmd.SetArgs([]string{"capture"})
+	err = cmd.Execute()
+	require.NoError(t, err)
+
+	initialID := getBaselineID(t, filepath.Join(historyDir, "regressions.litmus.yml"))
+
+	cmd = newSnapshotCmd()
+	cmd.SetArgs([]string{"capture"})
+	err = cmd.Execute()
+	require.NoError(t, err)
+
+	currentID := getBaselineID(t, filepath.Join(historyDir, "regressions.litmus.yml"))
+
+	require.Equal(t, initialID, currentID, "baseline ID should not change when baseline is current")
+}
+
+func TestSnapshotUpdate_WithDrift_CreatesNewHistory(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldCwd) }()
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	err = os.WriteFile(".litmus.yaml", []byte(`
+workspace:
+  root: "config"
+  history: 3
+global_labels:
+  severity: "warning"
+`), 0600)
+	require.NoError(t, err)
+
+	err = os.MkdirAll("config", 0755)
+	require.NoError(t, err)
+	err = os.WriteFile("config/alertmanager.yml", []byte(`
+global:
+  resolve_timeout: 5m
+route:
+  receiver: 'default'
+receivers:
+  - name: 'default'
+`), 0600)
+	require.NoError(t, err)
+
+	cmd := newSnapshotCmd()
+	cmd.SetArgs([]string{"capture"})
+	err = cmd.Execute()
+	require.NoError(t, err)
+
+	initialID := getBaselineID(t, filepath.Join(historyDir, "regressions.litmus.yml"))
+	historyCountBefore := countHistoryEntries(t)
+
+	err = os.WriteFile("config/alertmanager.yml", []byte(`
+global:
+  resolve_timeout: 5m
+route:
+  receiver: 'default'
+  routes:
+    - receiver: 'api-team'
+      match:
+        service: 'api'
+receivers:
+  - name: 'default'
+  - name: 'api-team'
+`), 0600)
+	require.NoError(t, err)
+
+	cmd = newSnapshotCmd()
+	cmd.SetArgs([]string{"update"})
+	err = cmd.Execute()
+	require.NoError(t, err)
+
+	currentID := getBaselineID(t, filepath.Join(historyDir, "regressions.litmus.yml"))
+	historyCountAfter := countHistoryEntries(t)
+
+	require.NotEqual(t, initialID, currentID, "baseline ID should change after update with drift")
+	require.Equal(t, historyCountBefore+1, historyCountAfter, "should create new history entry")
+}
+
+func TestSnapshotUpdate_WithNoDrift_ReportsNoChanges(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldCwd) }()
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	err = os.WriteFile(".litmus.yaml", []byte(`
+workspace:
+  root: "config"
+  history: 3
+global_labels:
+  severity: "warning"
+`), 0600)
+	require.NoError(t, err)
+
+	err = os.MkdirAll("config", 0755)
+	require.NoError(t, err)
+	err = os.WriteFile("config/alertmanager.yml", []byte(`
+global:
+  resolve_timeout: 5m
+route:
+  receiver: 'default'
+receivers:
+  - name: 'default'
+`), 0600)
+	require.NoError(t, err)
+
+	cmd := newSnapshotCmd()
+	cmd.SetArgs([]string{"capture"})
+	err = cmd.Execute()
+	require.NoError(t, err)
+
+	initialID := getBaselineID(t, filepath.Join(historyDir, "regressions.litmus.yml"))
+	historyCountBefore := countHistoryEntries(t)
+
+	cmd = newSnapshotCmd()
+	cmd.SetArgs([]string{"update"})
+	err = cmd.Execute()
+	require.NoError(t, err)
+
+	currentID := getBaselineID(t, filepath.Join(historyDir, "regressions.litmus.yml"))
+	historyCountAfter := countHistoryEntries(t)
+
+	require.Equal(t, initialID, currentID, "baseline ID should not change")
+	require.Equal(t, historyCountBefore, historyCountAfter, "history count should not change")
+}

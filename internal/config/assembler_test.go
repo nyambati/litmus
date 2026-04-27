@@ -95,6 +95,48 @@ func TestAssembler(t *testing.T) {
 			},
 		},
 		{
+			name: "Namespace prefixes Group.Receiver and child route receivers",
+			base: &amconfig.Config{
+				Route: &amconfig.Route{Receiver: "default"},
+			},
+			fragments: []*Fragment{
+				{
+					Name:      "payments",
+					Namespace: "payments",
+					Group: &FragmentGroup{
+						Match:    map[string]string{"label_team": "payments"},
+						Receiver: "fallback",
+					},
+					Routes: []*amconfig.Route{
+						{Receiver: "critical"},
+						{Receiver: "warning"},
+					},
+					Receivers: []amconfig.Receiver{
+						{Name: "fallback"},
+						{Name: "critical"},
+						{Name: "warning"},
+					},
+				},
+			},
+			validate: func(t *testing.T, assembled *amconfig.Config) {
+				t.Helper()
+				// synthetic parent route receiver must be prefixed
+				require.Len(t, assembled.Route.Routes, 1)
+				parent := assembled.Route.Routes[0]
+				assert.Equal(t, "payments-fallback", parent.Receiver)
+				// child route receivers must be prefixed
+				require.Len(t, parent.Routes, 2)
+				assert.Equal(t, "payments-critical", parent.Routes[0].Receiver)
+				assert.Equal(t, "payments-warning", parent.Routes[1].Receiver)
+				// named receivers must be prefixed
+				names := make([]string, len(assembled.Receivers))
+				for i, r := range assembled.Receivers {
+					names[i] = r.Name
+				}
+				assert.ElementsMatch(t, []string{"payments-fallback", "payments-critical", "payments-warning"}, names)
+			},
+		},
+		{
 			name: "Two Fragments Same Group — Co-located",
 			base: &amconfig.Config{
 				Route: &amconfig.Route{Receiver: "default"},

@@ -11,6 +11,7 @@ Welcome to Litmus documentation. Choose your starting point:
 - **[User Guide](cli/user_guide.md)** — How to use each command (init, snapshot, check, diff, inspect, sync)
 - **[Interactive UI Guide](ui_guide.md)** — How to use the web interface
 - **[Configuration](cli/configuration.md)** — Complete `litmus.yaml` schema and options
+- **[Policies](policies.md)** — Enforce workspace-wide rules (require_tests, enforce_matchers)
 
 ### Understanding Litmus
 - **[Whitepaper](whitepaper.md)** — Vision and motivation (5 min read)
@@ -37,6 +38,7 @@ Welcome to Litmus documentation. Choose your starting point:
 |------|----------|
 | "How do I use Litmus?" | [User Guide](cli/user_guide.md) |
 | "How do I configure it?" | [Configuration](cli/configuration.md) |
+| "How do I enforce routing rules?" | [Policies](policies.md) |
 | "Why does Litmus exist?" | [Whitepaper](whitepaper.md) |
 | "How is it designed?" | [Architecture](architecture.md) |
 | "What's next?" | [Backlog](backlog.md) |

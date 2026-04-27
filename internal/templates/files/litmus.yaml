@@ -14,10 +14,12 @@ global_labels:
 # Applies to both root package and all fragments by default.
 # policy:
 #   require_tests: true          # Root and every fragment must have at least one test
-#   enforce_matchers:            # Root and fragment routes must match on at least one of these labels
-#     - team
-#     - service
 #   skip_root: false             # Set true to exempt the root package from policy checks
+#   enforce:
+#     strict: true               # true = AND (all labels required), false = OR (any one label)
+#     matchers:                  # Label names that must appear in every route path
+#       - team
+#       - service
 
 # Mimir Configuration (optional, used for 'litmus sync')
 # mimir:

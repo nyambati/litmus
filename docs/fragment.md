@@ -25,14 +25,15 @@ workspace:
 
 # Policy is optional. Enforced during 'litmus check'.
 # Applies to root and all fragments unless skip_root: true.
-# enforce_matchers only applies to fragment routes (root is exempt — it uses
-# its own established label conventions).
+# See docs/policies.md for full details on strict vs non-strict mode.
 # policy:
 #   require_tests: true
-#   enforce_matchers:
-#     - team
-#     - service
 #   skip_root: false
+#   enforce:
+#     strict: true     # AND — all labels must be present in the accumulated path
+#     matchers:
+#       - team
+#       - service
 ```
 
 The `fragments` value is a glob. Beyond the default, useful forms include:
@@ -147,13 +148,12 @@ Policy rules run during `litmus check` as part of the sanity stage.
 
 | Rule | Applies to | Behaviour |
 | :--- | :--- | :--- |
+| Rule | Applies to | Behaviour |
 | `require_tests` | Root + all fragments | Each package must have ≥1 test |
-| `enforce_matchers` | Fragment routes only | Each fragment route must match on ≥1 listed label |
+| `enforce.matchers` | All routes (recursive) | Every route path must accumulate the required labels |
 | `skip_root` | Root package | When `true`, root is exempt from all policy checks |
 
-`enforce_matchers` is intentionally not applied to the root package. Root routes are
-platform-level infrastructure (catch-alls, environment splits, country routes) that use
-their own established label conventions. Fragment authors are the target audience.
+`enforce.matchers` checks the **accumulated** label names from a route and all its ancestors, not just the route's own matchers. A route that inherits a required label from a parent is not flagged. See [docs/policies.md](policies.md) for strict vs non-strict mode and full traces.
 
 ## 7. `litmus init` Scaffold
 
