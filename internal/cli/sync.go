@@ -51,7 +51,7 @@ func RunSync(address, tenantID, apiKey string, skipValidate, dryRun bool, output
 	}
 
 	if dryRun {
-		return outputAssembledConfig(litmusConfig, output)
+		return outputAssembledConfig(amConfig, output)
 	}
 
 	if err := litmusConfig.Mimir.Validate(); err != nil {
@@ -62,7 +62,7 @@ func RunSync(address, tenantID, apiKey string, skipValidate, dryRun bool, output
 
 	client := mimir.NewClient(litmusConfig.Mimir.Address, litmusConfig.Mimir.TenantID, litmusConfig.Mimir.APIKey)
 	payload := mimir.PushPayload{
-		Config:    assembleYAML(litmusConfig),
+		Config:    assembleYAML(amConfig),
 		Templates: templates,
 	}
 
@@ -74,12 +74,7 @@ func RunSync(address, tenantID, apiKey string, skipValidate, dryRun bool, output
 	return nil
 }
 
-func outputAssembledConfig(litmusConfig *config.LitmusConfig, output string) error {
-	amCfg, _, _, err := litmusConfig.LoadAssembledConfig()
-	if err != nil {
-		return fmt.Errorf("loading config: %w", err)
-	}
-
+func outputAssembledConfig(amCfg *config.AlertmanagerConfig, output string) error {
 	yamlData, err := yaml.Marshal(amCfg)
 	if err != nil {
 		return fmt.Errorf("marshaling config: %w", err)
@@ -97,13 +92,12 @@ func outputAssembledConfig(litmusConfig *config.LitmusConfig, output string) err
 	return nil
 }
 
-func assembleYAML(litmusConfig *config.LitmusConfig) string {
-	amCfg, _, _, err := litmusConfig.LoadAssembledConfig()
+func assembleYAML(amCfg *config.AlertmanagerConfig) string {
+	yamlData, err := yaml.Marshal(amCfg)
 	if err != nil {
 		return ""
 	}
 
-	yamlData, _ := yaml.Marshal(amCfg)
 	return string(yamlData)
 }
 
@@ -119,6 +113,7 @@ func loadTemplates(litmusConfig *config.LitmusConfig, templateNames []string) ma
 
 		data, err := os.ReadFile(filePath)
 		if err != nil {
+			fmt.Fprintf(os.Stderr, "WARN: could not read template %q: %v\n", filename, err)
 			continue
 		}
 

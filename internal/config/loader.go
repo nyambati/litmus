@@ -216,7 +216,10 @@ func (c *LitmusConfig) LoadAssembledConfig() (*AlertmanagerConfig, []*Fragment, 
 		copy(baseRoutes, base.Route.Routes)
 	}
 
-	rootTests, _ := behavioral.NewBehavioralTestLoader().LoadFromDirectory(c.TestsDir())
+	rootTests, err := behavioral.NewBehavioralTestLoader().LoadFromDirectory(c.TestsDir())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "WARN: could not load behavioral tests: %v\n", err)
+	}
 
 	rootFrag := &Fragment{
 		Name:   "root",
@@ -227,7 +230,10 @@ func (c *LitmusConfig) LoadAssembledConfig() (*AlertmanagerConfig, []*Fragment, 
 	allFragments := append([]*Fragment{rootFrag}, fragments...)
 
 	if len(fragments) == 0 {
-		amCfg, _ := ToAMConfig(base)
+		amCfg, err := ToAMConfig(base)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("converting base config: %w", err)
+		}
 		return base, allFragments, amCfg, nil
 	}
 
@@ -237,6 +243,9 @@ func (c *LitmusConfig) LoadAssembledConfig() (*AlertmanagerConfig, []*Fragment, 
 		return nil, nil, nil, fmt.Errorf("assembling fragments: %w", err)
 	}
 
-	amCfg, _ := ToAMConfig(assembled)
+	amCfg, err := ToAMConfig(assembled)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("converting assembled config: %w", err)
+	}
 	return assembled, allFragments, amCfg, nil
 }

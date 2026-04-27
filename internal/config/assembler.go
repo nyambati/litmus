@@ -17,6 +17,10 @@ func NewAssembler(base *AlertmanagerConfig) *Assembler {
 }
 
 func (a *Assembler) Assemble(fragments []*Fragment) (*AlertmanagerConfig, error) {
+	if a.base.Route == nil {
+		a.base.Route = &amconfig.Route{}
+	}
+
 	type groupEntry struct {
 		route    *amconfig.Route
 		receiver string
