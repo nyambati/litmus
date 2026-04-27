@@ -25,12 +25,13 @@ import (
 // loadAssembled loads the assembled alertmanager config and fragments, writing
 // an error response and returning false on failure.
 func loadAssembled(c *gin.Context, litmusConfig *config.LitmusConfig) (*amconfig.Config, []*config.Fragment, bool) {
-	alertConfig, fragments, _, err := litmusConfig.LoadAssembledConfig()
+	amCfg, fragments, _, err := litmusConfig.LoadAssembledConfig()
 	if err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading alertmanager config: %v", err))
 		return nil, nil, false
 	}
-	return alertConfig, fragments, true
+	amConf, _ := config.ToAMConfig(amCfg)
+	return amConf, fragments, true
 }
 
 func getLitmusConfig(c *gin.Context) *config.LitmusConfig {

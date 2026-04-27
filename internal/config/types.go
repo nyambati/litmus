@@ -33,16 +33,28 @@ type (
 		Enforce      EnforceConfig `yaml:"enforce"      mapstructure:"enforce"`
 	}
 
+	// SanityMode defines whether a sanity check should warn or fail.
+	SanityMode string
+
+	// SanityConfig defines sanity check behavior modes.
+	SanityConfig struct {
+		OrphanReceivers  SanityMode `yaml:"orphan_receivers" mapstructure:"orphan_receivers"`
+		DeadReceivers    SanityMode `yaml:"dead_receivers" mapstructure:"dead_receivers"`
+		ShadowedRoutes   SanityMode `yaml:"shadowed_routes" mapstructure:"shadowed_routes"`
+		InhibitionCycles SanityMode `yaml:"inhibition_cycles" mapstructure:"inhibition_cycles"`
+		PolicyViolations SanityMode `yaml:"policy_violations" mapstructure:"policy_violations"`
+	}
+
 	// LitmusConfig is the root configuration object.
 	LitmusConfig struct {
 		Workspace    WorkspaceConfig   `yaml:"workspace" mapstructure:"workspace"`
 		Policy       PolicyConfig      `yaml:"policy" mapstructure:"policy"`
+		Sanity       SanityConfig      `yaml:"sanity" mapstructure:"sanity"`
 		GlobalLabels map[string]string `yaml:"global_labels" mapstructure:"global_labels"`
 		Mimir        MimirConfig       `yaml:"mimir" mapstructure:"mimir"`
 	}
 
 	// FragmentGroup defines a synthetic parent route created during assembly.
-	// Match uses exact label matching only — no regex support on the synthetic parent.
 	FragmentGroup struct {
 		Match    map[string]string `yaml:"match"`
 		Receiver string            `yaml:"receiver"`
@@ -54,10 +66,19 @@ type (
 		Namespace    string                 `yaml:"namespace"`
 		Group        *FragmentGroup         `yaml:"group"`
 		Routes       []*amconfig.Route      `yaml:"routes"`
-		Receivers    []amconfig.Receiver    `yaml:"receivers"`
+		Receivers    []Receiver             `yaml:"receivers"`
 		InhibitRules []amconfig.InhibitRule `yaml:"inhibit_rules"`
 		// Tests are discovered from sibling *-tests.yml files and tests/ subdirectory.
 		// Never parsed from the fragment definition file itself.
 		Tests []*types.TestCase `yaml:"-"`
 	}
 )
+
+const (
+	SanityModeFail SanityMode = "fail"
+	SanityModeWarn SanityMode = "warn"
+)
+
+func (m SanityMode) IsFail() bool {
+	return m == SanityModeFail
+}

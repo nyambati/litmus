@@ -21,6 +21,15 @@ global_labels:
 #       - team
 #       - service
 
+# Sanity Checks (optional, defaults to fail mode for all categories)
+# Set specific checks to "warn" if you want them to pass with warnings
+# sanity:
+#   orphan_receivers: warn       # "warn" or "fail"
+#   dead_receivers: warn          # "warn" or "fail"
+#   shadowed_routes: warn      # "warn" or "fail"
+#   inhibition_cycles: warn    # "warn" or "fail"
+#   policy_violations: warn    # "warn" or "fail"
+
 # Mimir Configuration (optional, used for 'litmus sync')
 # mimir:
 #   address: ""

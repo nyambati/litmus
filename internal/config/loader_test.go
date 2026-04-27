@@ -11,6 +11,9 @@ import (
 
 func TestLoadConfig_Defaults(t *testing.T) {
 	os.Clearenv()
+	err := os.WriteFile(".litmus.yaml", []byte{}, 0600)
+	require.NoError(t, err)
+	defer os.Remove(".litmus.yaml")
 
 	cfg, err := LoadConfig()
 	require.NoError(t, err)
@@ -24,6 +27,10 @@ func TestLoadConfig_EnvOverrides(t *testing.T) {
 	os.Clearenv()
 	os.Setenv("LITMUS_WORKSPACE_ROOT", "custom-root")
 	os.Setenv("LITMUS_MIMIR_ADDRESS", "https://mimir.io")
+
+	err := os.WriteFile(".litmus.yaml", []byte{}, 0600)
+	require.NoError(t, err)
+	defer os.Remove(".litmus.yaml")
 
 	cfg, err := LoadConfig()
 	require.NoError(t, err)
@@ -80,7 +87,7 @@ route:
   receiver: 'default'
 receivers:
   - name: 'default'
-`
+ `
 	f, err := os.CreateTemp("", "alertmanager-*.yml")
 	require.NoError(t, err)
 	defer os.Remove(f.Name())
@@ -88,9 +95,9 @@ receivers:
 	require.NoError(t, err)
 	f.Close()
 
-	cfg, _, err := loadAlertmanagerConfig(f.Name())
+	cfg, err := loadAlertmanagerConfigYAML(f.Name())
 	require.NoError(t, err)
-	assert.Equal(t, "test-key-123", string(cfg.Global.OpsGenieAPIKey))
+	assert.Equal(t, "test-key-123", cfg.Global.OpsGenieAPIKey)
 }
 
 func TestExpandEnvVars(t *testing.T) {

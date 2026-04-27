@@ -326,6 +326,14 @@ func TestSnapshotCommand_MissingConfig(t *testing.T) {
 	err = os.Chdir(tmpDir)
 	require.NoError(t, err)
 
+	// Create minimal litmus.yaml so that the loader can find the workspace.
+	// The command should then fail because the alertmanager.yml is missing.
+	err = os.WriteFile(".litmus.yaml", []byte(`
+workspace:
+  root: "config"
+`), 0600)
+	require.NoError(t, err)
+
 	cmd := newSnapshotCmd()
 	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
