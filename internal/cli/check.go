@@ -467,7 +467,9 @@ func formatSummary(r CheckResult) string {
 	if n := len(r.Regression.Failures); n > 0 {
 		parts = append(parts, fmt.Sprintf("%d Regression%s", n, plural(n)))
 	}
-	sanityWarnings := len(r.Sanity.ShadowedIssues) + len(r.Sanity.OrphanIssues) + len(r.Sanity.InhibitionIssues) + len(r.Sanity.DeadReceiverIssues)
+	sanityWarnings := len(r.Sanity.ShadowedIssues) +
+		len(r.Sanity.OrphanIssues) + len(r.Sanity.InhibitionIssues) +
+		len(r.Sanity.PolicyIssues) + len(r.Sanity.DeadReceiverIssues)
 	if sanityWarnings > 0 {
 		parts = append(parts, fmt.Sprintf("%d Sanity Warning%s", sanityWarnings, plural(sanityWarnings)))
 	}
