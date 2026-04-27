@@ -2,6 +2,8 @@ package sanity
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/prometheus/alertmanager/config"
 )
@@ -26,8 +28,8 @@ func (icd *InhibitionCycleDetector) DetectCycles() []string {
 		if rule == nil {
 			continue
 		}
-		source := icd.matcherKey(rule.SourceMatch)
-		target := icd.matcherKey(rule.TargetMatch)
+		source := icd.ruleMatcherKey(rule.SourceMatch, rule.SourceMatchRE, rule.SourceMatchers)
+		target := icd.ruleMatcherKey(rule.TargetMatch, rule.TargetMatchRE, rule.TargetMatchers)
 		if source != "" && target != "" {
 			graph[source] = append(graph[source], target)
 		}
@@ -67,16 +69,30 @@ func (icd *InhibitionCycleDetector) hasCycle(node string, graph map[string][]str
 	return false
 }
 
-// matcherKey creates a unique key from matcher map.
-func (icd *InhibitionCycleDetector) matcherKey(matcher map[string]string) string {
-	if len(matcher) == 0 {
+// ruleMatcherKey creates a stable key from all matcher forms supported by Alertmanager.
+func (icd *InhibitionCycleDetector) ruleMatcherKey(
+	exact map[string]string,
+	regex config.MatchRegexps,
+	matchers config.Matchers,
+) string {
+	parts := make([]string, 0, len(exact)+len(regex)+len(matchers))
+
+	for k, v := range exact {
+		parts = append(parts, k+"="+v)
+	}
+	for k, v := range regex {
+		parts = append(parts, k+"=~"+v.String())
+	}
+	for _, matcher := range matchers {
+		parts = append(parts, matcher.String())
+	}
+
+	if len(parts) == 0 {
 		return ""
 	}
-	key := ""
-	for k, v := range matcher {
-		key += k + "=" + v + "|"
-	}
-	return key
+
+	sort.Strings(parts)
+	return strings.Join(parts, "|")
 }
 
 // OrphanReceiverDetector detects unused receivers.

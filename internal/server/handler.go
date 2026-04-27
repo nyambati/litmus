@@ -228,12 +228,7 @@ func runTestsHandler(c *gin.Context) {
 			return
 		}
 
-		loader := behavioral.NewBehavioralTestLoader()
-		tests, err := loader.LoadFromDirectory(litmusConfig.TestsDir())
-		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			c.String(http.StatusInternalServerError, fmt.Sprintf("Loading tests: %v", err))
-			return
-		}
+		var tests []*types.TestCase
 		for _, frag := range fragments {
 			tests = append(tests, frag.Tests...)
 		}

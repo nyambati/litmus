@@ -279,14 +279,7 @@ func RunRegressionTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, fragments []*config.Fragment, router *pipeline.Router, inhibitRules []amconfig.InhibitRule, tags []string) BehavioralResult {
 	result := BehavioralResult{Passed: true}
 
-	loader := behavioral.NewBehavioralTestLoader()
-	tests, err := loader.LoadFromDirectory(litmusConfig.TestsDir())
-	if err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			fmt.Fprintf(os.Stderr, "WARN: could not load behavioral tests from root: %v\n", err)
-		}
-	}
-
+	var tests []*types.TestCase
 	for _, frag := range fragments {
 		tests = append(tests, frag.Tests...)
 	}

@@ -77,6 +77,47 @@ receivers:
 	return cfg
 }
 
+func setupRootBehavioralWorkspace(t *testing.T) *config.LitmusConfig {
+	t.Helper()
+	tmpDir := t.TempDir()
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = os.Chdir(oldCwd) })
+	require.NoError(t, os.Chdir(tmpDir))
+
+	require.NoError(t, os.WriteFile(".litmus.yaml", []byte(`
+workspace:
+  root: "config"
+  fragments: "fragments/*"
+  history: 3
+global_labels: {}
+`), 0600))
+
+	require.NoError(t, os.MkdirAll("config/tests", 0755))
+	require.NoError(t, os.MkdirAll("config/fragments", 0755))
+	require.NoError(t, os.WriteFile("config/alertmanager.yml", []byte(`
+route:
+  receiver: 'default'
+receivers:
+  - name: 'default'
+`), 0600))
+	require.NoError(t, os.WriteFile("config/tests/root.yml", []byte(`
+name: "root test"
+type: "unit"
+alert:
+  labels:
+    service: "api"
+expect:
+  outcome: "active"
+  receivers:
+    - "default"
+`), 0600))
+
+	cfg, err := config.LoadConfig()
+	require.NoError(t, err)
+	return cfg
+}
+
 func newTestCtx(cfg *config.LitmusConfig, req *http.Request) (*gin.Context, *httptest.ResponseRecorder) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -182,4 +223,17 @@ func TestFragmentsHandler_ListsFragmentsWithMetadata(t *testing.T) {
 	assert.Equal(t, 1, dbFrag.Tests)
 	require.NotNil(t, dbFrag.Group)
 	assert.Equal(t, map[string]string{"scope": "teams"}, dbFrag.Group.Match)
+}
+
+func TestRunTestsHandler_DoesNotDuplicateRootTests(t *testing.T) {
+	cfg := setupRootBehavioralWorkspace(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/tests/run?type=behavioral", nil)
+	c, w := newTestCtx(cfg, req)
+	runTestsHandler(c)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var results []map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &results))
+	require.Len(t, results, 1)
 }

@@ -1,8 +1,12 @@
 package cli
 
 import (
+	"context"
+	"os"
 	"testing"
 
+	"github.com/nyambati/litmus/internal/config"
+	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/types"
 	"github.com/stretchr/testify/require"
 )
@@ -75,4 +79,55 @@ func TestFilterByTags_NilTagsOnTest(t *testing.T) {
 	result := filterByTags(tests, []string{"critical"})
 	require.Len(t, result, 1)
 	require.Equal(t, "test2", result[0].Name)
+}
+
+func TestRunBehavioralTests_DoesNotDuplicateRootTests(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = os.Chdir(oldCwd) })
+	require.NoError(t, os.Chdir(tmpDir))
+
+	require.NoError(t, os.WriteFile(".litmus.yaml", []byte(`
+workspace:
+  root: "config"
+  fragments: "fragments/*"
+`), 0600))
+	require.NoError(t, os.MkdirAll("config/tests", 0755))
+	require.NoError(t, os.WriteFile("config/alertmanager.yml", []byte(`
+route:
+  receiver: "default"
+receivers:
+  - name: "default"
+`), 0600))
+	require.NoError(t, os.WriteFile("config/tests/root.yml", []byte(`
+name: "root behavioral test"
+alert:
+  labels:
+    service: "api"
+expect:
+  outcome: "active"
+  receivers:
+    - "default"
+`), 0600))
+
+	cfg, err := config.LoadConfig()
+	require.NoError(t, err)
+
+	_, fragments, amCfg, err := cfg.LoadAssembledConfig()
+	require.NoError(t, err)
+
+	result := RunBehavioralTests(
+		context.Background(),
+		cfg,
+		fragments,
+		pipeline.NewRouter(amCfg.Route),
+		amCfg.InhibitRules,
+		nil,
+	)
+
+	require.Equal(t, 1, result.TotalTests)
+	require.Equal(t, 1, result.Tests)
+	require.Equal(t, 1, result.PassCount)
+	require.Empty(t, result.Failures)
 }
