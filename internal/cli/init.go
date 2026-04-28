@@ -34,7 +34,7 @@ func RunInit() error {
 	fmt.Println("✓ .litmus.yaml created")
 	fmt.Println("✓ config/ package structure created (templates, regressions, tests, fragments)")
 	fmt.Println("\nWorkspace initialized! Next steps:")
-	fmt.Println("1. Add your alertmanager.yml to config/")
+	fmt.Println("1. Add alertmanager.yml, alertmanager.yaml, base.yml, or base.yaml to config/")
 	fmt.Println("2. Add team fragments to config/fragments/")
 	fmt.Println("3. Run 'litmus snapshot' to generate global regression baseline")
 

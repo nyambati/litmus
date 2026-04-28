@@ -8,6 +8,8 @@ import (
 	"github.com/nyambati/litmus/internal/config"
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/types"
+	amconfig "github.com/prometheus/alertmanager/config"
+	labels "github.com/prometheus/alertmanager/pkg/labels"
 	"github.com/stretchr/testify/require"
 )
 
@@ -130,4 +132,44 @@ expect:
 	require.Equal(t, 1, result.Tests)
 	require.Equal(t, 1, result.PassCount)
 	require.Empty(t, result.Failures)
+}
+
+func TestRunSanityChecks_NegativeOnlyRoutesMode(t *testing.T) {
+	matcher, err := labels.NewMatcher(labels.MatchNotEqual, "team", "ops")
+	require.NoError(t, err)
+
+	amCfg := &amconfig.Config{
+		Route: &amconfig.Route{Receiver: "default", Routes: []*amconfig.Route{
+			{Receiver: "non-ops", Matchers: amconfig.Matchers{matcher}},
+		}},
+		Receivers: []amconfig.Receiver{{Name: "default"}, {Name: "non-ops"}},
+	}
+
+	t.Run("fail mode fails sanity", func(t *testing.T) {
+		result := RunSanityChecks(amCfg, config.SanityConfig{
+			OrphanReceivers:    config.SanityModeFail,
+			DeadReceivers:      config.SanityModeFail,
+			ShadowedRoutes:     config.SanityModeFail,
+			InhibitionCycles:   config.SanityModeFail,
+			NegativeOnlyRoutes: config.SanityModeFail,
+		})
+
+		require.False(t, result.Passed)
+		require.Len(t, result.NegativeOnlyRouteIssues, 1)
+		require.Equal(t, string(config.SanityModeFail), result.NegativeOnlyRouteMode)
+	})
+
+	t.Run("warn mode reports without failing sanity", func(t *testing.T) {
+		result := RunSanityChecks(amCfg, config.SanityConfig{
+			OrphanReceivers:    config.SanityModeFail,
+			DeadReceivers:      config.SanityModeFail,
+			ShadowedRoutes:     config.SanityModeFail,
+			InhibitionCycles:   config.SanityModeFail,
+			NegativeOnlyRoutes: config.SanityModeWarn,
+		})
+
+		require.True(t, result.Passed)
+		require.Len(t, result.NegativeOnlyRouteIssues, 1)
+		require.Equal(t, string(config.SanityModeWarn), result.NegativeOnlyRouteMode)
+	})
 }

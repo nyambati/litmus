@@ -49,6 +49,7 @@ Before any execution, Litmus audits your configuration for logical errors:
 - Shadowed routes (dead code)
 - Orphaned receivers (unused)
 - Circular inhibition rules
+- Negative-only routes (ambiguous route intent)
 
 ```bash
 litmus check           # Includes static analysis

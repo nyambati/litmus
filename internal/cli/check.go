@@ -37,17 +37,19 @@ type CheckResult struct {
 
 // SanityResult holds per-category static analysis results.
 type SanityResult struct {
-	Passed             bool     `json:"passed"`
-	ShadowedIssues     []string `json:"shadowed_issues,omitempty"`
-	OrphanIssues       []string `json:"orphan_issues,omitempty"`
-	InhibitionIssues   []string `json:"inhibition_issues,omitempty"`
-	PolicyIssues       []string `json:"policy_issues,omitempty"`
-	DeadReceiverIssues []string `json:"dead_receiver_issues,omitempty"`
-	ShadowedMode       string   `json:"shadowed_mode,omitempty"`
-	OrphanMode         string   `json:"orphan_mode,omitempty"`
-	InhibitionMode     string   `json:"inhibition_mode,omitempty"`
-	PolicyMode         string   `json:"policy_mode,omitempty"`
-	DeadReceiverMode   string   `json:"dead_receiver_mode,omitempty"`
+	Passed                  bool     `json:"passed"`
+	ShadowedIssues          []string `json:"shadowed_issues,omitempty"`
+	OrphanIssues            []string `json:"orphan_issues,omitempty"`
+	InhibitionIssues        []string `json:"inhibition_issues,omitempty"`
+	PolicyIssues            []string `json:"policy_issues,omitempty"`
+	DeadReceiverIssues      []string `json:"dead_receiver_issues,omitempty"`
+	NegativeOnlyRouteIssues []string `json:"negative_only_route_issues,omitempty"`
+	ShadowedMode            string   `json:"shadowed_mode,omitempty"`
+	OrphanMode              string   `json:"orphan_mode,omitempty"`
+	InhibitionMode          string   `json:"inhibition_mode,omitempty"`
+	PolicyMode              string   `json:"policy_mode,omitempty"`
+	DeadReceiverMode        string   `json:"dead_receiver_mode,omitempty"`
+	NegativeOnlyRouteMode   string   `json:"negative_only_route_mode,omitempty"`
 }
 
 // TestFailure holds structured detail for a single test failure.
@@ -219,6 +221,10 @@ func RunSanityChecks(alertConfig *amconfig.Config, sanityConfig config.SanityCon
 	result.DeadReceiverIssues = dead.Detect()
 	result.DeadReceiverMode = string(sanityConfig.DeadReceivers)
 
+	negativeOnly := sanity.NewNegativeOnlyRouteDetector(alertConfig.Route)
+	result.NegativeOnlyRouteIssues = negativeOnly.Detect()
+	result.NegativeOnlyRouteMode = string(sanityConfig.NegativeOnlyRoutes)
+
 	if sanityConfig.ShadowedRoutes.IsFail() && len(result.ShadowedIssues) > 0 {
 		result.Passed = false
 	}
@@ -229,6 +235,9 @@ func RunSanityChecks(alertConfig *amconfig.Config, sanityConfig config.SanityCon
 		result.Passed = false
 	}
 	if sanityConfig.DeadReceivers.IsFail() && len(result.DeadReceiverIssues) > 0 {
+		result.Passed = false
+	}
+	if sanityConfig.NegativeOnlyRoutes.IsFail() && len(result.NegativeOnlyRouteIssues) > 0 {
 		result.Passed = false
 	}
 
@@ -355,6 +364,7 @@ func PrintCheckResult(r CheckResult, showDiff bool) {
 	printSanityCategory("No inhibition cycles", r.Sanity.InhibitionIssues, r.Sanity.InhibitionMode)
 	printSanityCategory("No policy violations", r.Sanity.PolicyIssues, r.Sanity.PolicyMode)
 	printSanityCategory("No dead receivers detected", r.Sanity.DeadReceiverIssues, r.Sanity.DeadReceiverMode)
+	printSanityCategory("No negative-only routes detected", r.Sanity.NegativeOnlyRouteIssues, r.Sanity.NegativeOnlyRouteMode)
 	fmt.Println()
 
 	// 2. Regressions
@@ -490,7 +500,8 @@ func formatSummary(r CheckResult) string {
 	}
 	sanityWarnings := len(r.Sanity.ShadowedIssues) +
 		len(r.Sanity.OrphanIssues) + len(r.Sanity.InhibitionIssues) +
-		len(r.Sanity.PolicyIssues) + len(r.Sanity.DeadReceiverIssues)
+		len(r.Sanity.PolicyIssues) + len(r.Sanity.DeadReceiverIssues) +
+		len(r.Sanity.NegativeOnlyRouteIssues)
 	if sanityWarnings > 0 {
 		parts = append(parts, fmt.Sprintf("%d Sanity Warning%s", sanityWarnings, plural(sanityWarnings)))
 	}

@@ -1,6 +1,8 @@
 package config
 
 import (
+	"bytes"
+
 	amconfig "github.com/prometheus/alertmanager/config"
 	"github.com/prometheus/common/model"
 	"gopkg.in/yaml.v3"
@@ -90,4 +92,12 @@ func (c *AlertmanagerConfig) ConvertToAMConfigStruct() (*amconfig.Config, error)
 		return nil, err
 	}
 	return amconfig.Load(string(data))
+}
+
+func (c *AlertmanagerConfig) MarshalIndent(spaces int) (*bytes.Buffer, error) {
+	var buff bytes.Buffer
+	encoder := yaml.NewEncoder(&buff)
+	encoder.SetIndent(spaces)
+	err := encoder.Encode(c)
+	return &buff, err
 }

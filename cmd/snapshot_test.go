@@ -327,7 +327,7 @@ func TestSnapshotCommand_MissingConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create minimal litmus.yaml so that the loader can find the workspace.
-	// The command should then fail because the alertmanager.yml is missing.
+	// The command should then fail because no entrypoint can be discovered.
 	err = os.WriteFile(".litmus.yaml", []byte(`
 workspace:
   root: "config"
@@ -338,9 +338,9 @@ workspace:
 	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 
-	// Should fail because config/alertmanager.yml is missing
+	// Should fail because no base or alertmanager config exists in the root.
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "alertmanager.yml")
+	require.Contains(t, err.Error(), "found 0 files matching")
 }
 
 func TestSnapshotHistory_ListsBaselines(t *testing.T) {

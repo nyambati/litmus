@@ -66,7 +66,6 @@ litmus/
 
 ## Coding Standards & Mandates
 
-Read `GEMINI.md` for absolute procedural rules. Highlights:
 - **TDD required**: Table-driven tests before features
 - **GoDoc**: Every exported symbol needs intent comment
 - **Complexity**: < 10 cyclomatic. Break into helpers.

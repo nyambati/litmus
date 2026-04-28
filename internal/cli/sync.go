@@ -8,7 +8,6 @@ import (
 
 	"github.com/nyambati/litmus/internal/config"
 	"github.com/nyambati/litmus/internal/mimir"
-	"gopkg.in/yaml.v3"
 )
 
 func RunSync(address, tenantID, apiKey string, skipValidate, dryRun bool, output string) error {
@@ -79,20 +78,20 @@ func RunSync(address, tenantID, apiKey string, skipValidate, dryRun bool, output
 }
 
 func outputAssembledConfig(amCfg *config.AlertmanagerConfig, output string) error {
-	yamlData, err := yaml.Marshal(amCfg)
+
+	data, err := amCfg.MarshalIndent(2)
 	if err != nil {
 		return fmt.Errorf("marshaling config: %w", err)
 	}
 
 	if output != "" {
-		if err := os.WriteFile(output, yamlData, 0600); err != nil {
+		if err := os.WriteFile(output, data.Bytes(), 0600); err != nil {
 			return fmt.Errorf("writing output file: %w", err)
 		}
-		fmt.Printf("Config written to %s\n", output) //nolint:forbidigo
-		return nil
+		fmt.Fprintf(os.Stdout, "Config written to %s\n", output)
 	}
 
-	fmt.Println(string(yamlData)) //nolint:forbidigo
+	fmt.Fprintln(os.Stdout, data.String())
 	return nil
 }
 

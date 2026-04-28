@@ -15,9 +15,10 @@ type (
 
 	// WorkspaceConfig defines the package-based layout and history settings.
 	WorkspaceConfig struct {
-		Root      string `yaml:"root" mapstructure:"root"`
-		Fragments string `yaml:"fragments" mapstructure:"fragments"`
-		History   int    `yaml:"history" mapstructure:"history"`
+		Root       string `yaml:"root" mapstructure:"root"`
+		entrypoint string `yaml:"entrypoint" mapstructure:"entrypoint"`
+		Fragments  string `yaml:"fragments" mapstructure:"fragments"`
+		History    int    `yaml:"history" mapstructure:"history"`
 	}
 
 	// EnforceConfig defines matcher enforcement rules for fragment routes.
@@ -38,11 +39,12 @@ type (
 
 	// SanityConfig defines sanity check behavior modes.
 	SanityConfig struct {
-		OrphanReceivers  SanityMode `yaml:"orphan_receivers" mapstructure:"orphan_receivers"`
-		DeadReceivers    SanityMode `yaml:"dead_receivers" mapstructure:"dead_receivers"`
-		ShadowedRoutes   SanityMode `yaml:"shadowed_routes" mapstructure:"shadowed_routes"`
-		InhibitionCycles SanityMode `yaml:"inhibition_cycles" mapstructure:"inhibition_cycles"`
-		PolicyViolations SanityMode `yaml:"policy_violations" mapstructure:"policy_violations"`
+		OrphanReceivers    SanityMode `yaml:"orphan_receivers"     mapstructure:"orphan_receivers"`
+		DeadReceivers      SanityMode `yaml:"dead_receivers"       mapstructure:"dead_receivers"`
+		ShadowedRoutes     SanityMode `yaml:"shadowed_routes"      mapstructure:"shadowed_routes"`
+		InhibitionCycles   SanityMode `yaml:"inhibition_cycles"    mapstructure:"inhibition_cycles"`
+		PolicyViolations   SanityMode `yaml:"policy_violations"    mapstructure:"policy_violations"`
+		NegativeOnlyRoutes SanityMode `yaml:"negative_only_routes" mapstructure:"negative_only_routes"`
 	}
 
 	// LitmusConfig is the root configuration object.

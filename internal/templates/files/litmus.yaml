@@ -2,7 +2,7 @@
 # See https://github.com/nyambati/litmus for documentation
 
 workspace:
-  root: "config" # The Root Package directory (contains alertmanager.yml, tests, regressions)
+  root: "config" # Root package directory (contains alertmanager/base YAML, tests, regressions)
   fragments: "fragments/*" # Discovery pattern for team fragments (relative to root)
   history: 5 # Number of regression baselines to keep
 
@@ -29,6 +29,7 @@ global_labels:
 #   shadowed_routes: warn      # "warn" or "fail"
 #   inhibition_cycles: warn    # "warn" or "fail"
 #   policy_violations: warn    # "warn" or "fail"
+#   negative_only_routes: warn # "warn" or "fail"
 
 # Mimir Configuration (optional, used for 'litmus sync')
 # mimir:

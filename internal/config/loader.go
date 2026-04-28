@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/joho/godotenv"
@@ -21,8 +22,6 @@ const (
 	defaultRegressionYamlFile = "regressions.litmus.yml"
 	defaultRegressionDir      = "regressions"
 	defaultConfigDir          = "config"
-	defaultConfigFile         = "alertmanager.yml"
-	defaultConfigFileAlt      = "alertmanager.yaml"
 	defaultConfigTemplatesDir = "templates"
 	defaultTestsDir           = "tests"
 	defaultFragmentsPattern   = "fragments/*"
@@ -48,6 +47,7 @@ func LoadConfig() (*LitmusConfig, error) {
 	v.SetDefault("sanity.shadowed_routes", SanityModeFail)
 	v.SetDefault("sanity.inhibition_cycles", SanityModeFail)
 	v.SetDefault("sanity.policy_violations", SanityModeFail)
+	v.SetDefault("sanity.negative_only_routes", SanityModeFail)
 
 	v.SetEnvPrefix("LITMUS")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
@@ -74,6 +74,13 @@ func LoadConfig() (*LitmusConfig, error) {
 	if err := cfg.expandEnv(); err != nil {
 		return nil, fmt.Errorf("failed to expand environment variables: %w", err)
 	}
+
+	entrypoint, err := findEntrypoint(cfg.Workspace.Root)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find base config: %w", err)
+	}
+
+	cfg.Workspace.entrypoint = entrypoint
 
 	return &cfg, nil
 }
@@ -158,15 +165,7 @@ func expandEnvVars(s string) (string, error) {
 }
 
 func (c *LitmusConfig) FilePath() string {
-	primary := filepath.Join(c.Workspace.Root, defaultConfigFile)
-	if _, err := os.Stat(primary); err == nil {
-		return primary
-	}
-	alt := filepath.Join(c.Workspace.Root, defaultConfigFileAlt)
-	if _, err := os.Stat(alt); err == nil {
-		return alt
-	}
-	return primary
+	return c.Workspace.entrypoint
 }
 
 func (c *LitmusConfig) RegressionsDir() string {
@@ -248,4 +247,34 @@ func (c *LitmusConfig) LoadAssembledConfig() (*AlertmanagerConfig, []*Fragment, 
 		return nil, nil, nil, fmt.Errorf("converting assembled config: %w", err)
 	}
 	return assembled, allFragments, amCfg, nil
+}
+
+func findEntrypoint(root string) (string, error) {
+	baseFileRegex := regexp.MustCompile(`^(base|alertmanager)\.ya?ml$`)
+	files, err := filepath.Glob(filepath.Join(root, "*ml"))
+	if err != nil {
+		return "", err
+	}
+	var found string
+	count := 0
+	var matches []string
+
+	for _, file := range files {
+		if baseFileRegex.MatchString(filepath.Base(file)) {
+			found = file
+			count++
+			matches = append(matches, file)
+		}
+	}
+
+	if count == 1 {
+		return found, nil
+	}
+	var builder strings.Builder
+	builder.WriteString("found " + strconv.Itoa(count) + " files matching base or alertmanager")
+	if count > 0 {
+		builder.WriteString(" (" + strings.Join(matches, ",") + ")")
+	}
+	builder.WriteString(" in root directory: " + root)
+	return "", fmt.Errorf("%s", builder.String())
 }
