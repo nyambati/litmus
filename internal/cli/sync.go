@@ -78,7 +78,6 @@ func RunSync(address, tenantID, apiKey string, skipValidate, dryRun bool, output
 }
 
 func outputAssembledConfig(amCfg *config.AlertmanagerConfig, output string) error {
-
 	data, err := amCfg.MarshalIndent(2)
 	if err != nil {
 		return fmt.Errorf("marshaling config: %w", err)
