@@ -64,26 +64,24 @@ type GlobalConfig struct {
 	MattermostWebhookURLFile string         `yaml:"mattermost_webhook_url_file,omitempty" json:"mattermost_webhook_url_file,omitempty"`
 }
 
-type ReceiverConfig = map[string]any
-
 type Receiver struct {
-	Name              string            `yaml:"name" json:"name"`
-	WebhookConfigs    []*ReceiverConfig `yaml:"webhook_configs,omitempty" json:"webhook_configs,omitempty"`
-	SlackConfigs      []*ReceiverConfig `yaml:"slack_configs,omitempty" json:"slack_configs,omitempty"`
-	PagerdutyConfigs  []*ReceiverConfig `yaml:"pagerduty_configs,omitempty" json:"pagerduty_configs,omitempty"`
-	EmailConfigs      []*ReceiverConfig `yaml:"email_configs,omitempty" json:"email_configs,omitempty"`
-	OpsGenieConfigs   []*ReceiverConfig `yaml:"opsgenie_configs,omitempty" json:"opsgenie_configs,omitempty"`
-	WechatConfigs     []*ReceiverConfig `yaml:"wechat_configs,omitempty" json:"wechat_configs,omitempty"`
-	PushoverConfigs   []*ReceiverConfig `yaml:"pushover_configs,omitempty" json:"pushover_configs,omitempty"`
-	VictorOpsConfigs  []*ReceiverConfig `yaml:"victorops_configs,omitempty" json:"victorops_configs,omitempty"`
-	SNSConfigs        []*ReceiverConfig `yaml:"sns_configs,omitempty" json:"sns_configs,omitempty"`
-	DiscordConfigs    []*ReceiverConfig `yaml:"discord_configs,omitempty" json:"discord_configs,omitempty"`
-	WebexConfigs      []*ReceiverConfig `yaml:"webex_configs,omitempty" json:"webex_configs,omitempty"`
-	TelegramConfigs   []*ReceiverConfig `yaml:"telegram_configs,omitempty" json:"telegram_configs,omitempty"`
-	MSTeamsConfigs    []*ReceiverConfig `yaml:"msteams_configs,omitempty" json:"msteams_configs,omitempty"`
-	JiraConfigs       []*ReceiverConfig `yaml:"jira_configs,omitempty" json:"jira_configs,omitempty"`
-	RocketchatConfigs []*ReceiverConfig `yaml:"rocketchat_configs,omitempty" json:"rocketchat_configs,omitempty"`
-	MattermostConfigs []*ReceiverConfig `yaml:"mattermost_configs,omitempty" json:"mattermost_configs,omitempty"`
+	Name              string           `yaml:"name" json:"name"`
+	WebhookConfigs    []map[string]any `yaml:"webhook_configs,omitempty" json:"webhook_configs,omitempty"`
+	SlackConfigs      []map[string]any `yaml:"slack_configs,omitempty" json:"slack_configs,omitempty"`
+	PagerdutyConfigs  []map[string]any `yaml:"pagerduty_configs,omitempty" json:"pagerduty_configs,omitempty"`
+	EmailConfigs      []map[string]any `yaml:"email_configs,omitempty" json:"email_configs,omitempty"`
+	OpsGenieConfigs   []map[string]any `yaml:"opsgenie_configs,omitempty" json:"opsgenie_configs,omitempty"`
+	WechatConfigs     []map[string]any `yaml:"wechat_configs,omitempty" json:"wechat_configs,omitempty"`
+	PushoverConfigs   []map[string]any `yaml:"pushover_configs,omitempty" json:"pushover_configs,omitempty"`
+	VictorOpsConfigs  []map[string]any `yaml:"victorops_configs,omitempty" json:"victorops_configs,omitempty"`
+	SNSConfigs        []map[string]any `yaml:"sns_configs,omitempty" json:"sns_configs,omitempty"`
+	DiscordConfigs    []map[string]any `yaml:"discord_configs,omitempty" json:"discord_configs,omitempty"`
+	WebexConfigs      []map[string]any `yaml:"webex_configs,omitempty" json:"webex_configs,omitempty"`
+	TelegramConfigs   []map[string]any `yaml:"telegram_configs,omitempty" json:"telegram_configs,omitempty"`
+	MSTeamsConfigs    []map[string]any `yaml:"msteams_configs,omitempty" json:"msteams_configs,omitempty"`
+	JiraConfigs       []map[string]any `yaml:"jira_configs,omitempty" json:"jira_configs,omitempty"`
+	RocketchatConfigs []map[string]any `yaml:"rocketchat_configs,omitempty" json:"rocketchat_configs,omitempty"`
+	MattermostConfigs []map[string]any `yaml:"mattermost_configs,omitempty" json:"mattermost_configs,omitempty"`
 }
 
 func (c *AlertmanagerConfig) String() (string, error) {
