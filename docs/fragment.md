@@ -10,7 +10,7 @@ defines the entire layout. Global state (regressions, history) lives in the Root
 
 | Component | Location | Root Package | Fragment Package |
 | :--- | :--- | :---: | :---: |
-| **Config** | `alertmanager.yml` / `fragment.yml` | ✅ | ✅ |
+| **Config** | `alertmanager.yml`, `alertmanager.yaml`, `base.yml`, or `base.yaml` / `fragment.yml` | ✅ | ✅ |
 | **Tests** | `tests/` or `*-tests.yml` | ✅ | ✅ |
 | **Regressions** | `regressions/` | ✅ | ❌ |
 | **Fragments** | `fragments/` | ✅ (hosts them) | ❌ |
@@ -45,7 +45,7 @@ The `fragments` value is a glob. Beyond the default, useful forms include:
 
 ```text
 config/                        # ROOT PACKAGE
-├── alertmanager.yml           # Base routing skeleton (catch-all + global routes)
+├── alertmanager.yml           # Base routing skeleton (also accepts alertmanager.yaml, base.yml, base.yaml)
 ├── tests/                     # Root behavioral tests
 ├── regressions/               # Global regression baseline & history
 │   └── regressions.litmus.yml
@@ -107,7 +107,7 @@ all validation and testing; the raw base YAML is what gets pushed to Mimir via `
 
 ```
 Discovery
-  Root Package  ──► load alertmanager.yml + tests/
+  Root Package  ──► load alertmanager/base YAML + tests/
   Fragments     ──► load each fragment (config + tests)
 
 Assembly
@@ -117,7 +117,7 @@ Assembly
   3. Inhibit rule merge     fragment rules appended to base rules
 
 Execution (all against assembled config)
-  Sanity checks     shadowed routes, orphan receivers, inhibition cycles, policy
+  Sanity checks     shadowed routes, orphan receivers, inhibition cycles, negative-only routes, policy
   Behavioral tests  root tests/ + all fragment tests
   Regression tests  route-walk synthesis against regression baseline
 ```

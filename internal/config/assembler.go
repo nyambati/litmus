@@ -8,18 +8,19 @@ import (
 	amconfig "github.com/prometheus/alertmanager/config"
 )
 
-// Assembler handles merging fragments into a base Alertmanager configuration.
 type Assembler struct {
-	base *amconfig.Config
+	base *AlertmanagerConfig
 }
 
-// NewAssembler creates a new assembler with the given base configuration.
-func NewAssembler(base *amconfig.Config) *Assembler {
+func NewAssembler(base *AlertmanagerConfig) *Assembler {
 	return &Assembler{base: base}
 }
 
-// Assemble merges the provided fragments into the base configuration.
-func (a *Assembler) Assemble(fragments []*Fragment) (*amconfig.Config, error) {
+func (a *Assembler) Assemble(fragments []*Fragment) (*AlertmanagerConfig, error) {
+	if a.base.Route == nil {
+		a.base.Route = &amconfig.Route{}
+	}
+
 	type groupEntry struct {
 		route    *amconfig.Route
 		receiver string
@@ -82,7 +83,6 @@ func (a *Assembler) Assemble(fragments []*Fragment) (*amconfig.Config, error) {
 	return a.base, nil
 }
 
-// applyNamespace prefixes receiver names within the fragment if a namespace is defined.
 func (a *Assembler) applyNamespace(frag *Fragment) {
 	if frag.Namespace == "" {
 		return
@@ -118,7 +118,6 @@ func (a *Assembler) prefixRouteReceivers(route *amconfig.Route, prefix string) {
 	}
 }
 
-// groupKey produces a stable string key from a label map.
 func groupKey(labels map[string]string) string {
 	keys := make([]string, 0, len(labels))
 	for k := range labels {

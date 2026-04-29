@@ -5,6 +5,13 @@ set -e
 echo "Running pre-commit checks..."
 
 # Run make all (fmt, test, vet, lint)
+if [ -n "$(gofmt -l .)" ]; then
+    echo "✗ Formatting issues found:";
+    gofmt -l .;
+    exit 1;
+fi
+echo "✓ Code is formatted properly"
+
 echo "Running make all..."
 if ! make all; then
     echo "✗ make all failed"

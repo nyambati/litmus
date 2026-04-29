@@ -25,12 +25,18 @@ import (
 // loadAssembled loads the assembled alertmanager config and fragments, writing
 // an error response and returning false on failure.
 func loadAssembled(c *gin.Context, litmusConfig *config.LitmusConfig) (*amconfig.Config, []*config.Fragment, bool) {
-	alertConfig, fragments, _, err := litmusConfig.LoadAssembledConfig()
+	amCfg, fragments, _, err := litmusConfig.LoadAssembledConfig()
 	if err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading alertmanager config: %v", err))
 		return nil, nil, false
 	}
-	return alertConfig, fragments, true
+
+	amConf, err := amCfg.ConvertToAMConfigStruct()
+	if err != nil {
+		c.String(http.StatusInternalServerError, fmt.Sprintf("Converting to Alertmanager config: %v", err))
+		return nil, nil, false
+	}
+	return amConf, fragments, true
 }
 
 func getLitmusConfig(c *gin.Context) *config.LitmusConfig {
@@ -222,12 +228,7 @@ func runTestsHandler(c *gin.Context) {
 			return
 		}
 
-		loader := behavioral.NewBehavioralTestLoader()
-		tests, err := loader.LoadFromDirectory(litmusConfig.TestsDir())
-		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			c.String(http.StatusInternalServerError, fmt.Sprintf("Loading tests: %v", err))
-			return
-		}
+		var tests []*types.TestCase
 		for _, frag := range fragments {
 			tests = append(tests, frag.Tests...)
 		}

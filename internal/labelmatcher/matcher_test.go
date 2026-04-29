@@ -1,6 +1,7 @@
 package labelmatcher
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/prometheus/alertmanager/config"
@@ -66,6 +67,20 @@ func TestSourceMatchers_RegexMatch_Fails(t *testing.T) {
 
 	result := SourceMatches(rule, labels)
 	require.False(t, result)
+}
+
+func TestSourceMatches_LegacyRegexMatch(t *testing.T) {
+	rule := config.InhibitRule{
+		SourceMatchRE: config.MatchRegexps{
+			"service": {Regexp: regexp.MustCompile("^api-.+$")},
+		},
+	}
+	labels := model.LabelSet{
+		"service": "api-gateway",
+	}
+
+	result := SourceMatches(rule, labels)
+	require.True(t, result)
 }
 
 func TestSourceMatches_MixedExactAndRegex(t *testing.T) {
@@ -151,6 +166,20 @@ func TestTargetMatchers_RegexMatch_Fails(t *testing.T) {
 
 	result := TargetMatches(rule, labels)
 	require.False(t, result)
+}
+
+func TestTargetMatches_LegacyRegexMatch(t *testing.T) {
+	rule := config.InhibitRule{
+		TargetMatchRE: config.MatchRegexps{
+			"severity": {Regexp: regexp.MustCompile("^warn.+$")},
+		},
+	}
+	labels := model.LabelSet{
+		"severity": "warning",
+	}
+
+	result := TargetMatches(rule, labels)
+	require.True(t, result)
 }
 
 func TestTargetMatchers_MixedEmptyMatchers(t *testing.T) {

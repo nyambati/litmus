@@ -18,8 +18,9 @@ func newSyncCmd() *cobra.Command {
 			apiKey, _ := cmd.Flags().GetString("api-key")
 			skipValidate, _ := cmd.Flags().GetBool("skip-validate")
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
+			output, _ := cmd.Flags().GetString("output")
 
-			return cli.RunSync(address, tenantID, apiKey, skipValidate, dryRun)
+			return cli.RunSync(address, tenantID, apiKey, skipValidate, dryRun, output)
 		},
 	}
 
@@ -27,7 +28,8 @@ func newSyncCmd() *cobra.Command {
 	cmd.Flags().String("tenant-id", "", "Mimir tenant ID (overrides LITMUS_MIMIR_TENANT_ID)")
 	cmd.Flags().String("api-key", "", "Mimir API key (overrides LITMUS_MIMIR_API_KEY)")
 	cmd.Flags().Bool("skip-validate", false, "Skip sanity checks before push")
-	cmd.Flags().Bool("dry-run", false, "Validate only, do not push")
+	cmd.Flags().Bool("dry-run", false, "Render config to stdout or file without syncing to Mimir")
+	cmd.Flags().StringP("output", "o", "", "Output file path (use with --dry-run)")
 
 	return cmd
 }

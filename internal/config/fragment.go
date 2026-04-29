@@ -41,7 +41,9 @@ func LoadFragments(pattern string) ([]*Fragment, error) {
 			if frag != nil {
 				fragments = append(fragments, frag)
 			}
-		} else if strings.HasSuffix(path, ".yml") || strings.HasSuffix(path, ".yaml") {
+		}
+
+		if strings.HasSuffix(path, ".yml") || strings.HasSuffix(path, ".yaml") {
 			// Single file mode
 			if strings.HasSuffix(path, testSuffixYML) || strings.HasSuffix(path, testSuffixYAML) {
 				continue // Skip sibling test files, they are loaded by the definition file logic

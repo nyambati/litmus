@@ -1,6 +1,7 @@
 package snapshot
 
 import (
+	"reflect"
 	"regexp"
 	"testing"
 
@@ -47,8 +48,8 @@ func TestRouteWalker_FindTerminalPaths(t *testing.T) {
 					},
 				},
 			},
-			wantPathCount: 2,
-			wantReceivers: []string{"api", "db"},
+			wantPathCount: 3,
+			wantReceivers: []string{"root", "api", "db"},
 		},
 		{
 			name: "nested routes",
@@ -72,8 +73,8 @@ func TestRouteWalker_FindTerminalPaths(t *testing.T) {
 					},
 				},
 			},
-			wantPathCount: 1,
-			wantReceivers: []string{"prod-critical"},
+			wantPathCount: 3,
+			wantReceivers: []string{"root", "prod", "prod-critical"},
 		},
 	}
 
@@ -151,4 +152,57 @@ func TestRoutePath_Matchers(t *testing.T) {
 	// All matchers in path should be satisfied for alert to reach this route
 	require.Len(t, path.Matchers, 2)
 	require.Equal(t, "critical", path.Receiver)
+}
+
+func TestRouteWalker_IncludesParentFallbackOutcomes(t *testing.T) {
+	route := &config.Route{
+		Receiver: "parent",
+		Match:    map[string]string{"team": "logistics"},
+		Routes: []*config.Route{
+			{
+				Receiver: "child-prod",
+				Match:    map[string]string{"env": "production"},
+			},
+		},
+	}
+
+	walker := NewRouteWalker(route)
+	paths := walker.FindTerminalPaths()
+
+	require.Len(t, paths, 2, "snapshot discovery must cover both the child route and the parent fallback outcome")
+
+	receivers := make([]string, 0, len(paths))
+	for _, path := range paths {
+		receivers = append(receivers, path.Receiver)
+	}
+	require.Contains(t, receivers, "parent")
+	require.Contains(t, receivers, "child-prod")
+}
+
+func TestRouteWalker_IgnoresNegativeMatchersInLabelExtraction(t *testing.T) {
+	matcher, err := labels.NewMatcher(labels.MatchNotEqual, "team", "ops")
+	require.NoError(t, err)
+
+	route := &config.Route{
+		Receiver: "non-ops",
+		Matchers: config.Matchers{matcher},
+	}
+
+	walker := NewRouteWalker(route)
+	paths := walker.FindTerminalPaths()
+
+	require.Len(t, paths, 1)
+
+	merged := make(model.LabelSet)
+	for _, ls := range paths[0].Matchers {
+		for k, v := range ls {
+			merged[k] = v
+		}
+	}
+	require.NotContains(t, merged, model.LabelName("team"), "negative matchers must not be converted into synthetic label values")
+
+	pathValue := reflect.ValueOf(paths[0]).Elem()
+	ignoredField := pathValue.FieldByName("IgnoredMatchers")
+	require.True(t, ignoredField.IsValid(), "RoutePath should track ignored negative matchers for downstream diagnostics")
+	require.Greater(t, ignoredField.Len(), 0, "ignored negative matchers should be recorded on the route path")
 }

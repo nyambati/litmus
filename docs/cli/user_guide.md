@@ -297,7 +297,8 @@ litmus check --diff              # Show routing delta for regression failures
     "passed": true,
     "shadowed_issues": [],
     "orphan_issues": [],
-    "inhibition_issues": []
+    "inhibition_issues": [],
+    "negative_only_route_issues": []
   },
   "regression": {
     "passed": true,

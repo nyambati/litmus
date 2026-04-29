@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/nyambati/litmus/internal/config"
 )
 
 // PushPayload contains the alertmanager config and template files to push to Mimir.
@@ -24,11 +26,11 @@ type Client struct {
 }
 
 // NewClient creates a new Mimir API client.
-func NewClient(address, tenantID, apiKey string) *Client {
+func NewClient(config *config.MimirConfig) *Client {
 	return &Client{
-		address:    address,
-		tenantID:   tenantID,
-		apiKey:     apiKey,
+		address:    config.Address,
+		tenantID:   config.TenantID,
+		apiKey:     config.APIKey,
 		httpClient: &http.Client{},
 	}
 }

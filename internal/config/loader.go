@@ -6,12 +6,14 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/joho/godotenv"
 	"github.com/nyambati/litmus/internal/engine/behavioral"
 	amconfig "github.com/prometheus/alertmanager/config"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -20,25 +22,19 @@ const (
 	defaultRegressionYamlFile = "regressions.litmus.yml"
 	defaultRegressionDir      = "regressions"
 	defaultConfigDir          = "config"
-	defaultConfigFile         = "alertmanager.yml"
-	defaultConfigFileAlt      = "alertmanager.yaml"
 	defaultConfigTemplatesDir = "templates"
 	defaultTestsDir           = "tests"
 	defaultFragmentsPattern   = "fragments/*"
 	defaultHistoryKeep        = 5
 )
 
-// envPattern matches env(VAR_NAME) where VAR_NAME is an uppercase env var identifier.
 var envPattern = regexp.MustCompile(`env\(([A-Za-z_][A-Za-z0-9_]*)\)`)
 
-// LoadConfig initializes and returns the litmus configuration.
-// It follows the precedence order: Flags > Env Vars > Config File > Defaults.
 func LoadConfig() (*LitmusConfig, error) {
 	//nolint:errcheck
 	godotenv.Load()
 	v := viper.New()
 
-	// 1. Set Defaults
 	v.SetDefault("workspace.root", defaultConfigDir)
 	v.SetDefault("workspace.fragments", defaultFragmentsPattern)
 	v.SetDefault("workspace.history", defaultHistoryKeep)
@@ -46,13 +42,17 @@ func LoadConfig() (*LitmusConfig, error) {
 	v.SetDefault("mimir.tenant_id", "")
 	v.SetDefault("mimir.api_key", "")
 	v.SetDefault("policy.enforce.strict", true)
+	v.SetDefault("sanity.orphan_receivers", SanityModeFail)
+	v.SetDefault("sanity.dead_receivers", SanityModeFail)
+	v.SetDefault("sanity.shadowed_routes", SanityModeFail)
+	v.SetDefault("sanity.inhibition_cycles", SanityModeFail)
+	v.SetDefault("sanity.policy_violations", SanityModeFail)
+	v.SetDefault("sanity.negative_only_routes", SanityModeFail)
 
-	// 2. Environment Variables
 	v.SetEnvPrefix("LITMUS")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
 
-	// 3. Config File
 	v.SetConfigName(defaultConfigName)
 	v.SetConfigType("yaml")
 	v.AddConfigPath(".")
@@ -66,22 +66,25 @@ func LoadConfig() (*LitmusConfig, error) {
 		}
 	}
 
-	// 4. Unmarshal
 	var cfg LitmusConfig
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
-	// 5. Post-process: env(VAR) substitution across all string fields
 	if err := cfg.expandEnv(); err != nil {
 		return nil, fmt.Errorf("failed to expand environment variables: %w", err)
 	}
 
+	entrypoint, err := findEntrypoint(cfg.Workspace.Root)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find base config: %w", err)
+	}
+
+	cfg.Workspace.entrypoint = entrypoint
+
 	return &cfg, nil
 }
 
-// expandAlertmanagerConfig reads and env-expands alertmanager YAML without parsing.
-// Returns the expanded raw YAML string.
 func expandAlertmanagerConfig(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -96,24 +99,20 @@ func expandAlertmanagerConfig(path string) (string, error) {
 	return expanded, nil
 }
 
-// loadAlertmanagerConfig reads, expands env(VAR) placeholders, and parses the
-// Alertmanager YAML using alertmanager's own loader (applies validation and defaults).
-// Returns the parsed config, raw expanded YAML, and any error.
-func loadAlertmanagerConfig(path string) (*amconfig.Config, string, error) {
+func loadAlertmanagerConfigYAML(path string) (*AlertmanagerConfig, error) {
 	expanded, err := expandAlertmanagerConfig(path)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
-	cfg, err := amconfig.Load(expanded)
-	if err != nil {
-		return nil, "", fmt.Errorf("parsing alertmanager config: %w", err)
+	var cfg AlertmanagerConfig
+	if err := yaml.Unmarshal([]byte(expanded), &cfg); err != nil {
+		return nil, fmt.Errorf("parsing alertmanager config: %w", err)
 	}
 
-	return cfg, expanded, nil
+	return &cfg, nil
 }
 
-// expandEnv applies env(VAR) substitution to all string fields in LitmusConfig.
 func (c *LitmusConfig) expandEnv() error {
 	fields := []*string{
 		&c.Workspace.Root,
@@ -139,16 +138,12 @@ func (c *LitmusConfig) expandEnv() error {
 	return nil
 }
 
-// expandEnvVars replaces env(VAR_NAME) expressions with the corresponding
-// environment variable values. Returns an error if a referenced variable is unset.
-// Fails fast on first error (does not partially substitute).
 func expandEnvVars(s string) (string, error) {
 	if !strings.Contains(s, "env(") {
 		return s, nil
 	}
 	var expandErr error
 	result := envPattern.ReplaceAllStringFunc(s, func(match string) string {
-		// If error already occurred, skip further processing
 		if expandErr != nil {
 			return match
 		}
@@ -169,20 +164,8 @@ func expandEnvVars(s string) (string, error) {
 	return result, nil
 }
 
-// methods
-
-// FilePath returns the path to the alertmanager config file, preferring .yml
-// but falling back to .yaml if the .yml variant does not exist.
 func (c *LitmusConfig) FilePath() string {
-	primary := filepath.Join(c.Workspace.Root, defaultConfigFile)
-	if _, err := os.Stat(primary); err == nil {
-		return primary
-	}
-	alt := filepath.Join(c.Workspace.Root, defaultConfigFileAlt)
-	if _, err := os.Stat(alt); err == nil {
-		return alt
-	}
-	return primary // return primary so callers get a meaningful "not found" path in errors
+	return c.Workspace.entrypoint
 }
 
 func (c *LitmusConfig) RegressionsDir() string {
@@ -190,7 +173,6 @@ func (c *LitmusConfig) RegressionsDir() string {
 }
 
 func (c *LitmusConfig) RegressionsYamlFilePath() string {
-	// Regressions always live in the root package's regressions/ directory
 	return filepath.Join(c.Workspace.Root, defaultRegressionDir, defaultRegressionYamlFile)
 }
 
@@ -202,28 +184,41 @@ func (c *LitmusConfig) TestsDir() string {
 	return filepath.Join(c.Workspace.Root, defaultTestsDir)
 }
 
-// LoadAssembledConfig loads the base Alertmanager config and all fragments,
-// performing virtual assembly and namespacing.
-func (c *LitmusConfig) LoadAssembledConfig() (*amconfig.Config, []*Fragment, string, error) {
-	// 1. Load Base Config Package
-	base, raw, err := loadAlertmanagerConfig(c.FilePath())
+func (c *LitmusConfig) FragmentsPath() string {
+	if filepath.IsAbs(c.Workspace.Fragments) {
+		return c.Workspace.Fragments
+	}
+	return filepath.Join(c.Workspace.Root, c.Workspace.Fragments)
+}
+
+func (m *MimirConfig) Validate() error {
+	if m.Address == "" {
+		return fmt.Errorf("mimir address not configured: set LITMUS_MIMIR_ADDRESS env var, provide --address flag, or add mimir.address to .litmus.yaml")
+	}
+	return nil
+}
+
+func (c *LitmusConfig) LoadAssembledConfig() (*AlertmanagerConfig, []*Fragment, *amconfig.Config, error) {
+	base, err := loadAlertmanagerConfigYAML(c.FilePath())
 	if err != nil {
-		return nil, nil, "", err
+		return nil, nil, nil, fmt.Errorf("loading alertmanager config: %w", err)
 	}
 
-	// 2. Discover Fragments
 	fragments, err := LoadFragments(c.FragmentsPath())
 	if err != nil {
-		return nil, nil, "", fmt.Errorf("WARN: loading fragments: %w", err)
+		return nil, nil, nil, fmt.Errorf("loading fragments: %w", err)
 	}
 
-	// Capture base routes before assembly (shallow copy — assembly appends to the slice
-	// in place and would otherwise pollute the root fragment with mounted fragment routes).
-	baseRoutes := make([]*amconfig.Route, len(base.Route.Routes))
-	copy(baseRoutes, base.Route.Routes)
+	var baseRoutes []*amconfig.Route
+	if base.Route != nil {
+		baseRoutes = make([]*amconfig.Route, len(base.Route.Routes))
+		copy(baseRoutes, base.Route.Routes)
+	}
 
-	// Load tests from the root tests/ directory.
-	rootTests, _ := behavioral.NewBehavioralTestLoader().LoadFromDirectory(c.TestsDir())
+	rootTests, err := behavioral.NewBehavioralTestLoader().LoadFromDirectory(c.TestsDir())
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		fmt.Fprintf(os.Stderr, "WARN: could not load behavioral tests: %v\n", err)
+	}
 
 	rootFrag := &Fragment{
 		Name:   "root",
@@ -234,31 +229,52 @@ func (c *LitmusConfig) LoadAssembledConfig() (*amconfig.Config, []*Fragment, str
 	allFragments := append([]*Fragment{rootFrag}, fragments...)
 
 	if len(fragments) == 0 {
-		// No assembly needed, but always return allFragments so policy can run on root.
-		return base, allFragments, raw, nil
+		amCfg, err := base.ConvertToAMConfigStruct()
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("converting base config: %w", err)
+		}
+		return base, allFragments, amCfg, nil
 	}
 
-	// 3. Assemble
 	assembler := NewAssembler(base)
 	assembled, err := assembler.Assemble(fragments)
 	if err != nil {
-		return nil, nil, "", fmt.Errorf("assembling fragments: %w", err)
+		return nil, nil, nil, fmt.Errorf("assembling fragments: %w", err)
 	}
 
-	return assembled, allFragments, raw, nil
+	amCfg, err := assembled.ConvertToAMConfigStruct()
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("converting assembled config: %w", err)
+	}
+	return assembled, allFragments, amCfg, nil
 }
 
-func (c *LitmusConfig) FragmentsPath() string {
-	if filepath.IsAbs(c.Workspace.Fragments) {
-		return c.Workspace.Fragments
+func findEntrypoint(root string) (string, error) {
+	baseFileRegex := regexp.MustCompile(`^(base|alertmanager)\.ya?ml$`)
+	files, err := filepath.Glob(filepath.Join(root, "*ml"))
+	if err != nil {
+		return "", err
 	}
-	return filepath.Join(c.Workspace.Root, c.Workspace.Fragments)
-}
+	var found string
+	count := 0
+	var matches []string
 
-func (m *MimirConfig) Validate() error {
-	// Validate required field
-	if m.Address == "" {
-		return fmt.Errorf("mimir address not configured: set LITMUS_MIMIR_ADDRESS env var, provide --address flag, or add mimir.address to .litmus.yaml")
+	for _, file := range files {
+		if baseFileRegex.MatchString(filepath.Base(file)) {
+			found = file
+			count++
+			matches = append(matches, file)
+		}
 	}
-	return nil
+
+	if count == 1 {
+		return found, nil
+	}
+	var builder strings.Builder
+	builder.WriteString("found " + strconv.Itoa(count) + " files matching base or alertmanager")
+	if count > 0 {
+		builder.WriteString(" (" + strings.Join(matches, ",") + ")")
+	}
+	builder.WriteString(" in root directory: " + root)
+	return "", fmt.Errorf("%s", builder.String())
 }

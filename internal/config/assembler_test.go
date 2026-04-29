@@ -11,25 +11,25 @@ import (
 func TestAssembler(t *testing.T) {
 	tests := []struct {
 		name      string
-		base      *amconfig.Config
+		base      *AlertmanagerConfig
 		fragments []*Fragment
 		wantErr   bool
-		validate  func(t *testing.T, assembled *amconfig.Config)
+		validate  func(t *testing.T, assembled *AlertmanagerConfig)
 	}{
 		{
 			name: "Namespacing and Basic Merging",
-			base: &amconfig.Config{
+			base: &AlertmanagerConfig{
 				Route: &amconfig.Route{Receiver: "default"},
 			},
 			fragments: []*Fragment{
 				{
 					Name:      "db-team",
 					Namespace: "db",
-					Receivers: []amconfig.Receiver{{Name: "critical"}},
+					Receivers: []Receiver{{Name: "critical"}},
 					Routes:    []*amconfig.Route{{Receiver: "critical"}},
 				},
 			},
-			validate: func(t *testing.T, assembled *amconfig.Config) {
+			validate: func(t *testing.T, assembled *AlertmanagerConfig) {
 				t.Helper()
 				assert.Equal(t, "db-critical", assembled.Receivers[0].Name)
 				assert.Equal(t, "db-critical", assembled.Route.Routes[0].Receiver)
@@ -37,7 +37,7 @@ func TestAssembler(t *testing.T) {
 		},
 		{
 			name: "No Group — Flat Merge to Root",
-			base: &amconfig.Config{
+			base: &AlertmanagerConfig{
 				Route: &amconfig.Route{Receiver: "default"},
 			},
 			fragments: []*Fragment{
@@ -46,7 +46,7 @@ func TestAssembler(t *testing.T) {
 					Routes: []*amconfig.Route{{Receiver: "db-receiver"}},
 				},
 			},
-			validate: func(t *testing.T, assembled *amconfig.Config) {
+			validate: func(t *testing.T, assembled *AlertmanagerConfig) {
 				t.Helper()
 				require.Len(t, assembled.Route.Routes, 1)
 				assert.Equal(t, "db-receiver", assembled.Route.Routes[0].Receiver)
@@ -54,7 +54,7 @@ func TestAssembler(t *testing.T) {
 		},
 		{
 			name: "Group — Synthetic Parent Created",
-			base: &amconfig.Config{
+			base: &AlertmanagerConfig{
 				Route: &amconfig.Route{Receiver: "default"},
 			},
 			fragments: []*Fragment{
@@ -64,7 +64,7 @@ func TestAssembler(t *testing.T) {
 					Routes: []*amconfig.Route{{Receiver: "db-receiver"}},
 				},
 			},
-			validate: func(t *testing.T, assembled *amconfig.Config) {
+			validate: func(t *testing.T, assembled *AlertmanagerConfig) {
 				t.Helper()
 				require.Len(t, assembled.Route.Routes, 1)
 				parent := assembled.Route.Routes[0]
@@ -76,7 +76,7 @@ func TestAssembler(t *testing.T) {
 		},
 		{
 			name: "Group Receiver Explicit",
-			base: &amconfig.Config{
+			base: &AlertmanagerConfig{
 				Route: &amconfig.Route{Receiver: "default"},
 			},
 			fragments: []*Fragment{
@@ -89,14 +89,14 @@ func TestAssembler(t *testing.T) {
 					Routes: []*amconfig.Route{{Receiver: "db-receiver"}},
 				},
 			},
-			validate: func(t *testing.T, assembled *amconfig.Config) {
+			validate: func(t *testing.T, assembled *AlertmanagerConfig) {
 				t.Helper()
 				assert.Equal(t, "teams-fallback", assembled.Route.Routes[0].Receiver)
 			},
 		},
 		{
 			name: "Namespace prefixes Group.Receiver and child route receivers",
-			base: &amconfig.Config{
+			base: &AlertmanagerConfig{
 				Route: &amconfig.Route{Receiver: "default"},
 			},
 			fragments: []*Fragment{
@@ -111,24 +111,21 @@ func TestAssembler(t *testing.T) {
 						{Receiver: "critical"},
 						{Receiver: "warning"},
 					},
-					Receivers: []amconfig.Receiver{
+					Receivers: []Receiver{
 						{Name: "fallback"},
 						{Name: "critical"},
 						{Name: "warning"},
 					},
 				},
 			},
-			validate: func(t *testing.T, assembled *amconfig.Config) {
+			validate: func(t *testing.T, assembled *AlertmanagerConfig) {
 				t.Helper()
-				// synthetic parent route receiver must be prefixed
 				require.Len(t, assembled.Route.Routes, 1)
 				parent := assembled.Route.Routes[0]
 				assert.Equal(t, "payments-fallback", parent.Receiver)
-				// child route receivers must be prefixed
 				require.Len(t, parent.Routes, 2)
 				assert.Equal(t, "payments-critical", parent.Routes[0].Receiver)
 				assert.Equal(t, "payments-warning", parent.Routes[1].Receiver)
-				// named receivers must be prefixed
 				names := make([]string, len(assembled.Receivers))
 				for i, r := range assembled.Receivers {
 					names[i] = r.Name
@@ -138,7 +135,7 @@ func TestAssembler(t *testing.T) {
 		},
 		{
 			name: "Two Fragments Same Group — Co-located",
-			base: &amconfig.Config{
+			base: &AlertmanagerConfig{
 				Route: &amconfig.Route{Receiver: "default"},
 			},
 			fragments: []*Fragment{
@@ -153,7 +150,7 @@ func TestAssembler(t *testing.T) {
 					Routes: []*amconfig.Route{{Receiver: "net-receiver"}},
 				},
 			},
-			validate: func(t *testing.T, assembled *amconfig.Config) {
+			validate: func(t *testing.T, assembled *AlertmanagerConfig) {
 				t.Helper()
 				require.Len(t, assembled.Route.Routes, 1, "single synthetic parent for same group")
 				parent := assembled.Route.Routes[0]
@@ -162,7 +159,7 @@ func TestAssembler(t *testing.T) {
 		},
 		{
 			name: "Group Receiver Conflict — Error",
-			base: &amconfig.Config{
+			base: &AlertmanagerConfig{
 				Route: &amconfig.Route{Receiver: "default"},
 			},
 			fragments: []*Fragment{
@@ -181,7 +178,7 @@ func TestAssembler(t *testing.T) {
 		},
 		{
 			name: "Merge Inhibit Rules",
-			base: &amconfig.Config{
+			base: &AlertmanagerConfig{
 				Route: &amconfig.Route{Receiver: "default"},
 				InhibitRules: []amconfig.InhibitRule{
 					{SourceMatch: map[string]string{"global": "rule"}},
@@ -195,7 +192,7 @@ func TestAssembler(t *testing.T) {
 					},
 				},
 			},
-			validate: func(t *testing.T, assembled *amconfig.Config) {
+			validate: func(t *testing.T, assembled *AlertmanagerConfig) {
 				t.Helper()
 				assert.Len(t, assembled.InhibitRules, 2)
 			},

@@ -10,18 +10,14 @@ import (
 	"github.com/nyambati/litmus/internal/mimir"
 )
 
-// RunSync validates the alertmanager config and pushes it to Mimir.
-// Flags override config file values if non-empty.
-func RunSync(address, tenantID, apiKey string, skipValidate, dryRun bool) error {
+func RunSync(address, tenantID, apiKey string, skipValidate, dryRun bool, output string) error {
 	ctx := context.Background()
 
-	// Load .litmus.yaml
 	litmusConfig, err := config.LoadConfig()
 	if err != nil {
 		return fmt.Errorf("loading litmus config: %w", err)
 	}
 
-	// Override with flags if provided
 	if address != "" {
 		litmusConfig.Mimir.Address = address
 	}
@@ -32,62 +28,44 @@ func RunSync(address, tenantID, apiKey string, skipValidate, dryRun bool) error 
 		litmusConfig.Mimir.APIKey = apiKey
 	}
 
-	// Validate mimir config
-	if err := litmusConfig.Mimir.Validate(); err != nil {
-		return err
-	}
-
-	// Load and assemble config (validates against full assembled routing tree).
-	// rawYAML is the base alertmanager.yml — that is what gets pushed to Mimir.
-	alertConfig, _, rawYAML, err := litmusConfig.LoadAssembledConfig()
+	assembled, _, amConfig, err := litmusConfig.LoadAssembledConfig()
 	if err != nil {
 		return fmt.Errorf("loading alertmanager config: %w", err)
 	}
 
-	if alertConfig.Route == nil {
+	if amConfig.Route == nil {
 		return fmt.Errorf("alertmanager config has no route defined")
 	}
 
-	// Run sanity checks unless skipped
 	if !skipValidate {
-		sanity := RunSanityChecks(alertConfig)
+		sanity := RunSanityChecks(amConfig, litmusConfig.Sanity)
 		if !sanity.Passed {
 			fmt.Fprintf(os.Stderr, "Sanity checks failed. Use --skip-validate to bypass.\n")
 			return fmt.Errorf("sanity check failures")
 		}
 	}
 
-	// Load templates from disk
-	templates := make(map[string]string)
-
-	for _, filename := range alertConfig.Templates {
-		// Support both absolute and relative paths
-		filePath := filepath.Join(litmusConfig.TemplatesDir(), filename)
-
-		if filepath.IsAbs(filename) {
-			filePath = filename
-		}
-
-		data, err := os.ReadFile(filePath)
-		if err != nil {
-			return fmt.Errorf("reading template %q: %w", filename, err)
-		}
-
-		// Use base filename as map key (matches Mimir requirement)
-		key := filepath.Base(filename)
-		templates[key] = string(data)
-	}
-
-	// Dry run: skip actual push
 	if dryRun {
-		fmt.Println("Dry run: validation passed, skipping push") //nolint:forbidigo
-		return nil
+		return outputAssembledConfig(assembled, output)
 	}
 
-	// Push to Mimir
-	client := mimir.NewClient(litmusConfig.Mimir.Address, litmusConfig.Mimir.TenantID, litmusConfig.Mimir.APIKey)
+	if err := litmusConfig.Mimir.Validate(); err != nil {
+		return err
+	}
+
+	templates, err := loadTemplates(litmusConfig, amConfig.Templates)
+	if err != nil {
+		return err
+	}
+
+	client := mimir.NewClient(&litmusConfig.Mimir)
+	configPayload, err := assembled.String()
+	if err != nil {
+		return fmt.Errorf("converting assembled config to string: %w", err)
+	}
+
 	payload := mimir.PushPayload{
-		Config:    rawYAML,
+		Config:    configPayload,
 		Templates: templates,
 	}
 
@@ -97,4 +75,43 @@ func RunSync(address, tenantID, apiKey string, skipValidate, dryRun bool) error 
 
 	fmt.Printf("✓ Alertmanager config synced to %s\n", litmusConfig.Mimir.Address) //nolint:forbidigo
 	return nil
+}
+
+func outputAssembledConfig(amCfg *config.AlertmanagerConfig, output string) error {
+	data, err := amCfg.MarshalIndent(2)
+	if err != nil {
+		return fmt.Errorf("marshaling config: %w", err)
+	}
+
+	if output != "" {
+		if err := os.WriteFile(output, data.Bytes(), 0600); err != nil {
+			return fmt.Errorf("writing output file: %w", err)
+		}
+		fmt.Fprintf(os.Stdout, "Config written to %s\n", output)
+	}
+
+	fmt.Fprintln(os.Stdout, data.String())
+	return nil
+}
+
+func loadTemplates(litmusConfig *config.LitmusConfig, templateNames []string) (map[string]string, error) {
+	templates := make(map[string]string)
+
+	for _, filename := range templateNames {
+		filePath := filepath.Join(litmusConfig.TemplatesDir(), filename)
+
+		if filepath.IsAbs(filename) {
+			filePath = filename
+		}
+
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("reading template %q: %w", filename, err)
+		}
+
+		key := filepath.Base(filename)
+		templates[key] = string(data)
+	}
+
+	return templates, nil
 }

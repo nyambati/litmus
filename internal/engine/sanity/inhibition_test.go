@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/prometheus/alertmanager/config"
+	labels "github.com/prometheus/alertmanager/pkg/labels"
 	"github.com/stretchr/testify/require"
 )
 
@@ -34,6 +35,34 @@ func TestInhibitionCycleDetector_DirectCycle(t *testing.T) {
 		{
 			SourceMatch: map[string]string{"alert": "B"},
 			TargetMatch: map[string]string{"alert": "A"},
+		},
+	}
+
+	detector := NewInhibitionCycleDetector(rules)
+	cycles := detector.DetectCycles()
+
+	require.Len(t, cycles, 1)
+	require.Contains(t, cycles[0], "cycle")
+}
+
+func TestInhibitionCycleDetector_MatcherBasedCycle(t *testing.T) {
+	sourceA, err := labels.NewMatcher(labels.MatchEqual, "alert", "A")
+	require.NoError(t, err)
+	targetA, err := labels.NewMatcher(labels.MatchEqual, "alert", "A")
+	require.NoError(t, err)
+	sourceB, err := labels.NewMatcher(labels.MatchEqual, "alert", "B")
+	require.NoError(t, err)
+	targetB, err := labels.NewMatcher(labels.MatchEqual, "alert", "B")
+	require.NoError(t, err)
+
+	rules := []*config.InhibitRule{
+		{
+			SourceMatchers: config.Matchers{sourceA},
+			TargetMatchers: config.Matchers{targetB},
+		},
+		{
+			SourceMatchers: config.Matchers{sourceB},
+			TargetMatchers: config.Matchers{targetA},
 		},
 	}
 
