@@ -3,15 +3,15 @@ package config
 type (
 	// MimirConfig defines the connection parameters for Grafana Mimir.
 	MimirConfig struct {
-		Address  string `yaml:"address" mapstructure:"address"`
+		Address  string `yaml:"address" mapstructure:"address" validate:"required,url"`
 		TenantID string `yaml:"tenant_id" mapstructure:"tenant_id"`
 		APIKey   string `yaml:"api_key" mapstructure:"api_key"`
 	}
 
 	// WorkspaceConfig defines the package-based layout and history settings.
 	WorkspaceConfig struct {
-		Root       string `yaml:"root" mapstructure:"root"`
-		entrypoint string `yaml:"entrypoint" mapstructure:"entrypoint"`
+		Root       string `yaml:"root" mapstructure:"root" validate:"required"`
+		entrypoint string `yaml:"entrypoint" mapstructure:"entrypoint" `
 		Fragments  string `yaml:"fragments" mapstructure:"fragments"`
 		History    int    `yaml:"history" mapstructure:"history"`
 	}

@@ -1,0 +1,42 @@
+tests:
+  - name: "payments critical routes to payments-critical"
+    alert:
+      labels:
+        label_team: "payments"
+        severity: "critical"
+        alertname: "PaymentGatewayDown"
+        payment_provider: "stripe"
+        region: "eu"
+    expect:
+      outcome: active
+      receivers:
+        - payments-critical
+
+  - name: "payments warning routes to payments-warning"
+    alert:
+      labels:
+        label_team: "payments"
+        severity: "warning"
+        alertname: "PaymentSuccessRateDegraded"
+        payment_provider: "adyen"
+    expect:
+      outcome: active
+      receivers:
+        - payments-warning
+
+  - name: "payments warning suppressed by active critical for same provider"
+    alert:
+      labels:
+        label_team: "payments"
+        severity: "warning"
+        alertname: "PaymentGatewayDown"
+        payment_provider: "stripe"
+    state:
+      active_alerts:
+        - labels:
+            label_team: "payments"
+            severity: "critical"
+            alertname: "PaymentGatewayDown"
+            payment_provider: "stripe"
+    expect:
+      outcome: inhibited

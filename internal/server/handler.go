@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -297,7 +296,7 @@ func suggestHandler(c *gin.Context) {
 	if litmusConfig == nil {
 		return
 	}
-	alertConfig, fragments, _, ok := loadAssembled(c, litmusConfig)
+	alertConfig, _, ws, ok := loadAssembled(c, litmusConfig)
 	if !ok {
 		return
 	}
@@ -332,15 +331,7 @@ func suggestHandler(c *gin.Context) {
 	}
 	walkRoute(alertConfig.Route)
 
-	loader := behavioral.NewBehavioralTestLoader()
-	tests, err := loader.LoadFromDirectory(litmusConfig.TestsDir())
-	if err != nil {
-		log.Printf("warning: failed to load tests for suggestions: %v", err)
-	}
-	for _, frag := range fragments {
-		tests = append(tests, frag.Tests...)
-	}
-	for _, test := range tests {
+	for _, test := range ws.Tests {
 		if test.Alert == nil {
 			continue
 		}

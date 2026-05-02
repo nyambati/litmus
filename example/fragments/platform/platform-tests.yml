@@ -1,0 +1,36 @@
+tests:
+  - name: "platform critical routes to platform-critical"
+    alert:
+      labels:
+        label_team: "platform"
+        severity: "critical"
+        alertname: "KubernetesPodCrashLooping"
+        cluster: "prod-eu-1"
+        namespace: "core"
+    expect:
+      outcome: active
+      receivers:
+        - platform-critical
+
+  - name: "platform warning routes to platform-warning"
+    alert:
+      labels:
+        label_team: "platform"
+        severity: "warning"
+        alertname: "NodeHighCPU"
+        cluster: "prod-eu-1"
+    expect:
+      outcome: active
+      receivers:
+        - platform-warning
+
+  - name: "platform alert without severity falls through to root"
+    alert:
+      labels:
+        label_team: "other-team"
+        severity: "warning"
+        alertname: "UnknownAlert"
+    expect:
+      outcome: active
+      receivers:
+        - default

@@ -86,12 +86,9 @@ func New() (*LitmusConfig, error) {
 		return nil, fmt.Errorf("failed to expand environment variables: %w", err)
 	}
 
-	entrypoint, err := findEntrypoint(cfg.Workspace.Root)
-	if err != nil {
+	if err := cfg.findEntrypoint(); err != nil {
 		return nil, fmt.Errorf("failed to find base config: %w", err)
 	}
-
-	cfg.Workspace.entrypoint = entrypoint
 
 	return &cfg, nil
 }
@@ -155,15 +152,15 @@ func (m *MimirConfig) Validate() error {
 	return nil
 }
 
-func findEntrypoint(root string) (string, error) {
+func (c *LitmusConfig) findEntrypoint() error {
 	// Use two explicit globs instead of "*ml" which matches .toml, .html, .xml, etc.
-	yamlFiles, err := filepath.Glob(filepath.Join(root, "*.yaml"))
+	yamlFiles, err := filepath.Glob(filepath.Join(c.Workspace.Root, "*.yaml"))
 	if err != nil {
-		return "", err
+		return err
 	}
-	ymlFiles, err := filepath.Glob(filepath.Join(root, "*.yml"))
+	ymlFiles, err := filepath.Glob(filepath.Join(c.Workspace.Root, "*.yml"))
 	if err != nil {
-		return "", err
+		return err
 	}
 	allFiles := make([]string, 0, len(yamlFiles)+len(ymlFiles))
 	allFiles = append(allFiles, yamlFiles...)
@@ -178,11 +175,10 @@ func findEntrypoint(root string) (string, error) {
 	}
 
 	if len(matches) == 1 {
-		return matches[0], nil
+		c.Workspace.entrypoint = matches[0]
+		return nil
 	}
-	if len(matches) == 0 {
-		return "", fmt.Errorf("found 0 files matching base or alertmanager in root directory: %s", root)
-	}
-	return "", fmt.Errorf("found %d files matching base or alertmanager (%s) in root directory: %s",
-		len(matches), strings.Join(matches, ","), root)
+
+	return fmt.Errorf("found %d files matching base or alertmanager (%s) in root directory: %s",
+		len(matches), strings.Join(matches, ","), c.Workspace.Root)
 }

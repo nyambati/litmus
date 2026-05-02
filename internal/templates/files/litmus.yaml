@@ -3,7 +3,7 @@
 
 workspace:
   root: "config" # Root package directory (contains alertmanager/base YAML, tests, regressions)
-  fragments: "fragments/*" # Discovery pattern for team fragments (relative to root)
+  fragments: "fragments" # Discovery pattern for team fragments (relative to root)
   history: 5 # Number of regression baselines to keep
 
 # Global Test Labels: These labels are automatically added to

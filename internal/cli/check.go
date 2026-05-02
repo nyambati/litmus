@@ -86,7 +86,6 @@ type BehavioralResult struct {
 // the exit code the CLI layer should pass to os.Exit (0 = all passed).
 func RunCheck(cfg *config.LitmusConfig, format string, showDiff bool, tags []string) (CheckExitCode, error) {
 	start := time.Now()
-
 	ws, err := workspace.Load(cfg.Workspace.Root)
 	if err != nil {
 		return 1, err

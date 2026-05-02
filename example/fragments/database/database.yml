@@ -3,7 +3,6 @@ namespace: "db"
 group:
   match:
     label_team: "database"
-
 routes:
   - receiver: "critical"
     match:
