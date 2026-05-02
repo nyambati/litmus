@@ -114,19 +114,14 @@ func cleanupOldEntries(cfg *config.LitmusConfig) error {
 }
 
 // RunHistoryList prints available baseline history entries.
-func RunHistoryList(cmd *cobra.Command) error {
-	litmusConfig, err := config.LoadConfig()
-	if err != nil {
-		return fmt.Errorf("loading litmus config: %w", err)
-	}
-
+func RunHistoryList(litmusConfig *config.LitmusConfig, cmd *cobra.Command) error {
 	ids, err := ListHistory(litmusConfig.RegressionsDir())
 	if err != nil {
 		return err
 	}
 
 	if len(ids) == 0 {
-		cmd.Println("No baseline history found. Run 'litmus snapshot --update' to create one.")
+		cmd.Println("No baseline history found. Run 'litmus snapshot capture' to create one.")
 		return nil
 	}
 
@@ -152,12 +147,7 @@ func RunHistoryList(cmd *cobra.Command) error {
 }
 
 // RunHistoryRollback restores the baseline identified by id.
-func RunHistoryRollback(cmd *cobra.Command, id string) error {
-	litmusConfig, err := config.LoadConfig()
-	if err != nil {
-		return fmt.Errorf("loading litmus config: %w", err)
-	}
-
+func RunHistoryRollback(litmusConfig *config.LitmusConfig, cmd *cobra.Command, id string) error {
 	ids, err := ListHistory(litmusConfig.RegressionsDir())
 	if err != nil {
 		return err

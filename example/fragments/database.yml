@@ -1,4 +1,3 @@
-name: "database"
 namespace: "db"
 
 group:

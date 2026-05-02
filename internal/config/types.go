@@ -1,10 +1,5 @@
 package config
 
-import (
-	"github.com/nyambati/litmus/internal/types"
-	amconfig "github.com/prometheus/alertmanager/config"
-)
-
 type (
 	// MimirConfig defines the connection parameters for Grafana Mimir.
 	MimirConfig struct {
@@ -54,25 +49,6 @@ type (
 		Sanity       SanityConfig      `yaml:"sanity" mapstructure:"sanity"`
 		GlobalLabels map[string]string `yaml:"global_labels" mapstructure:"global_labels"`
 		Mimir        MimirConfig       `yaml:"mimir" mapstructure:"mimir"`
-	}
-
-	// FragmentGroup defines a synthetic parent route created during assembly.
-	FragmentGroup struct {
-		Match    map[string]string `yaml:"match"`
-		Receiver string            `yaml:"receiver"`
-	}
-
-	// Fragment represents a team-level configuration fragment.
-	Fragment struct {
-		Name         string                 `yaml:"name"`
-		Namespace    string                 `yaml:"namespace"`
-		Group        *FragmentGroup         `yaml:"group"`
-		Routes       []*amconfig.Route      `yaml:"routes"`
-		Receivers    []Receiver             `yaml:"receivers"`
-		InhibitRules []amconfig.InhibitRule `yaml:"inhibit_rules"`
-		// Tests are discovered from sibling *-tests.yml files and tests/ subdirectory.
-		// Never parsed from the fragment definition file itself.
-		Tests []*types.TestCase `yaml:"-"`
 	}
 )
 

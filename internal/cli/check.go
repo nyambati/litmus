@@ -15,7 +15,9 @@ import (
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/engine/sanity"
 	"github.com/nyambati/litmus/internal/engine/snapshot"
+	"github.com/nyambati/litmus/internal/fragment"
 	"github.com/nyambati/litmus/internal/types"
+	"github.com/nyambati/litmus/internal/workspace"
 	amconfig "github.com/prometheus/alertmanager/config"
 )
 
@@ -82,19 +84,30 @@ type BehavioralResult struct {
 
 // RunCheck loads config, runs all validation stages, prints results, and returns
 // the exit code the CLI layer should pass to os.Exit (0 = all passed).
-func RunCheck(format string, showDiff bool, tags []string) (CheckExitCode, error) {
+func RunCheck(cfg *config.LitmusConfig, format string, showDiff bool, tags []string) (CheckExitCode, error) {
 	start := time.Now()
 
-	litmusConfig, router, fragments, amCfg, err := loadConfigAndRouter()
+	ws, err := workspace.Load(cfg.Workspace.Root)
 	if err != nil {
 		return 1, err
 	}
 
-	sanityResult := runSanityChecks(litmusConfig, fragments, amCfg)
-	regressionResult := runRegressionTests(litmusConfig, router, tags)
-	behavioralResult := runBehavioralTests(amCfg.InhibitRules, litmusConfig, fragments, router, tags)
+	amCfg, err := ws.Config()
+	if err != nil {
+		return 1, fmt.Errorf("failed to load alertmanager config: %w", err)
+	}
 
-	result := buildCheckResult(litmusConfig.FilePath(), sanityResult, regressionResult, behavioralResult, time.Since(start))
+	if amCfg.Route == nil {
+		return 1, fmt.Errorf("alertmanager config has no route defined")
+	}
+
+	router := pipeline.NewRouter(amCfg.Route)
+
+	sanityResult := runSanityChecks(cfg, ws.Fragments, amCfg)
+	regressionResult := runRegressionTests(cfg, router, tags)
+	behavioralResult := runBehavioralTests(amCfg.InhibitRules, cfg, ws.Fragments, ws.Tests, router, tags)
+
+	result := buildCheckResult(cfg.FilePath(), sanityResult, regressionResult, behavioralResult, time.Since(start))
 
 	code := calculateExitCode(result)
 	result.ExitCode = code
@@ -106,28 +119,8 @@ func RunCheck(format string, showDiff bool, tags []string) (CheckExitCode, error
 	return code, nil
 }
 
-// loadConfigAndRouter loads the litmus config, assembles alertmanager config, and creates a router.
-func loadConfigAndRouter() (*config.LitmusConfig, *pipeline.Router, []*config.Fragment, *amconfig.Config, error) {
-	litmusConfig, err := config.LoadConfig()
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("loading litmus config: %w", err)
-	}
-
-	_, fragments, amCfg, err := litmusConfig.LoadAssembledConfig()
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("loading assembled alertmanager config: %w", err)
-	}
-
-	if amCfg.Route == nil {
-		return nil, nil, nil, nil, fmt.Errorf("alertmanager config has no route defined")
-	}
-
-	router := pipeline.NewRouter(amCfg.Route)
-	return litmusConfig, router, fragments, amCfg, nil
-}
-
 // runSanityChecks executes all sanity checks including policy enforcement.
-func runSanityChecks(litmusConfig *config.LitmusConfig, fragments []*config.Fragment, amCfg *amconfig.Config) SanityResult {
+func runSanityChecks(litmusConfig *config.LitmusConfig, fragments []*fragment.Fragment, amCfg *amconfig.Config) SanityResult {
 	sanityResult := RunSanityChecks(amCfg, litmusConfig.Sanity)
 	checker := sanity.NewPolicyChecker(litmusConfig.Policy)
 	sanityResult.PolicyIssues = checker.Check(fragments)
@@ -148,9 +141,9 @@ func runRegressionTests(litmusConfig *config.LitmusConfig, router *pipeline.Rout
 }
 
 // runBehavioralTests executes behavioral tests against the router and inhibit rules.
-func runBehavioralTests(inhibitRules []amconfig.InhibitRule, litmusConfig *config.LitmusConfig, fragments []*config.Fragment, router *pipeline.Router, tags []string) BehavioralResult {
+func runBehavioralTests(inhibitRules []amconfig.InhibitRule, litmusConfig *config.LitmusConfig, fragments []*fragment.Fragment, workspaceTests []*types.TestCase, router *pipeline.Router, tags []string) BehavioralResult {
 	ctx := context.Background()
-	return RunBehavioralTests(ctx, litmusConfig, fragments, router, inhibitRules, tags)
+	return RunBehavioralTests(ctx, litmusConfig, fragments, workspaceTests, router, inhibitRules, tags)
 }
 
 // buildCheckResult assembles the final check result from all test results.
@@ -285,13 +278,14 @@ func RunRegressionTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 }
 
 // RunBehavioralTests loads and executes all behavioral unit tests.
-func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, fragments []*config.Fragment, router *pipeline.Router, inhibitRules []amconfig.InhibitRule, tags []string) BehavioralResult {
+func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, fragments []*fragment.Fragment, workspaceTests []*types.TestCase, router *pipeline.Router, inhibitRules []amconfig.InhibitRule, tags []string) BehavioralResult {
 	result := BehavioralResult{Passed: true}
 
 	var tests []*types.TestCase
 	for _, frag := range fragments {
 		tests = append(tests, frag.Tests...)
 	}
+	tests = append(tests, workspaceTests...)
 
 	if len(tests) == 0 {
 		return result

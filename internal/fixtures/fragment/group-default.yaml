@@ -1,0 +1,9 @@
+namespace: "test"
+group:
+  receiver: "default-receiver"
+  match:
+    team: "test"
+routes:
+  - receiver: "critical"
+receivers:
+  - name: "critical"

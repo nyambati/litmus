@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/nyambati/litmus/internal/cli"
+	"github.com/nyambati/litmus/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -27,8 +28,9 @@ func newSnapshotCaptureCmd() *cobra.Command {
 		Long:         "Captures current alertmanager routing behavior as regression baseline.",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg := config.FromContext(cmd.Context())
 			strict, _ := cmd.Flags().GetBool("strict")
-			return cli.RunSnapshot(false, strict)
+			return cli.RunSnapshot(cfg, false, strict)
 		},
 	}
 
@@ -44,8 +46,9 @@ func newSnapshotUpdateCmd() *cobra.Command {
 		Long:         "Updates baseline with current alertmanager routing behavior.",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg := config.FromContext(cmd.Context())
 			strict, _ := cmd.Flags().GetBool("strict")
-			return cli.RunSnapshot(true, strict)
+			return cli.RunSnapshot(cfg, true, strict)
 		},
 	}
 

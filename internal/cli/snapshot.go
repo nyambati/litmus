@@ -13,29 +13,33 @@ import (
 	"github.com/nyambati/litmus/internal/engine/snapshot"
 	"github.com/nyambati/litmus/internal/stores"
 	"github.com/nyambati/litmus/internal/types"
+	"github.com/nyambati/litmus/internal/workspace"
 )
 
 // RunSnapshot captures current routing behavior as a regression baseline.
 // If update is false and a baseline exists, drift is checked.
 // In strict mode, drift causes an error and prints a diff.
 // Otherwise, drift only prints a warning and does not block the snapshot creation.
-func RunSnapshot(update, strict bool) error {
-	litmusConfig, err := config.LoadConfig()
+func RunSnapshot(cfg *config.LitmusConfig, update, strict bool) error {
+	ws, err := workspace.Load(cfg.Workspace.Root)
 	if err != nil {
-		return fmt.Errorf("loading litmus config: %w", err)
+		return err
 	}
 
-	alertConfig, _, _, err := litmusConfig.LoadAssembledConfig()
+	amCfg, err := ws.Config()
 	if err != nil {
-		return fmt.Errorf("loading assembled alertmanager config: %w", err)
+		return fmt.Errorf("failed to load alertmanager config: %w", err)
+	}
+	if amCfg.Route == nil {
+		return fmt.Errorf("alertmanager config has no route defined")
 	}
 
 	ctx := context.Background()
 
-	router := pipeline.NewRouter(alertConfig.Route)
+	router := pipeline.NewRouter(amCfg.Route)
 	runner := pipeline.NewRunner(stores.NewSilenceStore(nil), stores.NewAlertStore(), router, nil)
 
-	walker := snapshot.NewRouteWalker(alertConfig.Route)
+	walker := snapshot.NewRouteWalker(amCfg.Route)
 	paths := walker.FindTerminalPaths()
 
 	synthesizer := snapshot.NewSnapshotSynthesizer(runner)
@@ -48,13 +52,13 @@ func RunSnapshot(update, strict bool) error {
 		fmt.Fprintf(os.Stderr, "WARN: synthesis produced zero outcomes; baseline will be empty\n")
 	}
 
-	regTests := BuildRegressionTests(outcomes, litmusConfig.GlobalLabels)
+	regTests := BuildRegressionTests(outcomes, cfg.GlobalLabels)
 
 	var existing []*types.TestCase
-	existingHistory, err := ListHistory(litmusConfig.RegressionsDir())
+	existingHistory, err := ListHistory(cfg.RegressionsDir())
 	hasHistory := err == nil && len(existingHistory) > 0
 
-	state, err := LoadRegressionState(litmusConfig.RegressionsYamlFilePath())
+	state, err := LoadRegressionState(cfg.RegressionsYamlFilePath())
 	if err == nil && state != nil {
 		existing = state.Tests
 	} else if err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -73,12 +77,12 @@ func RunSnapshot(update, strict bool) error {
 		}
 	}
 
-	if err := os.MkdirAll(litmusConfig.RegressionsDir(), 0755); err != nil {
+	if err := os.MkdirAll(cfg.RegressionsDir(), 0755); err != nil {
 		return fmt.Errorf("creating regression directory: %w", err)
 	}
 
 	if !hasHistory {
-		if _, err := ArchiveBaseline(litmusConfig, regTests); err != nil {
+		if _, err := ArchiveBaseline(cfg, regTests); err != nil {
 			return fmt.Errorf("creating initial baseline: %w", err)
 		}
 		fmt.Println("✓ Baseline created") //nolint:forbidigo
@@ -90,7 +94,7 @@ func RunSnapshot(update, strict bool) error {
 			fmt.Fprintf(os.Stderr, "WARN: drift detected in routing behavior; run 'litmus snapshot update' to accept changes, or 'litmus diff' to inspect\n")
 			return nil
 		}
-		if _, err := ArchiveBaseline(litmusConfig, regTests); err != nil {
+		if _, err := ArchiveBaseline(cfg, regTests); err != nil {
 			return fmt.Errorf("archiving baseline to history: %w", err)
 		}
 		fmt.Println("✓ Baseline updated") //nolint:forbidigo

@@ -4,8 +4,10 @@ Copyright © 2026 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"context"
 	"os"
 
+	"github.com/nyambati/litmus/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -16,6 +18,15 @@ var rootCmd = &cobra.Command{
 	Short:   "Litmus - Alertmanager Validator",
 	Long:    "Litmus validates Alertmanager configurations through regression and behavioral testing",
 	Version: version,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		cfg, err := config.New()
+		if err != nil {
+			return err
+		}
+		ctx := context.WithValue(cmd.Context(), config.ConfigKey{}, cfg)
+		cmd.SetContext(ctx)
+		return nil
+	},
 }
 
 func Execute() {

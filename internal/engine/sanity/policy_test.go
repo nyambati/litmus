@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	litconfig "github.com/nyambati/litmus/internal/config"
+	"github.com/nyambati/litmus/internal/fragment"
 	"github.com/nyambati/litmus/internal/types"
 	amconfig "github.com/prometheus/alertmanager/config"
 	labels "github.com/prometheus/alertmanager/pkg/labels"
@@ -18,30 +19,30 @@ func enforce(strict bool, matchers ...string) litconfig.EnforceConfig {
 func TestPolicyChecker_RequireTests(t *testing.T) {
 	tests := []struct {
 		name       string
-		fragments  []*litconfig.Fragment
+		fragments  []*fragment.Fragment
 		wantIssues int
 	}{
 		{
 			name:       "fragment with tests — no violation",
-			fragments:  []*litconfig.Fragment{{Name: "db", Tests: []*types.TestCase{{Name: "t1"}}}},
+			fragments:  []*fragment.Fragment{{Namespace: "db", Tests: []*types.TestCase{{Name: "t1"}}}},
 			wantIssues: 0,
 		},
 		{
 			name:       "fragment with no tests — violation",
-			fragments:  []*litconfig.Fragment{{Name: "db"}},
+			fragments:  []*fragment.Fragment{{Namespace: "db"}},
 			wantIssues: 1,
 		},
 		{
 			name:       "root fragment checked — no tests is a violation",
-			fragments:  []*litconfig.Fragment{{Name: "root"}},
+			fragments:  []*fragment.Fragment{{Namespace: "root"}},
 			wantIssues: 1,
 		},
 		{
 			name: "multiple fragments — only violators reported",
-			fragments: []*litconfig.Fragment{
-				{Name: "db"},
-				{Name: "net", Tests: []*types.TestCase{{Name: "t1"}}},
-				{Name: "api"},
+			fragments: []*fragment.Fragment{
+				{Namespace: "db"},
+				{Namespace: "net", Tests: []*types.TestCase{{Name: "t1"}}},
+				{Namespace: "api"},
 			},
 			wantIssues: 2,
 		},
@@ -59,48 +60,48 @@ func TestPolicyChecker_EnforceMatchers_Flat(t *testing.T) {
 	tests := []struct {
 		name       string
 		policy     litconfig.PolicyConfig
-		fragments  []*litconfig.Fragment
+		fragments  []*fragment.Fragment
 		wantIssues int
 	}{
 		{
 			name:   "route has required label in Match — no violation",
 			policy: litconfig.PolicyConfig{Enforce: enforce(true, "team")},
-			fragments: []*litconfig.Fragment{{
-				Name:   "db",
-				Routes: []*amconfig.Route{{Receiver: "slack", Match: map[string]string{"team": "db"}}},
+			fragments: []*fragment.Fragment{{
+				Namespace: "db",
+				Routes:    []*amconfig.Route{{Receiver: "slack", Match: map[string]string{"team": "db"}}},
 			}},
 			wantIssues: 0,
 		},
 		{
 			name:   "route missing required label — violation",
 			policy: litconfig.PolicyConfig{Enforce: enforce(true, "team")},
-			fragments: []*litconfig.Fragment{{
-				Name:   "db",
-				Routes: []*amconfig.Route{{Receiver: "slack", Match: map[string]string{"severity": "critical"}}},
+			fragments: []*fragment.Fragment{{
+				Namespace: "db",
+				Routes:    []*amconfig.Route{{Receiver: "slack", Match: map[string]string{"severity": "critical"}}},
 			}},
 			wantIssues: 1,
 		},
 		{
 			name:   "route has required label in modern Matchers — no violation",
 			policy: litconfig.PolicyConfig{Enforce: enforce(true, "team")},
-			fragments: []*litconfig.Fragment{{
-				Name:   "db",
-				Routes: []*amconfig.Route{{Receiver: "slack", Matchers: mustMatchers(t, "team", "db")}},
+			fragments: []*fragment.Fragment{{
+				Namespace: "db",
+				Routes:    []*amconfig.Route{{Receiver: "slack", Matchers: mustMatchers(t, "team", "db")}},
 			}},
 			wantIssues: 0,
 		},
 		{
 			name:       "fragment with no routes — no violation",
 			policy:     litconfig.PolicyConfig{Enforce: enforce(true, "team")},
-			fragments:  []*litconfig.Fragment{{Name: "db"}},
+			fragments:  []*fragment.Fragment{{Namespace: "db"}},
 			wantIssues: 0,
 		},
 		{
 			name:   "root child route missing required matcher — violation",
 			policy: litconfig.PolicyConfig{Enforce: enforce(true, "team")},
-			fragments: []*litconfig.Fragment{{
-				Name:   "root",
-				Routes: []*amconfig.Route{{Receiver: "slack", Match: map[string]string{"severity": "critical"}}},
+			fragments: []*fragment.Fragment{{
+				Namespace: "root",
+				Routes:    []*amconfig.Route{{Receiver: "slack", Match: map[string]string{"severity": "critical"}}},
 			}},
 			wantIssues: 1,
 		},
@@ -135,7 +136,7 @@ func TestPolicyChecker_StrictMode_Inheritance(t *testing.T) {
 			},
 		}
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(true, "label_team", "severity")})
-		issues := checker.Check([]*litconfig.Fragment{{Name: "payments", Routes: root.Routes}})
+		issues := checker.Check([]*fragment.Fragment{{Namespace: "payments", Routes: root.Routes}})
 		assert.Empty(t, issues)
 	})
 
@@ -155,7 +156,7 @@ func TestPolicyChecker_StrictMode_Inheritance(t *testing.T) {
 			},
 		}
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(true, "label_team", "severity")})
-		issues := checker.Check([]*litconfig.Fragment{{Name: "payments", Routes: root.Routes}})
+		issues := checker.Check([]*fragment.Fragment{{Namespace: "payments", Routes: root.Routes}})
 		assert.Len(t, issues, 1)
 		assert.Contains(t, issues[0], "catch-all")
 	})
@@ -175,7 +176,7 @@ func TestPolicyChecker_StrictMode_Inheritance(t *testing.T) {
 			},
 		}
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(true, "label_team", "severity")})
-		issues := checker.Check([]*litconfig.Fragment{{Name: "payments", Routes: root.Routes}})
+		issues := checker.Check([]*fragment.Fragment{{Namespace: "payments", Routes: root.Routes}})
 		assert.Len(t, issues, 2)
 	})
 
@@ -197,7 +198,7 @@ func TestPolicyChecker_StrictMode_Inheritance(t *testing.T) {
 			},
 		}
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(true, "label_team", "severity")})
-		issues := checker.Check([]*litconfig.Fragment{{Name: "payments", Routes: routes}})
+		issues := checker.Check([]*fragment.Fragment{{Namespace: "payments", Routes: routes}})
 		assert.Empty(t, issues)
 	})
 
@@ -213,14 +214,14 @@ func TestPolicyChecker_StrictMode_Inheritance(t *testing.T) {
 			},
 		}
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(true, "label_team", "severity")})
-		issues := checker.Check([]*litconfig.Fragment{{Name: "payments", Routes: routes}})
+		issues := checker.Check([]*fragment.Fragment{{Namespace: "payments", Routes: routes}})
 		assert.Empty(t, issues)
 	})
 
 	t.Run("leaf route with no matchers anywhere — violation at leaf", func(t *testing.T) {
 		routes := []*amconfig.Route{{Receiver: "orphan"}}
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(true, "label_team", "severity")})
-		issues := checker.Check([]*litconfig.Fragment{{Name: "payments", Routes: routes}})
+		issues := checker.Check([]*fragment.Fragment{{Namespace: "payments", Routes: routes}})
 		assert.Len(t, issues, 1)
 		assert.Contains(t, issues[0], "orphan")
 	})
@@ -242,7 +243,7 @@ func TestPolicyChecker_NonStrictMode_Inheritance(t *testing.T) {
 			},
 		}
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(false, "label_team", "severity")})
-		issues := checker.Check([]*litconfig.Fragment{{Name: "payments", Routes: routes}})
+		issues := checker.Check([]*fragment.Fragment{{Namespace: "payments", Routes: routes}})
 		assert.Empty(t, issues)
 	})
 
@@ -257,7 +258,7 @@ func TestPolicyChecker_NonStrictMode_Inheritance(t *testing.T) {
 			},
 		}
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(false, "label_team", "severity")})
-		issues := checker.Check([]*litconfig.Fragment{{Name: "payments", Routes: routes}})
+		issues := checker.Check([]*fragment.Fragment{{Namespace: "payments", Routes: routes}})
 		assert.Empty(t, issues)
 	})
 
@@ -271,7 +272,7 @@ func TestPolicyChecker_NonStrictMode_Inheritance(t *testing.T) {
 			},
 		}
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(false, "label_team", "severity")})
-		issues := checker.Check([]*litconfig.Fragment{{Name: "payments", Routes: routes}})
+		issues := checker.Check([]*fragment.Fragment{{Namespace: "payments", Routes: routes}})
 		assert.Len(t, issues, 1)
 		assert.Contains(t, issues[0], "child")
 	})
@@ -281,7 +282,7 @@ func TestPolicyChecker_NonStrictMode_Inheritance(t *testing.T) {
 			{Receiver: "slack", Match: map[string]string{"service": "mysql"}},
 		}
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(false, "team", "service")})
-		issues := checker.Check([]*litconfig.Fragment{{Name: "db", Routes: routes}})
+		issues := checker.Check([]*fragment.Fragment{{Namespace: "db", Routes: routes}})
 		assert.Empty(t, issues)
 	})
 }
@@ -289,9 +290,9 @@ func TestPolicyChecker_NonStrictMode_Inheritance(t *testing.T) {
 func TestPolicyChecker_GroupMatch_Inheritance(t *testing.T) {
 	t.Run("group match provides label_team — child routes only need severity", func(t *testing.T) {
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(true, "label_team", "severity")})
-		issues := checker.Check([]*litconfig.Fragment{{
-			Name:  "database",
-			Group: &litconfig.FragmentGroup{Match: map[string]string{"label_team": "database"}},
+		issues := checker.Check([]*fragment.Fragment{{
+			Namespace: "database",
+			Group:     &fragment.FragmentGroup{Match: map[string]string{"label_team": "database"}},
 			Routes: []*amconfig.Route{
 				{Receiver: "critical", Match: map[string]string{"severity": "critical"}},
 				{Receiver: "warning", Match: map[string]string{"severity": "warning"}},
@@ -302,9 +303,9 @@ func TestPolicyChecker_GroupMatch_Inheritance(t *testing.T) {
 
 	t.Run("group match provides label_team but children missing severity — violation", func(t *testing.T) {
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(true, "label_team", "severity")})
-		issues := checker.Check([]*litconfig.Fragment{{
-			Name:  "database",
-			Group: &litconfig.FragmentGroup{Match: map[string]string{"label_team": "database"}},
+		issues := checker.Check([]*fragment.Fragment{{
+			Namespace: "database",
+			Group:     &fragment.FragmentGroup{Match: map[string]string{"label_team": "database"}},
 			Routes: []*amconfig.Route{
 				{Receiver: "catch-all"},
 			},
@@ -316,9 +317,9 @@ func TestPolicyChecker_GroupMatch_Inheritance(t *testing.T) {
 
 	t.Run("no group — routes must be self-sufficient", func(t *testing.T) {
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(true, "label_team", "severity")})
-		issues := checker.Check([]*litconfig.Fragment{{
-			Name:   "database",
-			Routes: []*amconfig.Route{{Receiver: "critical", Match: map[string]string{"severity": "critical"}}},
+		issues := checker.Check([]*fragment.Fragment{{
+			Namespace: "database",
+			Routes:    []*amconfig.Route{{Receiver: "critical", Match: map[string]string{"severity": "critical"}}},
 		}})
 		assert.Len(t, issues, 1)
 		assert.Contains(t, issues[0], "critical")
@@ -330,9 +331,9 @@ func TestPolicyChecker_GroupMatch_CoversAll(t *testing.T) {
 	t.Run("group match satisfies all required labels — empty child routes are exempt", func(t *testing.T) {
 		// group.match = {label_team, severity} → covers both → even leaf with no matchers is clean
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(true, "label_team", "severity")})
-		issues := checker.Check([]*litconfig.Fragment{{
-			Name: "database",
-			Group: &litconfig.FragmentGroup{Match: map[string]string{
+		issues := checker.Check([]*fragment.Fragment{{
+			Namespace: "database",
+			Group: &fragment.FragmentGroup{Match: map[string]string{
 				"label_team": "database",
 				"severity":   "critical",
 			}},
@@ -346,10 +347,10 @@ func TestPolicyChecker_GroupMatch_CoversAll(t *testing.T) {
 
 	t.Run("group present but Match is empty — no inherited labels, routes must self-cover", func(t *testing.T) {
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(true, "label_team")})
-		issues := checker.Check([]*litconfig.Fragment{{
-			Name:   "database",
-			Group:  &litconfig.FragmentGroup{},
-			Routes: []*amconfig.Route{{Receiver: "critical", Match: map[string]string{"severity": "critical"}}},
+		issues := checker.Check([]*fragment.Fragment{{
+			Namespace: "database",
+			Group:     &fragment.FragmentGroup{},
+			Routes:    []*amconfig.Route{{Receiver: "critical", Match: map[string]string{"severity": "critical"}}},
 		}})
 		assert.Len(t, issues, 1)
 		assert.Contains(t, issues[0], "critical")
@@ -358,19 +359,19 @@ func TestPolicyChecker_GroupMatch_CoversAll(t *testing.T) {
 
 	t.Run("group present but Match is nil — identical to no group", func(t *testing.T) {
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(true, "label_team")})
-		issues := checker.Check([]*litconfig.Fragment{{
-			Name:   "database",
-			Group:  &litconfig.FragmentGroup{Match: nil},
-			Routes: []*amconfig.Route{{Receiver: "critical", Match: map[string]string{"severity": "critical"}}},
+		issues := checker.Check([]*fragment.Fragment{{
+			Namespace: "database",
+			Group:     &fragment.FragmentGroup{Match: nil},
+			Routes:    []*amconfig.Route{{Receiver: "critical", Match: map[string]string{"severity": "critical"}}},
 		}})
 		assert.Len(t, issues, 1)
 	})
 
 	t.Run("fragment with group but no routes — no violations", func(t *testing.T) {
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(true, "label_team", "severity")})
-		issues := checker.Check([]*litconfig.Fragment{{
-			Name:  "database",
-			Group: &litconfig.FragmentGroup{Match: map[string]string{"label_team": "database"}},
+		issues := checker.Check([]*fragment.Fragment{{
+			Namespace: "database",
+			Group:     &fragment.FragmentGroup{Match: map[string]string{"label_team": "database"}},
 		}})
 		assert.Empty(t, issues)
 	})
@@ -383,9 +384,9 @@ func TestPolicyChecker_SkipRoot_Enforce(t *testing.T) {
 			Enforce:  enforce(true, "label_team"),
 		}
 		checker := NewPolicyChecker(policy)
-		issues := checker.Check([]*litconfig.Fragment{
-			{Name: "root", Routes: []*amconfig.Route{{Receiver: "catch-all"}}},
-			{Name: "db", Routes: []*amconfig.Route{{Receiver: "slack", Match: map[string]string{"label_team": "db"}}}},
+		issues := checker.Check([]*fragment.Fragment{
+			{Namespace: "root", Routes: []*amconfig.Route{{Receiver: "catch-all"}}},
+			{Namespace: "db", Routes: []*amconfig.Route{{Receiver: "slack", Match: map[string]string{"label_team": "db"}}}},
 		})
 		assert.Empty(t, issues, "root violation must be suppressed; db route is covered")
 	})
@@ -396,8 +397,8 @@ func TestPolicyChecker_SkipRoot_Enforce(t *testing.T) {
 			Enforce:  enforce(true, "label_team"),
 		}
 		checker := NewPolicyChecker(policy)
-		issues := checker.Check([]*litconfig.Fragment{
-			{Name: "root", Routes: []*amconfig.Route{{Receiver: "catch-all"}}},
+		issues := checker.Check([]*fragment.Fragment{
+			{Namespace: "root", Routes: []*amconfig.Route{{Receiver: "catch-all"}}},
 		})
 		assert.Len(t, issues, 1)
 		assert.Contains(t, issues[0], "catch-all")
@@ -408,9 +409,9 @@ func TestPolicyChecker_ViolationMessageAccuracy(t *testing.T) {
 	t.Run("AND mode message lists only actually-missing labels", func(t *testing.T) {
 		// route has severity but not label_team → message should mention label_team, not severity
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(true, "label_team", "severity")})
-		issues := checker.Check([]*litconfig.Fragment{{
-			Name:   "db",
-			Routes: []*amconfig.Route{{Receiver: "critical", Match: map[string]string{"severity": "critical"}}},
+		issues := checker.Check([]*fragment.Fragment{{
+			Namespace: "db",
+			Routes:    []*amconfig.Route{{Receiver: "critical", Match: map[string]string{"severity": "critical"}}},
 		}})
 		assert.Len(t, issues, 1)
 		assert.Contains(t, issues[0], "label_team")
@@ -419,9 +420,9 @@ func TestPolicyChecker_ViolationMessageAccuracy(t *testing.T) {
 
 	t.Run("OR mode message lists all required matchers when none present", func(t *testing.T) {
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(false, "label_team", "severity")})
-		issues := checker.Check([]*litconfig.Fragment{{
-			Name:   "db",
-			Routes: []*amconfig.Route{{Receiver: "catch-all"}},
+		issues := checker.Check([]*fragment.Fragment{{
+			Namespace: "db",
+			Routes:    []*amconfig.Route{{Receiver: "catch-all"}},
 		}})
 		assert.Len(t, issues, 1)
 		assert.Contains(t, issues[0], "label_team")
@@ -434,9 +435,9 @@ func TestPolicyChecker_ORMode_GroupMatch(t *testing.T) {
 	t.Run("OR mode — group match satisfies requirement — all routes clean", func(t *testing.T) {
 		// group provides label_team; OR requires any one of [label_team, severity] → already covered
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(false, "label_team", "severity")})
-		issues := checker.Check([]*litconfig.Fragment{{
-			Name:  "database",
-			Group: &litconfig.FragmentGroup{Match: map[string]string{"label_team": "database"}},
+		issues := checker.Check([]*fragment.Fragment{{
+			Namespace: "database",
+			Group:     &fragment.FragmentGroup{Match: map[string]string{"label_team": "database"}},
 			Routes: []*amconfig.Route{
 				{Receiver: "catch-all"},
 				{Receiver: "pagerduty"},
@@ -449,14 +450,14 @@ func TestPolicyChecker_ORMode_GroupMatch(t *testing.T) {
 func TestPolicyChecker_MultiFragment_Isolation(t *testing.T) {
 	t.Run("violations are isolated per fragment — clean fragment not affected", func(t *testing.T) {
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(true, "label_team")})
-		issues := checker.Check([]*litconfig.Fragment{
+		issues := checker.Check([]*fragment.Fragment{
 			{
-				Name:   "good",
-				Routes: []*amconfig.Route{{Receiver: "slack", Match: map[string]string{"label_team": "good"}}},
+				Namespace: "good",
+				Routes:    []*amconfig.Route{{Receiver: "slack", Match: map[string]string{"label_team": "good"}}},
 			},
 			{
-				Name:   "bad",
-				Routes: []*amconfig.Route{{Receiver: "catch-all"}},
+				Namespace: "bad",
+				Routes:    []*amconfig.Route{{Receiver: "catch-all"}},
 			},
 		})
 		assert.Len(t, issues, 1)
@@ -466,10 +467,10 @@ func TestPolicyChecker_MultiFragment_Isolation(t *testing.T) {
 
 	t.Run("multiple fragments each contribute their own violations", func(t *testing.T) {
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(true, "label_team")})
-		issues := checker.Check([]*litconfig.Fragment{
-			{Name: "a", Routes: []*amconfig.Route{{Receiver: "r-a"}}},
-			{Name: "b", Routes: []*amconfig.Route{{Receiver: "r-b"}}},
-			{Name: "c", Routes: []*amconfig.Route{{Receiver: "r-c", Match: map[string]string{"label_team": "c"}}}},
+		issues := checker.Check([]*fragment.Fragment{
+			{Namespace: "a", Routes: []*amconfig.Route{{Receiver: "r-a"}}},
+			{Namespace: "b", Routes: []*amconfig.Route{{Receiver: "r-b"}}},
+			{Namespace: "c", Routes: []*amconfig.Route{{Receiver: "r-c", Match: map[string]string{"label_team": "c"}}}},
 		})
 		assert.Len(t, issues, 2)
 	})
@@ -478,8 +479,8 @@ func TestPolicyChecker_MultiFragment_Isolation(t *testing.T) {
 func TestPolicyChecker_MatchRE_CoverageViaLabelName(t *testing.T) {
 	t.Run("route with MatchRE on required label counts as covered", func(t *testing.T) {
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(true, "label_team")})
-		issues := checker.Check([]*litconfig.Fragment{{
-			Name: "db",
+		issues := checker.Check([]*fragment.Fragment{{
+			Namespace: "db",
 			Routes: []*amconfig.Route{{
 				Receiver: "slack",
 				MatchRE:  map[string]amconfig.Regexp{"label_team": {}},
@@ -490,8 +491,8 @@ func TestPolicyChecker_MatchRE_CoverageViaLabelName(t *testing.T) {
 
 	t.Run("route with MatchRE on unrelated label does not cover required label", func(t *testing.T) {
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(true, "label_team")})
-		issues := checker.Check([]*litconfig.Fragment{{
-			Name: "db",
+		issues := checker.Check([]*fragment.Fragment{{
+			Namespace: "db",
 			Routes: []*amconfig.Route{{
 				Receiver: "slack",
 				MatchRE:  map[string]amconfig.Regexp{"severity": {}},
@@ -508,9 +509,9 @@ func TestPolicyChecker_RequireTests_And_Enforce_Together(t *testing.T) {
 			Enforce:      enforce(true, "label_team"),
 		}
 		checker := NewPolicyChecker(policy)
-		issues := checker.Check([]*litconfig.Fragment{{
-			Name:   "db",
-			Routes: []*amconfig.Route{{Receiver: "critical", Match: map[string]string{"severity": "critical"}}},
+		issues := checker.Check([]*fragment.Fragment{{
+			Namespace: "db",
+			Routes:    []*amconfig.Route{{Receiver: "critical", Match: map[string]string{"severity": "critical"}}},
 		}})
 		assert.Len(t, issues, 2)
 	})
@@ -521,10 +522,10 @@ func TestPolicyChecker_RequireTests_And_Enforce_Together(t *testing.T) {
 			Enforce:      enforce(true, "label_team"),
 		}
 		checker := NewPolicyChecker(policy)
-		issues := checker.Check([]*litconfig.Fragment{{
-			Name:   "db",
-			Tests:  []*types.TestCase{{Name: "t1"}},
-			Routes: []*amconfig.Route{{Receiver: "critical", Match: map[string]string{"label_team": "db"}}},
+		issues := checker.Check([]*fragment.Fragment{{
+			Namespace: "db",
+			Tests:     []*types.TestCase{{Name: "t1"}},
+			Routes:    []*amconfig.Route{{Receiver: "critical", Match: map[string]string{"label_team": "db"}}},
 		}})
 		assert.Empty(t, issues)
 	})
@@ -532,7 +533,7 @@ func TestPolicyChecker_RequireTests_And_Enforce_Together(t *testing.T) {
 
 func TestPolicyChecker_NoPolicy_ReturnsNil(t *testing.T) {
 	checker := NewPolicyChecker(litconfig.PolicyConfig{})
-	assert.Nil(t, checker.Check([]*litconfig.Fragment{{Name: "db"}}))
+	assert.Nil(t, checker.Check([]*fragment.Fragment{{Namespace: "db"}}))
 }
 
 func TestPolicyChecker_Root_RequireTests(t *testing.T) {
@@ -540,15 +541,15 @@ func TestPolicyChecker_Root_RequireTests(t *testing.T) {
 
 	t.Run("root with no tests fails", func(t *testing.T) {
 		checker := NewPolicyChecker(policy)
-		issues := checker.Check([]*litconfig.Fragment{{Name: "root"}})
+		issues := checker.Check([]*fragment.Fragment{{Namespace: "root"}})
 		assert.Len(t, issues, 1)
 		assert.Contains(t, issues[0], "root")
 	})
 
 	t.Run("root with tests passes", func(t *testing.T) {
 		checker := NewPolicyChecker(policy)
-		issues := checker.Check([]*litconfig.Fragment{
-			{Name: "root", Tests: []*types.TestCase{{Name: "base test"}}},
+		issues := checker.Check([]*fragment.Fragment{
+			{Namespace: "root", Tests: []*types.TestCase{{Name: "base test"}}},
 		})
 		assert.Empty(t, issues)
 	})
@@ -557,25 +558,25 @@ func TestPolicyChecker_Root_RequireTests(t *testing.T) {
 func TestPolicyChecker_Root_EnforceMatchers(t *testing.T) {
 	t.Run("child route without required matcher fails", func(t *testing.T) {
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(true, "team")})
-		issues := checker.Check([]*litconfig.Fragment{{
-			Name:   "root",
-			Routes: []*amconfig.Route{{Receiver: "pagerduty", Match: map[string]string{"severity": "critical"}}},
+		issues := checker.Check([]*fragment.Fragment{{
+			Namespace: "root",
+			Routes:    []*amconfig.Route{{Receiver: "pagerduty", Match: map[string]string{"severity": "critical"}}},
 		}})
 		assert.Len(t, issues, 1)
 	})
 
 	t.Run("child route with required matcher passes", func(t *testing.T) {
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(true, "team")})
-		issues := checker.Check([]*litconfig.Fragment{{
-			Name:   "root",
-			Routes: []*amconfig.Route{{Receiver: "pagerduty", Match: map[string]string{"team": "platform"}}},
+		issues := checker.Check([]*fragment.Fragment{{
+			Namespace: "root",
+			Routes:    []*amconfig.Route{{Receiver: "pagerduty", Match: map[string]string{"team": "platform"}}},
 		}})
 		assert.Empty(t, issues)
 	})
 
 	t.Run("no child routes — no violation", func(t *testing.T) {
 		checker := NewPolicyChecker(litconfig.PolicyConfig{Enforce: enforce(true, "team")})
-		issues := checker.Check([]*litconfig.Fragment{{Name: "root"}})
+		issues := checker.Check([]*fragment.Fragment{{Namespace: "root"}})
 		assert.Empty(t, issues)
 	})
 }
@@ -583,9 +584,9 @@ func TestPolicyChecker_Root_EnforceMatchers(t *testing.T) {
 func TestPolicyChecker_SkipRoot(t *testing.T) {
 	policy := litconfig.PolicyConfig{RequireTests: true, SkipRoot: true}
 	checker := NewPolicyChecker(policy)
-	issues := checker.Check([]*litconfig.Fragment{
-		{Name: "root"},
-		{Name: "db", Tests: []*types.TestCase{{Name: "t1"}}},
+	issues := checker.Check([]*fragment.Fragment{
+		{Namespace: "root"},
+		{Namespace: "db", Tests: []*types.TestCase{{Name: "t1"}}},
 	})
 	assert.Empty(t, issues, "root require_tests violation must be suppressed when SkipRoot=true")
 }

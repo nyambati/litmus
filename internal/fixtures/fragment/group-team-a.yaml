@@ -1,0 +1,4 @@
+group:
+  receiver: "team-a"
+  match:
+    team: "a"

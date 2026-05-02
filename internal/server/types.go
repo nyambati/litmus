@@ -42,9 +42,9 @@ type ConfigResponse struct {
 }
 
 // FragmentInfo is a summary of a single loaded fragment.
+// Name is the fragment's namespace (identity and receiver prefix).
 type FragmentInfo struct {
 	Name      string             `json:"name"`
-	Namespace string             `json:"namespace,omitempty"`
 	Group     *FragmentGroupInfo `json:"group,omitempty"`
 	Routes    int                `json:"routes"`
 	Receivers int                `json:"receivers"`
@@ -58,11 +58,11 @@ type FragmentGroupInfo struct {
 }
 
 // FragmentTestGroup is a fragment paired with its behavioral tests.
+// Name is the fragment's namespace (identity and receiver prefix).
 type FragmentTestGroup struct {
-	Name      string             `json:"name"`
-	Namespace string             `json:"namespace,omitempty"`
-	Group     *FragmentGroupInfo `json:"group,omitempty"`
-	Tests     []*types.TestCase  `json:"tests"`
+	Name  string             `json:"name"`
+	Group *FragmentGroupInfo `json:"group,omitempty"`
+	Tests []*types.TestCase  `json:"tests"`
 }
 
 // MatcherMismatch describes a single matcher in a route that no longer matches the label set.

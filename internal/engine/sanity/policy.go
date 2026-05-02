@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	litconfig "github.com/nyambati/litmus/internal/config"
+	"github.com/nyambati/litmus/internal/fragment"
 	labelmatcher "github.com/nyambati/litmus/internal/labelmatcher"
 	amconfig "github.com/prometheus/alertmanager/config"
 )
@@ -19,20 +20,20 @@ func NewPolicyChecker(policy litconfig.PolicyConfig) *PolicyChecker {
 }
 
 // Check returns a list of policy violations across the given fragments.
-func (pc *PolicyChecker) Check(fragments []*litconfig.Fragment) []string {
+func (pc *PolicyChecker) Check(fragments []*fragment.Fragment) []string {
 	if !pc.policy.RequireTests && len(pc.policy.Enforce.Matchers) == 0 {
 		return nil
 	}
 
 	var issues []string
 	for _, frag := range fragments {
-		if frag.Name == "root" && pc.policy.SkipRoot {
+		if frag.Namespace == "root" && pc.policy.SkipRoot {
 			continue
 		}
 
 		if pc.policy.RequireTests && len(frag.Tests) == 0 {
 			issues = append(issues, fmt.Sprintf(
-				"fragment %q has no tests (policy: require_tests=true)", frag.Name,
+				"fragment %q has no tests (policy: require_tests=true)", frag.Namespace,
 			))
 		}
 
@@ -41,7 +42,7 @@ func (pc *PolicyChecker) Check(fragments []*litconfig.Fragment) []string {
 			if frag.Group != nil {
 				groupInherited = labelmatcher.LabelNamesFromStringMap(frag.Group.Match)
 			}
-			issues = append(issues, pc.checkRoutes(frag.Name, frag.Routes, groupInherited)...)
+			issues = append(issues, pc.checkRoutes(frag.Namespace, frag.Routes, groupInherited)...)
 		}
 	}
 	return issues
