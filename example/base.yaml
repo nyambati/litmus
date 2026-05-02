@@ -1,11 +1,7 @@
 global:
   resolve_timeout: 5m
-  slack_api_url: "https://hooks.slack.com/services/334"
-  pagerduty_url: "https://events.pagerduty.com/v2/enqueue"
-  opsgenie_api_key: "env(JWT_TOKEN_1)"
-  smtp_smarthost: "smtp.example.com:587"
-  smtp_from: "alerts@example.com"
-  smtp_require_tls: true
+  opsgenie_api_key: "env(OPSGENIE_API_KEY)"
+  slack_api_url: "env(SLACK_API_URL)"
 
 templates:
 
