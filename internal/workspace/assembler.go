@@ -52,10 +52,28 @@ func (w *Workspace) Assemble() (*Workspace, error) {
 		w.Fragments = append(w.Fragments, ch.Fragment)
 	}
 
+	// Snapshot root-only routes and receivers before assembly merges child
+	// fragments in. PolicyChecker uses this to enforce policy on the root.
+	w.RootFragment = rootSnapshot(w.root)
+
 	if err := assemble(w.root, children.Fragments, log); err != nil {
 		return nil, err
 	}
 	return w, nil
+}
+
+// rootSnapshot captures the root's own routes and receivers before assembly
+// merges child fragment data into root. The snapshot is used so PolicyChecker
+// can evaluate the root independently without seeing fragment contributions.
+func rootSnapshot(root *types.AlertmanagerConfig) *fragment.Fragment {
+	frag := &fragment.Fragment{Namespace: "root"}
+	if root.Route != nil && len(root.Route.Routes) > 0 {
+		frag.Routes = append([]*amconfig.Route{}, root.Route.Routes...)
+	}
+	if len(root.Receivers) > 0 {
+		frag.Receivers = append([]*types.Receiver{}, root.Receivers...)
+	}
+	return frag
 }
 
 // logger returns the workspace's configured logger or a no-op fallback when

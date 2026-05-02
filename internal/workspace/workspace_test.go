@@ -280,6 +280,79 @@ func TestWorkspaceRead_IgnoresNonYAMLInTestsDir(t *testing.T) {
 	}
 }
 
+// --- Assemble: RootFragment ---
+
+const rootNamespace = "root"
+
+func TestAssemble_RootFragmentCapturedBeforeChildMerge(t *testing.T) {
+	dir := t.TempDir()
+
+	// Root config has one direct child route.
+	writeWSFixture(t, dir, "base.yaml", `
+route:
+  receiver: default
+  routes:
+    - receiver: root-critical
+      match:
+        severity: critical
+receivers:
+  - name: default
+  - name: root-critical
+`)
+	// A child fragment adds its own route.
+	writeWSFixture(t, filepath.Join(dir, "fragments", "db"), "fragment.yaml", `
+namespace: db
+routes:
+  - receiver: db-alert
+receivers:
+  - name: db-alert
+`)
+
+	ws, err := New(dir).Assemble()
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+
+	if ws.RootFragment == nil {
+		t.Fatal("RootFragment nil, want populated fragment")
+	}
+	if ws.RootFragment.Namespace != rootNamespace {
+		t.Errorf("RootFragment.Namespace = %q, want %q", rootNamespace, ws.RootFragment.Namespace)
+	}
+	// Snapshot must contain only the root's own route (root-critical), not db-alert.
+	if len(ws.RootFragment.Routes) != 1 {
+		t.Fatalf("RootFragment.Routes length = %d, want 1", len(ws.RootFragment.Routes))
+	}
+	if ws.RootFragment.Routes[0].Receiver != "root-critical" {
+		t.Errorf("RootFragment.Routes[0].Receiver = %q, want \"root-critical\"", ws.RootFragment.Routes[0].Receiver)
+	}
+	// The child fragment route must NOT appear in the snapshot.
+	for _, r := range ws.RootFragment.Routes {
+		if r.Receiver == "db-db-alert" || r.Receiver == "db-alert" {
+			t.Errorf("RootFragment must not contain child fragment route %q", r.Receiver)
+		}
+	}
+}
+
+func TestAssemble_RootFragmentEmptyWhenNoRootRoutes(t *testing.T) {
+	dir := t.TempDir()
+	writeWSFixture(t, dir, "base.yaml", fixtures.MustRead("workspace/base-simple.yaml"))
+
+	ws, err := New(dir).Assemble()
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+	if ws.RootFragment == nil {
+		t.Fatal("RootFragment nil, want non-nil even when root has no sub-routes")
+	}
+	if ws.RootFragment.Namespace != rootNamespace {
+		t.Errorf("RootFragment.Namespace = %q, want %q", rootNamespace, ws.RootFragment.Namespace)
+	}
+	if len(ws.RootFragment.Routes) != 0 {
+		t.Errorf("RootFragment.Routes length = %d, want 0 for root with no sub-routes", len(ws.RootFragment.Routes))
+	}
+}
+
 func TestWorkspaceRead_TestsDirAsFileSilentlyIgnored(t *testing.T) {
 	dir := t.TempDir()
 	writeWSFixture(t, dir, "base.yaml", fixtures.MustRead("workspace/base-simple.yaml"))

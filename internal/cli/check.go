@@ -85,7 +85,11 @@ func RunCheck(cfg *config.LitmusConfig, format string, showDiff bool, tags []str
 
 	router := pipeline.NewRouter(amCfg.Route)
 
-	sanityResult := runSanityChecks(cfg, ws.Fragments, amCfg)
+	fragments := ws.Fragments
+	if ws.RootFragment != nil {
+		fragments = append([]*fragment.Fragment{ws.RootFragment}, fragments...)
+	}
+	sanityResult := runSanityChecks(cfg, fragments, amCfg)
 	regressionResult := runRegressionTests(cfg, router, tags)
 	behavioralResult := runBehavioralTests(amCfg.InhibitRules, cfg, ws.Fragments, ws.Tests, router, tags)
 

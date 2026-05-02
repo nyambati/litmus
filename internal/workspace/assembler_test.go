@@ -393,6 +393,69 @@ func TestMergeFlat_AppendsAllFields(t *testing.T) {
 	}
 }
 
+// --- rootSnapshot ---
+
+func TestRootSnapshot_CapturesRoutesAndReceivers(t *testing.T) {
+	root := &types.AlertmanagerConfig{
+		Route: &amconfig.Route{
+			Receiver: "default",
+			Routes:   []*amconfig.Route{{Receiver: "critical"}, {Receiver: "warning"}},
+		},
+		Receivers: []*types.Receiver{{Name: "default"}, {Name: "critical"}},
+	}
+	snap := rootSnapshot(root)
+
+	if snap.Namespace != "root" {
+		t.Errorf("Namespace = %q, want \"root\"", snap.Namespace)
+	}
+	if len(snap.Routes) != 2 {
+		t.Errorf("Routes length = %d, want 2", len(snap.Routes))
+	}
+	if len(snap.Receivers) != 2 {
+		t.Errorf("Receivers length = %d, want 2", len(snap.Receivers))
+	}
+}
+
+func TestRootSnapshot_NilRouteSafe(t *testing.T) {
+	root := &types.AlertmanagerConfig{Receivers: []*types.Receiver{{Name: "default"}}}
+	snap := rootSnapshot(root)
+
+	if snap.Namespace != "root" {
+		t.Errorf("Namespace = %q, want \"root\"", snap.Namespace)
+	}
+	if len(snap.Routes) != 0 {
+		t.Errorf("Routes length = %d, want 0", len(snap.Routes))
+	}
+}
+
+func TestRootSnapshot_IsIsolatedFromSubsequentMutations(t *testing.T) {
+	root := &types.AlertmanagerConfig{
+		Route:     &amconfig.Route{Receiver: "default", Routes: []*amconfig.Route{{Receiver: "root-only"}}},
+		Receivers: []*types.Receiver{{Name: "default"}},
+	}
+	snap := rootSnapshot(root)
+
+	// simulate what assemble() does — appends a fragment route to root
+	frag := &fragment.Fragment{
+		Namespace: "db",
+		Routes:    []*amconfig.Route{{Receiver: "db-critical"}},
+	}
+	if err := assemble(root, augment([]*fragment.Fragment{frag}), nopLogger()); err != nil {
+		t.Fatalf("assemble: %v", err)
+	}
+
+	// root now has 2 routes; snapshot must still have 1
+	if len(root.Route.Routes) != 2 {
+		t.Fatalf("root.Routes length = %d, want 2 after assemble", len(root.Route.Routes))
+	}
+	if len(snap.Routes) != 1 {
+		t.Errorf("snapshot Routes length = %d, want 1 (must not reflect post-assemble mutation)", len(snap.Routes))
+	}
+	if snap.Routes[0].Receiver != "root-only" {
+		t.Errorf("snapshot Routes[0].Receiver = %q, want \"root-only\"", snap.Routes[0].Receiver)
+	}
+}
+
 // --- namespace + assemble integration ---
 
 func TestAssemble_NamespacePrefixesReceiversAndRoutes(t *testing.T) {
