@@ -14,14 +14,15 @@ import (
 	"github.com/nyambati/litmus/internal/stores"
 	"github.com/nyambati/litmus/internal/types"
 	"github.com/nyambati/litmus/internal/workspace"
+	"github.com/sirupsen/logrus"
 )
 
 // RunSnapshot captures current routing behavior as a regression baseline.
 // If update is false and a baseline exists, drift is checked.
 // In strict mode, drift causes an error and prints a diff.
 // Otherwise, drift only prints a warning and does not block the snapshot creation.
-func RunSnapshot(cfg *config.LitmusConfig, update, strict bool) error {
-	ws, err := workspace.Load(cfg.Workspace.Root)
+func RunSnapshot(cfg *config.LitmusConfig, logger logrus.FieldLogger, update, strict bool) error {
+	ws, err := workspace.Load(cfg.Workspace.Root, logger)
 	if err != nil {
 		return err
 	}

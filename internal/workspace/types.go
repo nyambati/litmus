@@ -10,10 +10,10 @@ import (
 type (
 	Workspace struct {
 		root         *types.AlertmanagerConfig `yaml:"root,omitempty"`
-		Tests        []*types.TestCase         `yaml:"tests,omitempty"`
-		Fragments    []*fragment.Fragment
-		RootFragment *fragment.Fragment `yaml:"-"`
-		Logger       logrus.FieldLogger `yaml:"-"`
+		tests        []*types.TestCase         `yaml:"tests,omitempty"`
+		fragments    []*fragment.Fragment
+		rootFragment *fragment.Fragment `yaml:"-"`
+		logger       logrus.FieldLogger `yaml:"-"`
 		dir          string             `yaml:"-"`
 	}
 

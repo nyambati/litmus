@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/nyambati/litmus/internal/utils"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -29,12 +31,26 @@ const (
 // ConfigKey is the context key for LitmusConfig.
 type ConfigKey struct{}
 
+// LoggerKey is the context key for logrus.FieldLogger.
+type LoggerKey struct{}
+
 // FromContext retrieves LitmusConfig from context.
 func FromContext(ctx context.Context) *LitmusConfig {
 	if cfg, ok := ctx.Value(ConfigKey{}).(*LitmusConfig); ok {
 		return cfg
 	}
 	return nil
+}
+
+// LoggerFromContext retrieves the logger from context. Returns a discard logger
+// when none is set so callers never need to nil-check.
+func LoggerFromContext(ctx context.Context) logrus.FieldLogger {
+	if log, ok := ctx.Value(LoggerKey{}).(logrus.FieldLogger); ok {
+		return log
+	}
+	l := logrus.New()
+	l.Out = io.Discard
+	return l
 }
 
 // LoadConfig is an alias for New to maintain compatibility with existing callers.

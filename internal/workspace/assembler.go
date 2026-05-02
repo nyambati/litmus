@@ -3,7 +3,6 @@ package workspace
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -23,7 +22,7 @@ import (
 // describing each child as it is merged, plus a final summary. Errors
 // include the offending fragment's directory for fast diagnosis.
 func (w *Workspace) Assemble() (*Workspace, error) {
-	log := w.logger()
+	log := w.logger
 
 	meta, err := w.read()
 	if err != nil {
@@ -48,13 +47,13 @@ func (w *Workspace) Assemble() (*Workspace, error) {
 	log.WithField("count", len(children.Fragments)).Debug("children loaded")
 
 	for _, ch := range children.Fragments {
-		w.Tests = append(w.Tests, ch.Tests...)
-		w.Fragments = append(w.Fragments, ch.Fragment)
+		w.tests = append(w.tests, ch.Tests...)
+		w.fragments = append(w.fragments, ch.Fragment)
 	}
 
 	// Snapshot root-only routes and receivers before assembly merges child
 	// fragments in. PolicyChecker uses this to enforce policy on the root.
-	w.RootFragment = rootSnapshot(w.root)
+	w.rootFragment = rootSnapshot(w.root)
 
 	if err := assemble(w.root, children.Fragments, log); err != nil {
 		return nil, err
@@ -74,18 +73,6 @@ func rootSnapshot(root *types.AlertmanagerConfig) *fragment.Fragment {
 		frag.Receivers = append([]*types.Receiver{}, root.Receivers...)
 	}
 	return frag
-}
-
-// logger returns the workspace's configured logger or a no-op fallback when
-// the caller did not supply one. The fallback discards output so the rest of
-// the package can call log methods unconditionally.
-func (w *Workspace) logger() logrus.FieldLogger {
-	if w.Logger != nil {
-		return w.Logger
-	}
-	l := logrus.New()
-	l.Out = io.Discard
-	return l
 }
 
 // assemble is the pure merge function: given a root config and a slice of

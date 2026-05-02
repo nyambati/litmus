@@ -11,14 +11,13 @@ import (
 	"time"
 
 	"github.com/nyambati/litmus/internal/config"
-	"github.com/nyambati/litmus/internal/engine/behavioral"
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/engine/sanity"
-	"github.com/nyambati/litmus/internal/engine/snapshot"
 	"github.com/nyambati/litmus/internal/fragment"
 	"github.com/nyambati/litmus/internal/types"
 	"github.com/nyambati/litmus/internal/workspace"
 	amconfig "github.com/prometheus/alertmanager/config"
+	"github.com/sirupsen/logrus"
 )
 
 const divider = "--------------------------------------------------"
@@ -67,9 +66,9 @@ type BehavioralResult struct {
 
 // RunCheck loads config, runs all validation stages, prints results, and returns
 // the exit code the CLI layer should pass to os.Exit (0 = all passed).
-func RunCheck(cfg *config.LitmusConfig, format string, showDiff bool, tags []string) (CheckExitCode, error) {
+func RunCheck(cfg *config.LitmusConfig, logger logrus.FieldLogger, format string, showDiff bool, tags []string) (CheckExitCode, error) {
 	start := time.Now()
-	ws, err := workspace.Load(cfg.Workspace.Root)
+	ws, err := workspace.Load(cfg.Workspace.Root, logger)
 	if err != nil {
 		return 1, err
 	}
@@ -85,13 +84,14 @@ func RunCheck(cfg *config.LitmusConfig, format string, showDiff bool, tags []str
 
 	router := pipeline.NewRouter(amCfg.Route)
 
-	fragments := ws.Fragments
-	if ws.RootFragment != nil {
-		fragments = append([]*fragment.Fragment{ws.RootFragment}, fragments...)
+	fragments := ws.Fragments()
+	if ws.RootFragment() != nil {
+		fragments = append([]*fragment.Fragment{ws.RootFragment()}, fragments...)
 	}
+	ctx := context.Background()
 	sanityResult := runSanityChecks(cfg, fragments, amCfg)
-	regressionResult := runRegressionTests(cfg, router, tags)
-	behavioralResult := runBehavioralTests(amCfg.InhibitRules, cfg, ws.Fragments, ws.Tests, router, tags)
+	regressionResult := RunRegressionTests(ctx, cfg, router, tags)
+	behavioralResult := RunBehavioralTests(ctx, cfg, ws.Fragments(), ws.Tests(), router, amCfg.InhibitRules, tags)
 
 	result := buildCheckResult(cfg.FilePath(), sanityResult, regressionResult, behavioralResult, time.Since(start))
 
@@ -123,18 +123,6 @@ func runSanityChecks(litmusConfig *config.LitmusConfig, fragments []*fragment.Fr
 		Fragments: fragments,
 	}
 	return sanity.Run(ctx, litmusConfig.Sanity)
-}
-
-// runRegressionTests executes regression tests against the router.
-func runRegressionTests(litmusConfig *config.LitmusConfig, router *pipeline.Router, tags []string) RegressionResult {
-	ctx := context.Background()
-	return RunRegressionTests(ctx, litmusConfig, router, tags)
-}
-
-// runBehavioralTests executes behavioral tests against the router and inhibit rules.
-func runBehavioralTests(inhibitRules []amconfig.InhibitRule, litmusConfig *config.LitmusConfig, fragments []*fragment.Fragment, workspaceTests []*types.TestCase, router *pipeline.Router, tags []string) BehavioralResult {
-	ctx := context.Background()
-	return RunBehavioralTests(ctx, litmusConfig, fragments, workspaceTests, router, inhibitRules, tags)
 }
 
 // buildCheckResult assembles the final check result from all test results.
@@ -197,9 +185,9 @@ func RunRegressionTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 	result.TotalTests = len(baseline)
 	baseline = filterByTags(baseline, tags)
 	result.Tests = len(baseline)
-	executor := snapshot.NewRegressionTestExecutor()
+	executor := pipeline.NewTestExecutor(nil)
 
-	for _, res := range executor.Execute(ctx, baseline, router) {
+	for _, res := range executor.ExecuteAll(ctx, baseline, router) {
 		if res.Pass {
 			result.PassCount++
 		} else {
@@ -234,7 +222,7 @@ func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 	result.TotalTests = len(tests)
 	tests = filterByTags(tests, tags)
 	result.Tests = len(tests)
-	executor := behavioral.NewBehavioralTestExecutor(inhibitRules)
+	executor := pipeline.NewTestExecutor(inhibitRules)
 
 	for _, test := range tests {
 		res := executor.Execute(ctx, test, router)

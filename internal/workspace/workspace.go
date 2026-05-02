@@ -3,6 +3,7 @@ package workspace
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -10,14 +11,32 @@ import (
 	"github.com/nyambati/litmus/internal/fragment"
 	"github.com/nyambati/litmus/internal/types"
 	amconfig "github.com/prometheus/alertmanager/config"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
 
 const maxFileSize = 10 * 1024 * 1024 // 10MB
 
-func New(dir string) *Workspace {
-	return &Workspace{dir: dir}
+func New(dir string, logger logrus.FieldLogger) *Workspace {
+	if logger == nil {
+		l := logrus.New()
+		l.Out = io.Discard
+		logger = l
+	}
+	return &Workspace{
+		dir:    dir,
+		logger: logger,
+	}
 }
+
+// Fragments returns the loaded child fragments.
+func (w *Workspace) Fragments() []*fragment.Fragment { return w.fragments }
+
+// Tests returns root-level test cases.
+func (w *Workspace) Tests() []*types.TestCase { return w.tests }
+
+// RootFragment returns the pre-assembly snapshot of the root fragment (for policy checks).
+func (w *Workspace) RootFragment() *fragment.Fragment { return w.rootFragment }
 
 func (w *Workspace) Config() (*amconfig.Config, error) {
 	if w.root == nil {
@@ -67,7 +86,8 @@ func (w *Workspace) read() (*Metadata, error) {
 	if err != nil {
 		return nil, err
 	}
-	w.Tests = tests
+
+	w.tests = tests
 
 	return &Metadata{
 		Dir:       absPath,

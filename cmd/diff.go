@@ -15,7 +15,8 @@ func newDiffCmd() *cobra.Command {
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg := config.FromContext(cmd.Context())
-			return cli.RunDiff(cfg)
+			logger := config.LoggerFromContext(cmd.Context())
+			return cli.RunDiff(cfg, logger)
 		},
 	}
 }

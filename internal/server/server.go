@@ -16,7 +16,10 @@ var (
 
 type contextKey string
 
-const LitmusConfigKey contextKey = "litmusConfig"
+const (
+	LitmusConfigKey contextKey = "litmusConfig"
+	litmusLoggerKey contextKey = "litmusLogger"
+)
 
 // SetStaticFS registers the embedded UI filesystem before the server starts.
 func SetStaticFS(f fs.FS) {
@@ -24,7 +27,7 @@ func SetStaticFS(f fs.FS) {
 }
 
 // RunUIServer starts the Litmus UI backend.
-func RunUIServer(port int, dev bool) error {
+func RunUIServer(port int, dev bool, logger logrus.FieldLogger) error {
 	if !dev {
 		// use gin in production mode to serve static files
 		gin.SetMode(gin.ReleaseMode)
@@ -40,6 +43,7 @@ func RunUIServer(port int, dev bool) error {
 	// CORS Middleware for development
 	router.Use(corsMiddleware())
 	router.Use(litmusConfigMiddleware(litmusConfig))
+	router.Use(litmusLoggerMiddleware(logger))
 
 	// API Endpoints
 	api := router.Group("/api/v1")
@@ -85,6 +89,13 @@ func corsMiddleware() gin.HandlerFunc {
 func litmusConfigMiddleware(litmusConfig *config.LitmusConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Set(string(LitmusConfigKey), litmusConfig)
+		c.Next()
+	}
+}
+
+func litmusLoggerMiddleware(logger logrus.FieldLogger) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Set(string(litmusLoggerKey), logger)
 		c.Next()
 	}
 }

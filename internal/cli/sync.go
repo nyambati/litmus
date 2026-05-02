@@ -11,9 +11,10 @@ import (
 	"github.com/nyambati/litmus/internal/mimir"
 	"github.com/nyambati/litmus/internal/workspace"
 	amconfig "github.com/prometheus/alertmanager/config"
+	"github.com/sirupsen/logrus"
 )
 
-func RunSync(cfg *config.LitmusConfig, address, tenantID, apiKey string, skipValidate, dryRun bool, output string) error {
+func RunSync(cfg *config.LitmusConfig, logger logrus.FieldLogger, address, tenantID, apiKey string, skipValidate, dryRun bool, output string) error {
 	ctx := context.Background()
 
 	if address != "" {
@@ -26,7 +27,7 @@ func RunSync(cfg *config.LitmusConfig, address, tenantID, apiKey string, skipVal
 		cfg.Mimir.APIKey = apiKey
 	}
 
-	ws, err := workspace.Load(cfg.Workspace.Root)
+	ws, err := workspace.Load(cfg.Workspace.Root, logger)
 	if err != nil {
 		return err
 	}

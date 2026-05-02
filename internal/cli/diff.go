@@ -14,6 +14,7 @@ import (
 	"github.com/nyambati/litmus/internal/stores"
 	"github.com/nyambati/litmus/internal/types"
 	"github.com/nyambati/litmus/internal/workspace"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -24,8 +25,8 @@ const (
 )
 
 // RunDiff compares current config against the baseline and prints a structural diff.
-func RunDiff(cfg *config.LitmusConfig) error {
-	ws, err := workspace.Load(cfg.Workspace.Root)
+func RunDiff(cfg *config.LitmusConfig, logger logrus.FieldLogger) error {
+	ws, err := workspace.Load(cfg.Workspace.Root, logger)
 	if err != nil {
 		return err
 	}

@@ -12,7 +12,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/nyambati/litmus/internal/cli"
 	"github.com/nyambati/litmus/internal/config"
-	"github.com/nyambati/litmus/internal/engine/behavioral"
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/engine/snapshot"
 	"github.com/nyambati/litmus/internal/fragment"
@@ -21,12 +20,13 @@ import (
 	"github.com/nyambati/litmus/internal/workspace"
 	amconfig "github.com/prometheus/alertmanager/config"
 	"github.com/prometheus/common/model"
+	"github.com/sirupsen/logrus"
 )
 
 // loadAssembled loads the assembled alertmanager config and fragments, writing
 // an error response and returning false on failure.
 func loadAssembled(c *gin.Context, litmusConfig *config.LitmusConfig) (*amconfig.Config, []*fragment.Fragment, *workspace.Workspace, bool) {
-	ws, err := workspace.Load(litmusConfig.Workspace.Root)
+	ws, err := workspace.Load(litmusConfig.Workspace.Root, getLogger(c))
 	if err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Assembling workspace: %v", err))
 		return nil, nil, nil, false
@@ -38,7 +38,18 @@ func loadAssembled(c *gin.Context, litmusConfig *config.LitmusConfig) (*amconfig
 		return nil, nil, nil, false
 	}
 
-	return amConfig, ws.Fragments, ws, true
+	return amConfig, ws.Fragments(), ws, true
+}
+
+func getLogger(c *gin.Context) logrus.FieldLogger {
+	if val, exists := c.Get(string(litmusLoggerKey)); exists {
+		if log, ok := val.(logrus.FieldLogger); ok {
+			return log
+		}
+	}
+	l := logrus.New()
+	l.Out = nil // discard
+	return l
 }
 
 func getLitmusConfig(c *gin.Context) *config.LitmusConfig {
@@ -204,9 +215,9 @@ func runTestsHandler(c *gin.Context) {
 				return
 			}
 		}
-		c.JSON(http.StatusOK, snapshot.NewRegressionTestExecutor().Execute(context.Background(), tests, router))
+		c.JSON(http.StatusOK, pipeline.NewTestExecutor(nil).ExecuteAll(context.Background(), tests, router))
 	default:
-		executor := behavioral.NewBehavioralTestExecutor(alertConfig.InhibitRules)
+		executor := pipeline.NewTestExecutor(alertConfig.InhibitRules)
 
 		// Fragment-scoped run: only execute tests from the named fragment.
 		if fragmentName := c.Query("fragment"); fragmentName != "" {
@@ -228,7 +239,7 @@ func runTestsHandler(c *gin.Context) {
 		for _, frag := range fragments {
 			tests = append(tests, frag.Tests...)
 		}
-		tests = append(tests, ws.Tests...)
+		tests = append(tests, ws.Tests()...)
 
 		if name != "" {
 			for _, test := range tests {
@@ -331,7 +342,7 @@ func suggestHandler(c *gin.Context) {
 	}
 	walkRoute(alertConfig.Route)
 
-	for _, test := range ws.Tests {
+	for _, test := range ws.Tests() {
 		if test.Alert == nil {
 			continue
 		}
@@ -380,7 +391,7 @@ func generateRegressionsHandler(c *gin.Context) {
 
 	update := c.Query("update") == "true" || errors.Is(err, os.ErrNotExist)
 
-	if err := cli.RunSnapshot(litmusConfig, update, false); err != nil {
+	if err := cli.RunSnapshot(litmusConfig, getLogger(c), update, false); err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Snapshot failed: %v", err))
 		return
 	}

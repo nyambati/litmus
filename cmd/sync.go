@@ -15,6 +15,7 @@ func newSyncCmd() *cobra.Command {
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg := config.FromContext(cmd.Context())
+			logger := config.LoggerFromContext(cmd.Context())
 			address, _ := cmd.Flags().GetString("address")
 			tenantID, _ := cmd.Flags().GetString("tenant-id")
 			apiKey, _ := cmd.Flags().GetString("api-key")
@@ -22,7 +23,7 @@ func newSyncCmd() *cobra.Command {
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
 			output, _ := cmd.Flags().GetString("output")
 
-			return cli.RunSync(cfg, address, tenantID, apiKey, skipValidate, dryRun, output)
+			return cli.RunSync(cfg, logger, address, tenantID, apiKey, skipValidate, dryRun, output)
 		},
 	}
 

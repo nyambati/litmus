@@ -29,8 +29,9 @@ func newSnapshotCaptureCmd() *cobra.Command {
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg := config.FromContext(cmd.Context())
+			logger := config.LoggerFromContext(cmd.Context())
 			strict, _ := cmd.Flags().GetBool("strict")
-			return cli.RunSnapshot(cfg, false, strict)
+			return cli.RunSnapshot(cfg, logger, false, strict)
 		},
 	}
 
@@ -47,8 +48,9 @@ func newSnapshotUpdateCmd() *cobra.Command {
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg := config.FromContext(cmd.Context())
+			logger := config.LoggerFromContext(cmd.Context())
 			strict, _ := cmd.Flags().GetBool("strict")
-			return cli.RunSnapshot(cfg, true, strict)
+			return cli.RunSnapshot(cfg, logger, true, strict)
 		},
 	}
 
