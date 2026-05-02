@@ -30,28 +30,11 @@ type CheckExitCode int
 type CheckResult struct {
 	Passed     bool             `json:"passed"`
 	ConfigPath string           `json:"config_path"`
-	Sanity     SanityResult     `json:"sanity"`
+	Sanity     sanity.Result    `json:"sanity"`
 	Regression RegressionResult `json:"regression"`
 	Behavioral BehavioralResult `json:"behavioral"`
 	Duration   time.Duration    `json:"duration_ns"`
 	ExitCode   CheckExitCode    `json:"exit_code"`
-}
-
-// SanityResult holds per-category static analysis results.
-type SanityResult struct {
-	Passed                  bool     `json:"passed"`
-	ShadowedIssues          []string `json:"shadowed_issues,omitempty"`
-	OrphanIssues            []string `json:"orphan_issues,omitempty"`
-	InhibitionIssues        []string `json:"inhibition_issues,omitempty"`
-	PolicyIssues            []string `json:"policy_issues,omitempty"`
-	DeadReceiverIssues      []string `json:"dead_receiver_issues,omitempty"`
-	NegativeOnlyRouteIssues []string `json:"negative_only_route_issues,omitempty"`
-	ShadowedMode            string   `json:"shadowed_mode,omitempty"`
-	OrphanMode              string   `json:"orphan_mode,omitempty"`
-	InhibitionMode          string   `json:"inhibition_mode,omitempty"`
-	PolicyMode              string   `json:"policy_mode,omitempty"`
-	DeadReceiverMode        string   `json:"dead_receiver_mode,omitempty"`
-	NegativeOnlyRouteMode   string   `json:"negative_only_route_mode,omitempty"`
 }
 
 // TestFailure holds structured detail for a single test failure.
@@ -119,18 +102,23 @@ func RunCheck(cfg *config.LitmusConfig, format string, showDiff bool, tags []str
 }
 
 // runSanityChecks executes all sanity checks including policy enforcement.
-func runSanityChecks(litmusConfig *config.LitmusConfig, fragments []*fragment.Fragment, amCfg *amconfig.Config) SanityResult {
-	sanityResult := RunSanityChecks(amCfg, litmusConfig.Sanity)
-	checker := sanity.NewPolicyChecker(litmusConfig.Policy)
-	sanityResult.PolicyIssues = checker.Check(fragments)
-
-	policyMode := string(litmusConfig.Sanity.PolicyViolations)
-	sanityResult.PolicyMode = policyMode
-	if litmusConfig.Sanity.PolicyViolations.IsFail() && len(sanityResult.PolicyIssues) > 0 {
-		sanityResult.Passed = false
+func runSanityChecks(litmusConfig *config.LitmusConfig, fragments []*fragment.Fragment, amCfg *amconfig.Config) sanity.Result {
+	receiversMap := make(map[string]*amconfig.Receiver)
+	for i := range amCfg.Receivers {
+		receiversMap[amCfg.Receivers[i].Name] = &amCfg.Receivers[i]
 	}
-
-	return sanityResult
+	rules := make([]*amconfig.InhibitRule, 0, len(amCfg.InhibitRules))
+	for i := range amCfg.InhibitRules {
+		rules = append(rules, &amCfg.InhibitRules[i])
+	}
+	ctx := sanity.CheckContext{
+		Route:     amCfg.Route,
+		Receivers: receiversMap,
+		Rules:     rules,
+		Policy:    litmusConfig.Policy,
+		Fragments: fragments,
+	}
+	return sanity.Run(ctx, litmusConfig.Sanity)
 }
 
 // runRegressionTests executes regression tests against the router.
@@ -146,7 +134,7 @@ func runBehavioralTests(inhibitRules []amconfig.InhibitRule, litmusConfig *confi
 }
 
 // buildCheckResult assembles the final check result from all test results.
-func buildCheckResult(configPath string, sanityResult SanityResult, regressionResult RegressionResult, behavioralResult BehavioralResult, duration time.Duration) CheckResult {
+func buildCheckResult(configPath string, sanityResult sanity.Result, regressionResult RegressionResult, behavioralResult BehavioralResult, duration time.Duration) CheckResult {
 	passed := sanityResult.Passed && regressionResult.Passed && behavioralResult.Passed
 
 	return CheckResult{
@@ -183,57 +171,6 @@ func outputResults(result CheckResult, format string, showDiff bool) error {
 		PrintCheckResult(result, showDiff)
 	}
 	return nil
-}
-
-// RunSanityChecks runs all static analysis linters, returning per-category results.
-func RunSanityChecks(alertConfig *amconfig.Config, sanityConfig config.SanityConfig) SanityResult {
-	result := SanityResult{Passed: true}
-
-	shadowed := sanity.NewShadowedRouteDetector(alertConfig.Route)
-	result.ShadowedIssues = shadowed.Detect()
-	result.ShadowedMode = string(sanityConfig.ShadowedRoutes)
-
-	receiversMap := make(map[string]*amconfig.Receiver)
-	for i := range alertConfig.Receivers {
-		receiversMap[alertConfig.Receivers[i].Name] = &alertConfig.Receivers[i]
-	}
-	orphan := sanity.NewOrphanReceiverDetector(alertConfig.Route, receiversMap)
-	result.OrphanIssues = orphan.DetectOrphans()
-	result.OrphanMode = string(sanityConfig.OrphanReceivers)
-
-	rules := make([]*amconfig.InhibitRule, 0, len(alertConfig.InhibitRules))
-	for i := range alertConfig.InhibitRules {
-		rules = append(rules, &alertConfig.InhibitRules[i])
-	}
-	inhibition := sanity.NewInhibitionCycleDetector(rules)
-	result.InhibitionIssues = inhibition.DetectCycles()
-	result.InhibitionMode = string(sanityConfig.InhibitionCycles)
-
-	dead := sanity.NewDeadReceiverDetector(alertConfig.Route)
-	result.DeadReceiverIssues = dead.Detect()
-	result.DeadReceiverMode = string(sanityConfig.DeadReceivers)
-
-	negativeOnly := sanity.NewNegativeOnlyRouteDetector(alertConfig.Route)
-	result.NegativeOnlyRouteIssues = negativeOnly.Detect()
-	result.NegativeOnlyRouteMode = string(sanityConfig.NegativeOnlyRoutes)
-
-	if sanityConfig.ShadowedRoutes.IsFail() && len(result.ShadowedIssues) > 0 {
-		result.Passed = false
-	}
-	if sanityConfig.OrphanReceivers.IsFail() && len(result.OrphanIssues) > 0 {
-		result.Passed = false
-	}
-	if sanityConfig.InhibitionCycles.IsFail() && len(result.InhibitionIssues) > 0 {
-		result.Passed = false
-	}
-	if sanityConfig.DeadReceivers.IsFail() && len(result.DeadReceiverIssues) > 0 {
-		result.Passed = false
-	}
-	if sanityConfig.NegativeOnlyRoutes.IsFail() && len(result.NegativeOnlyRouteIssues) > 0 {
-		result.Passed = false
-	}
-
-	return result
 }
 
 // RunRegressionTests executes the regression baseline against the current router.
@@ -352,12 +289,9 @@ func PrintCheckResult(r CheckResult, showDiff bool) {
 
 	// 1. Sanity
 	fmt.Println("1. Sanity (Static Analysis)")
-	printSanityCategory("No shadowed routes detected", r.Sanity.ShadowedIssues, r.Sanity.ShadowedMode)
-	printSanityCategory("No orphan receivers", r.Sanity.OrphanIssues, r.Sanity.OrphanMode)
-	printSanityCategory("No inhibition cycles", r.Sanity.InhibitionIssues, r.Sanity.InhibitionMode)
-	printSanityCategory("No policy violations", r.Sanity.PolicyIssues, r.Sanity.PolicyMode)
-	printSanityCategory("No dead receivers detected", r.Sanity.DeadReceiverIssues, r.Sanity.DeadReceiverMode)
-	printSanityCategory("No negative-only routes detected", r.Sanity.NegativeOnlyRouteIssues, r.Sanity.NegativeOnlyRouteMode)
+	for _, c := range r.Sanity.Checks {
+		printSanityCategory(sanityCheckLabel(c.Name), c.Issues, c.Mode)
+	}
 	fmt.Println()
 
 	// 2. Regressions
@@ -491,10 +425,10 @@ func formatSummary(r CheckResult) string {
 	if n := len(r.Regression.Failures); n > 0 {
 		parts = append(parts, fmt.Sprintf("%d Regression%s", n, plural(n)))
 	}
-	sanityWarnings := len(r.Sanity.ShadowedIssues) +
-		len(r.Sanity.OrphanIssues) + len(r.Sanity.InhibitionIssues) +
-		len(r.Sanity.PolicyIssues) + len(r.Sanity.DeadReceiverIssues) +
-		len(r.Sanity.NegativeOnlyRouteIssues)
+	var sanityWarnings int
+	for _, c := range r.Sanity.Checks {
+		sanityWarnings += len(c.Issues)
+	}
 	if sanityWarnings > 0 {
 		parts = append(parts, fmt.Sprintf("%d Sanity Warning%s", sanityWarnings, plural(sanityWarnings)))
 	}
@@ -502,6 +436,22 @@ func formatSummary(r CheckResult) string {
 		parts = append(parts, fmt.Sprintf("%d Behavioral Failure%s", n, plural(n)))
 	}
 	return "FAIL (" + strings.Join(parts, ", ") + ")"
+}
+
+// sanityCheckLabel returns the human-readable ok message for a check name.
+func sanityCheckLabel(name string) string {
+	labels := map[string]string{
+		"shadowed_routes":      "No shadowed routes detected",
+		"orphan_receivers":     "No orphan receivers",
+		"inhibition_cycles":    "No inhibition cycles",
+		"policy_violations":    "No policy violations",
+		"dead_receivers":       "No dead receivers detected",
+		"negative_only_routes": "No negative-only routes detected",
+	}
+	if l, ok := labels[name]; ok {
+		return l
+	}
+	return fmt.Sprintf("No %s issues", name)
 }
 
 func formatDuration(d time.Duration) string {

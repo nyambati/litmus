@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/nyambati/litmus/internal/config"
+	"github.com/nyambati/litmus/internal/engine/sanity"
 	"github.com/nyambati/litmus/internal/types"
 	amconfig "github.com/prometheus/alertmanager/config"
 	labels "github.com/prometheus/alertmanager/pkg/labels"
@@ -91,8 +92,26 @@ func TestRunSanityChecks_NegativeOnlyRoutesMode(t *testing.T) {
 		Receivers: []amconfig.Receiver{{Name: "default"}, {Name: "non-ops"}},
 	}
 
+	receiversMap := map[string]*amconfig.Receiver{
+		"default": {Name: "default"},
+		"non-ops": {Name: "non-ops"},
+	}
+	ctx := sanity.CheckContext{
+		Route:     amCfg.Route,
+		Receivers: receiversMap,
+	}
+
+	findCheck := func(result sanity.Result, name string) *sanity.CheckEntry {
+		for i := range result.Checks {
+			if result.Checks[i].Name == name {
+				return &result.Checks[i]
+			}
+		}
+		return nil
+	}
+
 	t.Run("fail mode fails sanity", func(t *testing.T) {
-		result := RunSanityChecks(amCfg, config.SanityConfig{
+		result := sanity.Run(ctx, config.SanityConfig{
 			OrphanReceivers:    config.SanityModeFail,
 			DeadReceivers:      config.SanityModeFail,
 			ShadowedRoutes:     config.SanityModeFail,
@@ -101,12 +120,14 @@ func TestRunSanityChecks_NegativeOnlyRoutesMode(t *testing.T) {
 		})
 
 		require.False(t, result.Passed)
-		require.Len(t, result.NegativeOnlyRouteIssues, 1)
-		require.Equal(t, string(config.SanityModeFail), result.NegativeOnlyRouteMode)
+		entry := findCheck(result, "negative_only_routes")
+		require.NotNil(t, entry)
+		require.Len(t, entry.Issues, 1)
+		require.Equal(t, string(config.SanityModeFail), entry.Mode)
 	})
 
 	t.Run("warn mode reports without failing sanity", func(t *testing.T) {
-		result := RunSanityChecks(amCfg, config.SanityConfig{
+		result := sanity.Run(ctx, config.SanityConfig{
 			OrphanReceivers:    config.SanityModeFail,
 			DeadReceivers:      config.SanityModeFail,
 			ShadowedRoutes:     config.SanityModeFail,
@@ -115,7 +136,9 @@ func TestRunSanityChecks_NegativeOnlyRoutesMode(t *testing.T) {
 		})
 
 		require.True(t, result.Passed)
-		require.Len(t, result.NegativeOnlyRouteIssues, 1)
-		require.Equal(t, string(config.SanityModeWarn), result.NegativeOnlyRouteMode)
+		entry := findCheck(result, "negative_only_routes")
+		require.NotNil(t, entry)
+		require.Len(t, entry.Issues, 1)
+		require.Equal(t, string(config.SanityModeWarn), entry.Mode)
 	})
 }

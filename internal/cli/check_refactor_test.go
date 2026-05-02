@@ -3,6 +3,7 @@ package cli
 import (
 	"testing"
 
+	"github.com/nyambati/litmus/internal/engine/sanity"
 	"github.com/nyambati/litmus/internal/types"
 	"github.com/stretchr/testify/require"
 )
@@ -278,8 +279,10 @@ func TestFormatSummary(t *testing.T) {
 			name: "sanity warnings",
 			result: CheckResult{
 				Passed: false,
-				Sanity: SanityResult{
-					ShadowedIssues: []string{"issue1"},
+				Sanity: sanity.Result{
+					Checks: []sanity.CheckEntry{
+						{Name: "shadowed_routes", Issues: []string{"issue1"}},
+					},
 				},
 			},
 			want: "FAIL (1 Sanity Warning)",
@@ -301,8 +304,10 @@ func TestFormatSummary(t *testing.T) {
 				Regression: RegressionResult{
 					Failures: []TestFailure{{}, {}, {}},
 				},
-				Sanity: SanityResult{
-					ShadowedIssues: []string{"issue1", "issue2"},
+				Sanity: sanity.Result{
+					Checks: []sanity.CheckEntry{
+						{Name: "shadowed_routes", Issues: []string{"issue1", "issue2"}},
+					},
 				},
 				Behavioral: BehavioralResult{
 					Failures: []TestFailure{{}},

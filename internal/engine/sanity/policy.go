@@ -19,6 +19,14 @@ func NewPolicyChecker(policy litconfig.PolicyConfig) *PolicyChecker {
 	return &PolicyChecker{policy: policy}
 }
 
+// Name implements Check.
+func (pc *PolicyChecker) Name() string { return "policy_violations" }
+
+// Run implements Check.
+func (pc *PolicyChecker) Run(ctx CheckContext) []string {
+	return NewPolicyChecker(ctx.Policy).Check(ctx.Fragments)
+}
+
 // Check returns a list of policy violations across the given fragments.
 func (pc *PolicyChecker) Check(fragments []*fragment.Fragment) []string {
 	if !pc.policy.RequireTests && len(pc.policy.Enforce.Matchers) == 0 {

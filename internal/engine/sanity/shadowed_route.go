@@ -16,6 +16,14 @@ func NewShadowedRouteDetector(root *config.Route) *ShadowedRouteDetector {
 	return &ShadowedRouteDetector{root: root}
 }
 
+// Name implements Check.
+func (srd *ShadowedRouteDetector) Name() string { return "shadowed_routes" }
+
+// Run implements Check.
+func (srd *ShadowedRouteDetector) Run(ctx CheckContext) []string {
+	return NewShadowedRouteDetector(ctx.Route).Detect()
+}
+
 // Detect returns list of shadowed route issues.
 func (srd *ShadowedRouteDetector) Detect() []string {
 	paths := newRouteInspector(srd.root).findPaths()

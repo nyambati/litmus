@@ -32,6 +32,14 @@ type contradiction struct {
 	regexSrc string // receiver that set the regex matcher
 }
 
+// Name implements Check.
+func (d *DeadReceiverDetector) Name() string { return "dead_receivers" }
+
+// Run implements Check.
+func (d *DeadReceiverDetector) Run(ctx CheckContext) []string {
+	return NewDeadReceiverDetector(ctx.Route).Detect()
+}
+
 // Detect returns one issue string per dead route. When a contradiction is found,
 // recursion into that subtree stops — descendants are implied dead and not re-reported.
 func (d *DeadReceiverDetector) Detect() []string {

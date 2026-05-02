@@ -18,6 +18,14 @@ func NewNegativeOnlyRouteDetector(root *config.Route) *NegativeOnlyRouteDetector
 	return &NegativeOnlyRouteDetector{root: root}
 }
 
+// Name implements Check.
+func (d *NegativeOnlyRouteDetector) Name() string { return "negative_only_routes" }
+
+// Run implements Check.
+func (d *NegativeOnlyRouteDetector) Run(ctx CheckContext) []string {
+	return NewNegativeOnlyRouteDetector(ctx.Route).Detect()
+}
+
 // Detect returns one issue per route that has only negative matchers.
 func (d *NegativeOnlyRouteDetector) Detect() []string {
 	if d.root == nil {

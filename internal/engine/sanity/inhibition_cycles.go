@@ -13,16 +13,23 @@ type InhibitionCycleDetector struct {
 	rules []*config.InhibitRule
 }
 
-// NewInhibitionCycleDetector creates cycle detector for inhibition rules.
+// NewInhibitionCycleDetector creates a cycle detector for the given inhibition rules.
 func NewInhibitionCycleDetector(rules []*config.InhibitRule) *InhibitionCycleDetector {
 	return &InhibitionCycleDetector{rules: rules}
 }
 
-// DetectCycles returns list of detected inhibition cycles.
+// Name implements Check.
+func (icd *InhibitionCycleDetector) Name() string { return "inhibition_cycles" }
+
+// Run implements Check.
+func (icd *InhibitionCycleDetector) Run(ctx CheckContext) []string {
+	return NewInhibitionCycleDetector(ctx.Rules).DetectCycles()
+}
+
+// DetectCycles returns a list of detected inhibition cycles.
 func (icd *InhibitionCycleDetector) DetectCycles() []string {
 	var cycles []string
 
-	// Build adjacency list: source matcher -> target matcher
 	graph := make(map[string][]string)
 	for _, rule := range icd.rules {
 		if rule == nil {
@@ -35,7 +42,6 @@ func (icd *InhibitionCycleDetector) DetectCycles() []string {
 		}
 	}
 
-	// DFS-based cycle detection
 	visited := make(map[string]bool)
 	recStack := make(map[string]bool)
 
@@ -50,7 +56,6 @@ func (icd *InhibitionCycleDetector) DetectCycles() []string {
 	return cycles
 }
 
-// hasCycle performs DFS to detect cycles.
 func (icd *InhibitionCycleDetector) hasCycle(node string, graph map[string][]string, visited, recStack map[string]bool) bool {
 	visited[node] = true
 	recStack[node] = true
@@ -69,7 +74,6 @@ func (icd *InhibitionCycleDetector) hasCycle(node string, graph map[string][]str
 	return false
 }
 
-// ruleMatcherKey creates a stable key from all matcher forms supported by Alertmanager.
 func (icd *InhibitionCycleDetector) ruleMatcherKey(
 	exact map[string]string,
 	regex config.MatchRegexps,
@@ -93,49 +97,4 @@ func (icd *InhibitionCycleDetector) ruleMatcherKey(
 
 	sort.Strings(parts)
 	return strings.Join(parts, "|")
-}
-
-// OrphanReceiverDetector detects unused receivers.
-type OrphanReceiverDetector struct {
-	root      *config.Route
-	receivers map[string]*config.Receiver
-}
-
-// NewOrphanReceiverDetector creates orphan detector.
-func NewOrphanReceiverDetector(root *config.Route, receivers map[string]*config.Receiver) *OrphanReceiverDetector {
-	return &OrphanReceiverDetector{
-		root:      root,
-		receivers: receivers,
-	}
-}
-
-// DetectOrphans returns list of unused receivers.
-func (ord *OrphanReceiverDetector) DetectOrphans() []string {
-	used := make(map[string]bool)
-
-	// Traverse routes and mark used receivers
-	ord.markUsed(ord.root, used)
-
-	var orphans []string
-	for name := range ord.receivers {
-		if !used[name] {
-			orphans = append(orphans, fmt.Sprintf("Receiver %q is defined but never used", name))
-		}
-	}
-
-	return orphans
-}
-
-// markUsed recursively marks receivers as used.
-func (ord *OrphanReceiverDetector) markUsed(route *config.Route, used map[string]bool) {
-	if route == nil {
-		return
-	}
-	if route.Receiver != "" {
-		used[route.Receiver] = true
-	}
-
-	for _, child := range route.Routes {
-		ord.markUsed(child, used)
-	}
 }

@@ -60,3 +60,20 @@ const (
 func (m SanityMode) IsFail() bool {
 	return m == SanityModeFail
 }
+
+// ModeFor returns the configured SanityMode for the named check.
+// Unknown check names default to SanityModeFail.
+func (c SanityConfig) ModeFor(name string) SanityMode {
+	modes := map[string]SanityMode{
+		"orphan_receivers":     c.OrphanReceivers,
+		"dead_receivers":       c.DeadReceivers,
+		"shadowed_routes":      c.ShadowedRoutes,
+		"inhibition_cycles":    c.InhibitionCycles,
+		"policy_violations":    c.PolicyViolations,
+		"negative_only_routes": c.NegativeOnlyRoutes,
+	}
+	if m, ok := modes[name]; ok && m != "" {
+		return m
+	}
+	return SanityModeFail
+}

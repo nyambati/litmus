@@ -7,8 +7,10 @@ import (
 	"path/filepath"
 
 	"github.com/nyambati/litmus/internal/config"
+	"github.com/nyambati/litmus/internal/engine/sanity"
 	"github.com/nyambati/litmus/internal/mimir"
 	"github.com/nyambati/litmus/internal/workspace"
+	amconfig "github.com/prometheus/alertmanager/config"
 )
 
 func RunSync(cfg *config.LitmusConfig, address, tenantID, apiKey string, skipValidate, dryRun bool, output string) error {
@@ -48,8 +50,22 @@ func RunSync(cfg *config.LitmusConfig, address, tenantID, apiKey string, skipVal
 	// But according to user, we are using them directly in CLI.
 
 	if !skipValidate {
-		sanity := RunSanityChecks(amConfig, cfg.Sanity)
-		if !sanity.Passed {
+		receiversMap := make(map[string]*amconfig.Receiver)
+		for i := range amConfig.Receivers {
+			receiversMap[amConfig.Receivers[i].Name] = &amConfig.Receivers[i]
+		}
+		rules := make([]*amconfig.InhibitRule, 0, len(amConfig.InhibitRules))
+		for i := range amConfig.InhibitRules {
+			rules = append(rules, &amConfig.InhibitRules[i])
+		}
+		ctx := sanity.CheckContext{
+			Route:     amConfig.Route,
+			Receivers: receiversMap,
+			Rules:     rules,
+			Policy:    cfg.Policy,
+		}
+		sanityResult := sanity.Run(ctx, cfg.Sanity)
+		if !sanityResult.Passed {
 			fmt.Fprintf(os.Stderr, "Sanity checks failed. Use --skip-validate to bypass.\n")
 			return fmt.Errorf("sanity check failures")
 		}
