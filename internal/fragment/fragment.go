@@ -7,7 +7,6 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"sync"
 
@@ -133,11 +132,24 @@ func (f *Fragment) readFile(file string) error {
 }
 
 func isTestFile(file string) bool {
-	if strings.Contains(filepath.Base(file), "-tests") {
+	base := filepath.Base(file)
+	if strings.Contains(base, "-tests") {
 		return true
 	}
-	dir := filepath.ToSlash(filepath.Dir(file))
-	return slices.Contains(strings.Split(dir, "/"), "tests")
+
+	// Check if any parent directory is exactly "tests"
+	dir := filepath.Dir(file)
+	for {
+		if filepath.Base(dir) == "tests" {
+			return true
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return false
 }
 
 func (f *Fragment) merge(src *Fragment) error {
@@ -166,6 +178,8 @@ func isEmptyGroup(group *FragmentGroup) bool {
 	return group == nil || group.Receiver == "" && len(group.Match) == 0
 }
 
+const maxConcurrentFragmentReads = 20
+
 func Load(dir string) (*LoadResult, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -179,6 +193,7 @@ func Load(dir string) (*LoadResult, error) {
 
 	results := make(chan resultItem, len(entries))
 	var wg sync.WaitGroup
+	sem := make(chan struct{}, maxConcurrentFragmentReads)
 
 	for _, entry := range entries {
 		if !entry.IsDir() {
@@ -186,8 +201,10 @@ func Load(dir string) (*LoadResult, error) {
 		}
 
 		wg.Add(1)
+		sem <- struct{}{}
 		go func(entry fs.DirEntry) {
 			defer wg.Done()
+			defer func() { <-sem }()
 			path := filepath.Join(dir, entry.Name())
 			frag := New(path)
 			meta, err := frag.Read()

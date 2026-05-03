@@ -152,43 +152,80 @@ func (lcg *LabelCombinationGenerator) cartesianProduct(matchers map[string][]str
 	return result
 }
 
-// minimalCoveringSet selects up to maxCombinations combos that maximise coverage.
+// minimalCoveringSet selects up to maxCombinations combos that maximise coverage
+// without generating the full Cartesian product to avoid OOM.
 func (lcg *LabelCombinationGenerator) minimalCoveringSet(matchers map[string][]string) []map[string]string {
-	full := lcg.cartesianProduct(matchers)
-
-	covered := make(map[string]map[string]bool)
-	for k := range matchers {
-		covered[k] = make(map[string]bool)
+	if len(matchers) == 0 {
+		return nil
 	}
 
-	remaining := make([]map[string]string, len(full))
-	copy(remaining, full)
+	keys := make([]string, 0, len(matchers))
+	for k := range matchers {
+		keys = append(keys, k)
+	}
+
+	covered := make(map[string]map[string]bool)
+	uncoveredCount := 0
+	for k, vals := range matchers {
+		covered[k] = make(map[string]bool)
+		uncoveredCount += len(vals)
+	}
 
 	var result []map[string]string
-	for len(result) < lcg.maxCombinations && len(remaining) > 0 {
-		bestIdx := 0
-		bestScore := -1
 
-		for i, combo := range remaining {
-			score := 0
-			for k, v := range combo {
+	// 1. Greedily generate combinations to cover all values at least once
+	for uncoveredCount > 0 && len(result) < lcg.maxCombinations {
+		combo := make(map[string]string)
+		for _, k := range keys {
+			vals := matchers[k]
+			// Find an uncovered value if possible
+			var chosen string
+			found := false
+			for _, v := range vals {
 				if !covered[k][v] {
-					score++
+					chosen = v
+					found = true
+					break
 				}
 			}
-			if score > bestScore {
-				bestScore = score
-				bestIdx = i
+			// Fallback to first value if all are covered for this key
+			if !found {
+				chosen = vals[0]
+			}
+			combo[k] = chosen
+		}
+
+		result = append(result, combo)
+		// Mark as covered and update counter
+		for k, v := range combo {
+			if !covered[k][v] {
+				covered[k][v] = true
+				uncoveredCount--
 			}
 		}
+	}
 
-		chosen := remaining[bestIdx]
-		result = append(result, chosen)
-		for k, v := range chosen {
-			covered[k][v] = true
+	// 2. If we still have room, add a few more "interesting" combinations
+	// (e.g., using different values for the first few keys)
+	if len(result) < lcg.maxCombinations {
+		// This is a simple fallback to fill up to maxCombinations if needed.
+		// In practice, the first loop often covers most scenarios or hits the limit.
+		for i := 1; len(result) < lcg.maxCombinations; i++ {
+			combo := make(map[string]string)
+			changed := false
+			for j, k := range keys {
+				vals := matchers[k]
+				idx := (i + j) % len(vals)
+				combo[k] = vals[idx]
+				if idx > 0 {
+					changed = true
+				}
+			}
+			if !changed && i > 0 {
+				break // We've looped through all simple variations
+			}
+			result = append(result, combo)
 		}
-
-		remaining = append(remaining[:bestIdx], remaining[bestIdx+1:]...)
 	}
 
 	return result

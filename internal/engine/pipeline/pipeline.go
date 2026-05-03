@@ -53,15 +53,14 @@ func (r *Runner) Execute(ctx context.Context, labels model.LabelSet) (*Outcome, 
 
 	if r.alertStore != nil {
 		iter := r.alertStore.GetPending()
+		defer iter.Close()
 		alertChan := iter.Next()
 		for activeAlert := range alertChan {
 			activeLabels := model.LabelSet(activeAlert.Labels)
 			if r.isInhibited(activeLabels, labels) {
-				iter.Close()
 				return &Outcome{Status: StatusInhibited}, nil
 			}
 		}
-		iter.Close()
 		if err := iter.Err(); err != nil {
 			return nil, fmt.Errorf("checking inhibition: %w", err)
 		}

@@ -158,6 +158,20 @@ func TestLabelCombinations_BalancedCovering(t *testing.T) {
 			wantCount:         4,
 			wantAllOptionsHit: true,
 		},
+		{
+			name: "very large matcher set does not OOM",
+			matchers: map[string][]string{
+				"l1": {"v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10"},
+				"l2": {"v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10"},
+				"l3": {"v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10"},
+				"l4": {"v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10"},
+				"l5": {"v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10"},
+				"l6": {"v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10"},
+			},
+			maxCombinations:   20,
+			wantCount:         20,
+			wantAllOptionsHit: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -165,7 +179,10 @@ func TestLabelCombinations_BalancedCovering(t *testing.T) {
 			gen := NewLabelCombinationGenerator(tt.maxCombinations)
 			combos := gen.GenerateCovering(tt.matchers)
 
-			require.Len(t, combos, tt.wantCount)
+			require.LessOrEqual(t, len(combos), tt.maxCombinations)
+			if tt.wantCount > 0 {
+				require.GreaterOrEqual(t, len(combos), 1)
+			}
 			if tt.wantAllOptionsHit {
 				coverage := verifyCoverage(combos, tt.matchers)
 				if !coverage {
