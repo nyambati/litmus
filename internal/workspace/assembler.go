@@ -14,6 +14,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const fieldRoutes = "routes"
+
 // Assemble produces the complete *amconfig.Config in w.Root by reading the
 // workspace and merging every child fragment under <dir>/fragments. Child
 // test cases are appended to w.Tests.
@@ -93,7 +95,7 @@ func assemble(root *types.AlertmanagerConfig, children []fragment.AugmentedFragm
 			"dir":       dir,
 			"files":     metaFiles(ch.Metadata),
 			"receivers": len(frag.Receivers),
-			"routes":    len(frag.Routes),
+			fieldRoutes: len(frag.Routes),
 			"inhibit":   len(frag.InhibitRules),
 		})
 		entry.Debug("merging child")
@@ -107,15 +109,15 @@ func assemble(root *types.AlertmanagerConfig, children []fragment.AugmentedFragm
 		}
 		if frag.Group == nil {
 			root.Route.Routes = append(root.Route.Routes, frag.Routes...)
-			entry.WithField("routes", len(frag.Routes)).Debug("attached routes directly to root")
+			entry.WithField(fieldRoutes, len(frag.Routes)).Debug("attached routes directly to root")
 			continue
 		}
 		if err := groups.add(frag); err != nil {
 			return fmt.Errorf("group child %q (dir=%s): %w", frag.Namespace, dir, err)
 		}
 		entry.WithFields(logrus.Fields{
-			"routes": len(frag.Routes),
-			"match":  frag.Group.Match,
+			fieldRoutes: len(frag.Routes),
+			"match":     frag.Group.Match,
 		}).Debug("grouped routes")
 	}
 
@@ -186,7 +188,7 @@ func (g *groupSet) routes(root *types.AlertmanagerConfig, log logrus.FieldLogger
 	root.Route.Routes = append(root.Route.Routes, out...)
 	log.WithFields(logrus.Fields{
 		"receivers":  len(root.Receivers),
-		"routes":     len(root.Route.Routes),
+		fieldRoutes:  len(root.Route.Routes),
 		"group_subs": len(out),
 		"inhibit":    len(root.InhibitRules),
 	}).Debug("workspace assembled")
