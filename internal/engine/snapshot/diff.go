@@ -1,11 +1,9 @@
 package snapshot
 
 import (
-	"sort"
-	"strings"
-
 	"github.com/nyambati/litmus/internal/engine/matching"
 	"github.com/nyambati/litmus/internal/types"
+	"github.com/nyambati/litmus/internal/utils"
 )
 
 // ComputeDiff compares two sets of regression TestCases and identifies deltas.
@@ -73,20 +71,5 @@ func indexByLabels(tests []*types.TestCase) map[string]*types.TestCase {
 
 // LabelKey produces a stable string key for a label map.
 func LabelKey(m map[string]string) string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	var b strings.Builder
-	for i, k := range keys {
-		if i > 0 {
-			b.WriteByte(',')
-		}
-		b.WriteString(k)
-		b.WriteByte('=')
-		b.WriteString(m[k])
-	}
-	return b.String()
+	return utils.LabelFormat(m)
 }

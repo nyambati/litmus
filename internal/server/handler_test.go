@@ -19,7 +19,8 @@ func init() {
 }
 
 // setupFragmentWorkspace creates a minimal workspace with a base alertmanager
-// config and a single fragment that mounts a db-critical route under scope=teams.
+// config and a single fragment (db-team) that mounts a db-critical route under scope=teams.
+// Fragment lives in its own subdirectory (config/fragments/db-team/) per the new model.
 func setupFragmentWorkspace(t *testing.T) *config.LitmusConfig {
 	t.Helper()
 	tmpDir := t.TempDir()
@@ -34,9 +35,9 @@ workspace:
   fragments: "fragments/*"
   history: 3
 global_labels: {}
-`), 0600))
+`), 0o600))
 
-	require.NoError(t, os.MkdirAll("config/tests", 0755))
+	require.NoError(t, os.MkdirAll("config/tests", 0o755))
 	require.NoError(t, os.WriteFile("config/alertmanager.yml", []byte(`
 global:
   resolve_timeout: 5m
@@ -44,11 +45,13 @@ route:
   receiver: 'default'
 receivers:
   - name: 'default'
-`), 0600))
+`), 0o600))
 
-	require.NoError(t, os.MkdirAll("config/fragments", 0755))
-	require.NoError(t, os.WriteFile("config/fragments/db.yml", []byte(`
-name: "db-team"
+	// Fragment in its own subdirectory — fragment.Load only processes dirs.
+	// Explicit namespace "db-team" so receiver names are predictable: db-team-db-critical.
+	require.NoError(t, os.MkdirAll("config/fragments/db-team", 0o755))
+	require.NoError(t, os.WriteFile("config/fragments/db-team/fragment.yml", []byte(`
+namespace: "db-team"
 group:
   match:
     scope: "teams"
@@ -58,19 +61,20 @@ routes:
       service: "mysql"
 receivers:
   - name: "db-critical"
-`), 0600))
-	require.NoError(t, os.WriteFile("config/fragments/db-tests.yml", []byte(`
-- name: "mysql routes to db-critical"
-  type: "unit"
-  alert:
-    labels:
-      scope: "teams"
-      service: "mysql"
-  expect:
-    outcome: "active"
-    receivers:
-      - "db-critical"
-`), 0600))
+`), 0o600))
+	require.NoError(t, os.WriteFile("config/fragments/db-team/db-team-tests.yml", []byte(`
+tests:
+  - name: "mysql routes to db-critical"
+    type: "unit"
+    alert:
+      labels:
+        scope: "teams"
+        service: "mysql"
+    expect:
+      outcome: "active"
+      receivers:
+        - "db-team-db-critical"
+`), 0o600))
 
 	cfg, err := config.LoadConfig()
 	require.NoError(t, err)
@@ -91,27 +95,28 @@ workspace:
   fragments: "fragments/*"
   history: 3
 global_labels: {}
-`), 0600))
+`), 0o600))
 
-	require.NoError(t, os.MkdirAll("config/tests", 0755))
-	require.NoError(t, os.MkdirAll("config/fragments", 0755))
+	require.NoError(t, os.MkdirAll("config/tests", 0o755))
+	require.NoError(t, os.MkdirAll("config/fragments", 0o755))
 	require.NoError(t, os.WriteFile("config/alertmanager.yml", []byte(`
 route:
   receiver: 'default'
 receivers:
   - name: 'default'
-`), 0600))
+`), 0o600))
 	require.NoError(t, os.WriteFile("config/tests/root.yml", []byte(`
-name: "root test"
-type: "unit"
-alert:
-  labels:
-    service: "api"
-expect:
-  outcome: "active"
-  receivers:
-    - "default"
-`), 0600))
+tests:
+  - name: "root test"
+    type: "unit"
+    alert:
+      labels:
+        service: "api"
+    expect:
+      outcome: "active"
+      receivers:
+        - "default"
+`), 0o600))
 
 	cfg, err := config.LoadConfig()
 	require.NoError(t, err)
@@ -139,8 +144,8 @@ func TestEvaluateHandler_UsesAssembledConfig(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 	var resp EvalResponse
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
-	assert.Contains(t, resp.Receivers, "db-critical",
-		"evaluate must route through assembled fragment routes")
+	assert.Contains(t, resp.Receivers, "db-team-db-critical",
+		"evaluate must route through assembled fragment routes with namespace prefix")
 }
 
 func TestSuggestHandler_IncludesFragmentRouteLabels(t *testing.T) {
@@ -195,7 +200,7 @@ func TestConfigHandler_ExposesWorkspaceAndFragmentCount(t *testing.T) {
 	assert.NotEmpty(t, resp.ConfigPath)
 	assert.Equal(t, "config", resp.Workspace.Root)
 	assert.Equal(t, "fragments/*", resp.Workspace.Fragments)
-	assert.Equal(t, 2, resp.FragmentCount, "root + db-team fragment")
+	assert.Equal(t, 2, resp.FragmentCount, "root + db-team fragments")
 }
 
 func TestFragmentsHandler_ListsFragmentsWithMetadata(t *testing.T) {
@@ -236,4 +241,15 @@ func TestRunTestsHandler_DoesNotDuplicateRootTests(t *testing.T) {
 	var results []map[string]any
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &results))
 	require.Len(t, results, 1)
+}
+
+func TestGetLogger_FallbackDoesNotPanic(t *testing.T) {
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	// No logger injected into context — exercises the fallback path.
+	// Use Info (default level) so logrus actually attempts to write to Out.
+	require.NotPanics(t, func() {
+		l := getLogger(c)
+		l.Info("probe")
+	})
 }

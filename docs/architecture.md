@@ -267,15 +267,17 @@ Litmus itself has three test layers:
 
 ---
 
-## Performance
+## Performance & Resource Safety
 
-**Target:** Validate 1,000+ routing paths in < 2 seconds
+**Target:** Validate 1,000+ routing paths in < 2 seconds while maintaining a low memory footprint.
 
 **Achieved by:**
-- In-memory state stores (no I/O)
-- Single-pass synthesis (no repeated traversals)
-- Efficient label combination generation
-- Bounded iteration (configurable `max_samples`)
+- **In-memory state stores** (no I/O during core execution)
+- **Single-pass synthesis** (no repeated traversals of the route tree)
+- **Memory-efficient label synthesis:** The `SnapshotSynthesizer` uses a greedy algorithm for label combination generation, ensuring high coverage without materializing the full Cartesian product. This prevents Out-of-Memory (OOM) crashes on complex configurations.
+- **Concurrency-limited I/O:** Workspace and fragment loading use a semaphore-controlled worker pool to prevent file descriptor exhaustion in environments with hundreds of fragments.
+- **Resource safety:** Iterators and file handles are strictly managed using `defer` cleanup patterns to prevent goroutine and memory leaks.
+- **Bounded iteration:** Configurable `max_samples` limits the depth of exploration for extremely deep route trees.
 
 ---
 

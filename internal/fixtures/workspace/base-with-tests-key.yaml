@@ -1,0 +1,6 @@
+route:
+  receiver: default
+receivers:
+  - name: default
+tests:
+  - name: "stray-key-not-allowed-by-strict-load"

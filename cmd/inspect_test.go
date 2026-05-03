@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"context"
 	"os"
 	"testing"
 
 	"github.com/nyambati/litmus/internal/codec"
+	"github.com/nyambati/litmus/internal/config"
 	"github.com/nyambati/litmus/internal/types"
 	"github.com/stretchr/testify/require"
 )
@@ -36,6 +38,8 @@ func TestInspectCommand_YAML(t *testing.T) {
 
 	cmd := newInspectCmd()
 	cmd.SetArgs([]string{"test.mpk"})
+	ctx := context.WithValue(context.Background(), config.LoggerKey{}, testLogger)
+	cmd.SetContext(ctx)
 	err = cmd.Execute()
 
 	require.NoError(t, err)

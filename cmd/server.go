@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/nyambati/litmus/internal/config"
 	"github.com/nyambati/litmus/internal/server"
 	"github.com/spf13/cobra"
 )
@@ -15,7 +16,8 @@ func newServeCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			port, _ := cmd.Flags().GetInt("port")
 			dev, _ := cmd.Flags().GetBool("dev")
-			return server.RunUIServer(port, dev)
+			logger := config.LoggerFromContext(cmd.Context())
+			return server.RunUIServer(port, dev, logger)
 		},
 	}
 

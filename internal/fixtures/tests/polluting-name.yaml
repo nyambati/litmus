@@ -1,0 +1,3 @@
+name: "should-not-leak-as-fragment-name"
+tests:
+  - name: "t1"

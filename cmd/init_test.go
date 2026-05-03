@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/nyambati/litmus/internal/config"
 	"github.com/stretchr/testify/require"
 )
 
@@ -38,6 +40,8 @@ func TestInitCommand_LitmusYAML(t *testing.T) {
 
 	cmd := newInitCmd()
 	cmd.SetArgs([]string{})
+	ctx := context.WithValue(context.Background(), config.LoggerKey{}, testLogger)
+	cmd.SetContext(ctx)
 	err = cmd.Execute()
 
 	require.NoError(t, err)

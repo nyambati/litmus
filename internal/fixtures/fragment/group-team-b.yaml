@@ -1,0 +1,5 @@
+namespace: "test"
+group:
+  receiver: "team-b"
+  match:
+    team: "b"

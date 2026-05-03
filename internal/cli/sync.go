@@ -7,30 +7,33 @@ import (
 	"path/filepath"
 
 	"github.com/nyambati/litmus/internal/config"
+	"github.com/nyambati/litmus/internal/engine/sanity"
 	"github.com/nyambati/litmus/internal/mimir"
+	"github.com/nyambati/litmus/internal/workspace"
+	"github.com/sirupsen/logrus"
 )
 
-func RunSync(address, tenantID, apiKey string, skipValidate, dryRun bool, output string) error {
+func RunSync(cfg *config.LitmusConfig, logger logrus.FieldLogger, address, tenantID, apiKey string, skipValidate, dryRun bool, output string) error {
 	ctx := context.Background()
 
-	litmusConfig, err := config.LoadConfig()
-	if err != nil {
-		return fmt.Errorf("loading litmus config: %w", err)
-	}
-
 	if address != "" {
-		litmusConfig.Mimir.Address = address
+		cfg.Mimir.Address = address
 	}
 	if tenantID != "" {
-		litmusConfig.Mimir.TenantID = tenantID
+		cfg.Mimir.TenantID = tenantID
 	}
 	if apiKey != "" {
-		litmusConfig.Mimir.APIKey = apiKey
+		cfg.Mimir.APIKey = apiKey
 	}
 
-	assembled, _, amConfig, err := litmusConfig.LoadAssembledConfig()
+	ws, err := workspace.Load(cfg, logger)
 	if err != nil {
-		return fmt.Errorf("loading alertmanager config: %w", err)
+		return err
+	}
+
+	amConfig, err := ws.AMConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load alertmanager config: %w", err)
 	}
 
 	if amConfig.Route == nil {
@@ -38,34 +41,30 @@ func RunSync(address, tenantID, apiKey string, skipValidate, dryRun bool, output
 	}
 
 	if !skipValidate {
-		sanity := RunSanityChecks(amConfig, litmusConfig.Sanity)
-		if !sanity.Passed {
+		sanityResult := sanity.Run(buildCheckContext(amConfig, ws, cfg.Policy), cfg.Sanity)
+		if !sanityResult.Passed {
 			fmt.Fprintf(os.Stderr, "Sanity checks failed. Use --skip-validate to bypass.\n")
 			return fmt.Errorf("sanity check failures")
 		}
 	}
 
 	if dryRun {
-		return outputAssembledConfig(assembled, output)
+		return printYAML(ws.ConfigString(), output)
 	}
 
-	if err := litmusConfig.Mimir.Validate(); err != nil {
+	if err := cfg.Mimir.Validate(); err != nil {
 		return err
 	}
 
-	templates, err := loadTemplates(litmusConfig, amConfig.Templates)
+	templates, err := loadTemplates(cfg, amConfig.Templates)
 	if err != nil {
 		return err
 	}
 
-	client := mimir.NewClient(&litmusConfig.Mimir)
-	configPayload, err := assembled.String()
-	if err != nil {
-		return fmt.Errorf("converting assembled config to string: %w", err)
-	}
+	client := mimir.NewClient(&cfg.Mimir)
 
 	payload := mimir.PushPayload{
-		Config:    configPayload,
+		Config:    ws.ConfigString(),
 		Templates: templates,
 	}
 
@@ -73,24 +72,22 @@ func RunSync(address, tenantID, apiKey string, skipValidate, dryRun bool, output
 		return fmt.Errorf("pushing to mimir: %w", err)
 	}
 
-	fmt.Printf("✓ Alertmanager config synced to %s\n", litmusConfig.Mimir.Address) //nolint:forbidigo
+	fmt.Printf("✓ Alertmanager config synced to %s\n", cfg.Mimir.Address) //nolint:forbidigo
 	return nil
 }
 
-func outputAssembledConfig(amCfg *config.AlertmanagerConfig, output string) error {
-	data, err := amCfg.MarshalIndent(2)
-	if err != nil {
-		return fmt.Errorf("marshaling config: %w", err)
-	}
+func printYAML(amCfg string, output string) error {
+	data := []byte(amCfg)
 
 	if output != "" {
-		if err := os.WriteFile(output, data.Bytes(), 0600); err != nil {
+		if err := os.WriteFile(output, data, 0o600); err != nil {
 			return fmt.Errorf("writing output file: %w", err)
 		}
 		fmt.Fprintf(os.Stdout, "Config written to %s\n", output)
+		return nil
 	}
 
-	fmt.Fprintln(os.Stdout, data.String())
+	fmt.Fprintln(os.Stdout, string(amCfg))
 	return nil
 }
 

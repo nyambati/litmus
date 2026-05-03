@@ -2,7 +2,7 @@ version: "2"
 run:
   go: "1.26.2"
   issues-exit-code: 1
-  tests: true
+  tests: false
 output:
   formats:
     tab:

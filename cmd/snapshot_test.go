@@ -1,11 +1,13 @@
 package cmd
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/nyambati/litmus/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -43,8 +45,10 @@ receivers:
 `), 0600)
 	require.NoError(t, err)
 
-	cmd := newSnapshotCmd()
+	cmd := withConfig(newSnapshotCmd())
 	cmd.SetArgs([]string{"capture"})
+	ctx := context.WithValue(context.Background(), config.LoggerKey{}, testLogger)
+	cmd.SetContext(ctx)
 	err = cmd.Execute()
 
 	require.NoError(t, err)
@@ -90,7 +94,7 @@ receivers:
 	require.NoError(t, err)
 
 	// Generate initial baseline
-	cmd := newSnapshotCmd()
+	cmd := withConfig(newSnapshotCmd())
 	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 	require.NoError(t, err)
@@ -112,7 +116,7 @@ receivers:
 	require.NoError(t, err)
 
 	// Run snapshot again without --strict (should succeed with warning)
-	cmd = newSnapshotCmd()
+	cmd = withConfig(newSnapshotCmd())
 	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 
@@ -150,7 +154,7 @@ receivers:
 	require.NoError(t, err)
 
 	// Generate initial baseline
-	cmd := newSnapshotCmd()
+	cmd := withConfig(newSnapshotCmd())
 	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 	require.NoError(t, err)
@@ -172,7 +176,7 @@ receivers:
 	require.NoError(t, err)
 
 	// Run snapshot with --strict (should fail due to drift)
-	cmd = newSnapshotCmd()
+	cmd = withConfig(newSnapshotCmd())
 	cmd.SetArgs([]string{"capture", "--strict"})
 	err = cmd.Execute()
 
@@ -211,7 +215,7 @@ receivers:
 	require.NoError(t, err)
 
 	// Generate initial baseline
-	cmd := newSnapshotCmd()
+	cmd := withConfig(newSnapshotCmd())
 	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 	require.NoError(t, err)
@@ -233,7 +237,7 @@ receivers:
 	require.NoError(t, err)
 
 	// Run snapshot with update (should succeed)
-	cmd = newSnapshotCmd()
+	cmd = withConfig(newSnapshotCmd())
 	cmd.SetArgs([]string{"update"})
 	err = cmd.Execute()
 
@@ -283,7 +287,7 @@ receivers:
 	require.NoError(t, err)
 
 	// Generate initial baseline
-	cmd := newSnapshotCmd()
+	cmd := withConfig(newSnapshotCmd())
 	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 	require.NoError(t, err)
@@ -300,7 +304,7 @@ receivers:
 	require.Equal(t, 1, mpkCount, "should have exactly 1 baseline version after initial snapshot")
 
 	// Run snapshot with update (no config changes, so no drift)
-	cmd = newSnapshotCmd()
+	cmd = withConfig(newSnapshotCmd())
 	cmd.SetArgs([]string{"update"})
 	err = cmd.Execute()
 
@@ -334,7 +338,7 @@ workspace:
 `), 0600)
 	require.NoError(t, err)
 
-	cmd := newSnapshotCmd()
+	cmd := withConfig(newSnapshotCmd())
 	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 
@@ -374,7 +378,7 @@ receivers:
 	require.NoError(t, err)
 
 	// Generate initial baseline
-	cmd := newSnapshotCmd()
+	cmd := withConfig(newSnapshotCmd())
 	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 	require.NoError(t, err)
@@ -391,7 +395,7 @@ receivers:
 	require.Greater(t, versionCount, 0, "should have at least one version")
 
 	// List history using new history command
-	cmd = newHistoryCmd()
+	cmd = withConfig(newHistoryCmd())
 	cmd.SetArgs([]string{"list"})
 	err = cmd.Execute()
 	require.NoError(t, err)
@@ -428,7 +432,7 @@ receivers:
 	require.NoError(t, err)
 
 	// Generate initial baseline
-	cmd := newSnapshotCmd()
+	cmd := withConfig(newSnapshotCmd())
 	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 	require.NoError(t, err)
@@ -465,7 +469,7 @@ receivers:
 	require.NoError(t, err)
 
 	// Update baseline
-	cmd = newSnapshotCmd()
+	cmd = withConfig(newSnapshotCmd())
 	cmd.SetArgs([]string{"update"})
 	err = cmd.Execute()
 	require.NoError(t, err)
@@ -476,7 +480,7 @@ receivers:
 	require.Greater(t, len(entries), 0)
 
 	// Rollback to first baseline using new history command
-	cmd = newHistoryCmd()
+	cmd = withConfig(newHistoryCmd())
 	cmd.SetArgs([]string{"rollback", firstID})
 	err = cmd.Execute()
 	require.NoError(t, err)
@@ -508,10 +512,11 @@ receivers:
   - name: 'default'
 `), 0600))
 
-	// Fragment uses group to create a synthetic parent under scope=teams
-	require.NoError(t, os.MkdirAll("config/fragments", 0755))
-	require.NoError(t, os.WriteFile("config/fragments/db.yml", []byte(`
-name: "db-team"
+	// Fragment uses group to create a synthetic parent under scope=teams.
+	// Namespace "db-team" → assembled receiver name is "db-team-db-critical".
+	require.NoError(t, os.MkdirAll("config/fragments/db-team", 0755))
+	require.NoError(t, os.WriteFile("config/fragments/db-team/fragment.yml", []byte(`
+namespace: "db-team"
 group:
   match:
     scope: "teams"
@@ -523,13 +528,13 @@ receivers:
   - name: "db-critical"
 `), 0600))
 
-	cmd := newSnapshotCmd()
+	cmd := withConfig(newSnapshotCmd())
 	cmd.SetArgs([]string{"capture"})
 	require.NoError(t, cmd.Execute())
 
 	data, err := os.ReadFile(filepath.Join("config", "regressions", "regressions.litmus.yml"))
 	require.NoError(t, err)
-	assert.Contains(t, string(data), "db-critical", "snapshot must capture routes from assembled fragments")
+	assert.Contains(t, string(data), "db-team-db-critical", "snapshot must capture routes from assembled fragments with namespace prefix")
 }
 
 func countHistoryEntries(t *testing.T) int {
@@ -585,7 +590,7 @@ receivers:
 `), 0600)
 	require.NoError(t, err)
 
-	cmd := newSnapshotCmd()
+	cmd := withConfig(newSnapshotCmd())
 	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 	require.NoError(t, err)
@@ -628,7 +633,7 @@ receivers:
 `), 0600)
 	require.NoError(t, err)
 
-	cmd := newSnapshotCmd()
+	cmd := withConfig(newSnapshotCmd())
 	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 	require.NoError(t, err)
@@ -651,7 +656,7 @@ receivers:
 `), 0600)
 	require.NoError(t, err)
 
-	cmd = newSnapshotCmd()
+	cmd = withConfig(newSnapshotCmd())
 	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 	require.NoError(t, err)
@@ -692,14 +697,14 @@ receivers:
 `), 0600)
 	require.NoError(t, err)
 
-	cmd := newSnapshotCmd()
+	cmd := withConfig(newSnapshotCmd())
 	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 	require.NoError(t, err)
 
 	initialID := getBaselineID(t, filepath.Join(historyDir, "regressions.litmus.yml"))
 
-	cmd = newSnapshotCmd()
+	cmd = withConfig(newSnapshotCmd())
 	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 	require.NoError(t, err)
@@ -738,7 +743,7 @@ receivers:
 `), 0600)
 	require.NoError(t, err)
 
-	cmd := newSnapshotCmd()
+	cmd := withConfig(newSnapshotCmd())
 	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 	require.NoError(t, err)
@@ -761,7 +766,7 @@ receivers:
 `), 0600)
 	require.NoError(t, err)
 
-	cmd = newSnapshotCmd()
+	cmd = withConfig(newSnapshotCmd())
 	cmd.SetArgs([]string{"update"})
 	err = cmd.Execute()
 	require.NoError(t, err)
@@ -802,7 +807,7 @@ receivers:
 `), 0600)
 	require.NoError(t, err)
 
-	cmd := newSnapshotCmd()
+	cmd := withConfig(newSnapshotCmd())
 	cmd.SetArgs([]string{"capture"})
 	err = cmd.Execute()
 	require.NoError(t, err)
@@ -810,7 +815,7 @@ receivers:
 	initialID := getBaselineID(t, filepath.Join(historyDir, "regressions.litmus.yml"))
 	historyCountBefore := countHistoryEntries(t)
 
-	cmd = newSnapshotCmd()
+	cmd = withConfig(newSnapshotCmd())
 	cmd.SetArgs([]string{"update"})
 	err = cmd.Execute()
 	require.NoError(t, err)

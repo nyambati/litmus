@@ -2,17 +2,17 @@ package cli
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"os"
 	"sort"
-	"strings"
 
 	"github.com/nyambati/litmus/internal/config"
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/engine/snapshot"
 	"github.com/nyambati/litmus/internal/stores"
 	"github.com/nyambati/litmus/internal/types"
+	"github.com/nyambati/litmus/internal/utils"
+	"github.com/nyambati/litmus/internal/workspace"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -23,22 +23,26 @@ const (
 )
 
 // RunDiff compares current config against the baseline and prints a structural diff.
-func RunDiff() error {
-	litmusConfig, err := config.LoadConfig()
+func RunDiff(cfg *config.LitmusConfig, logger logrus.FieldLogger) error {
+	ws, err := workspace.Load(cfg, logger)
 	if err != nil {
-		return fmt.Errorf("loading litmus config: %w", err)
+		return err
 	}
 
-	alertConfig, _, _, err := litmusConfig.LoadAssembledConfig()
+	amCfg, err := ws.AMConfig()
 	if err != nil {
-		return fmt.Errorf("loading alertmanager config: %w", err)
+		return fmt.Errorf("failed to load alertmanager config: %w", err)
+	}
+
+	if amCfg.Route == nil {
+		return fmt.Errorf("alertmanager config has no route defined")
 	}
 
 	ctx := context.Background()
-	router := pipeline.NewRouter(alertConfig.Route)
+	router := pipeline.NewRouter(amCfg.Route)
 	runner := pipeline.NewRunner(stores.NewSilenceStore(nil), stores.NewAlertStore(), router, nil)
 
-	walker := snapshot.NewRouteWalker(alertConfig.Route)
+	walker := snapshot.NewRouteWalker(amCfg.Route)
 	paths := walker.FindTerminalPaths()
 
 	synthesizer := snapshot.NewSnapshotSynthesizer(runner)
@@ -47,15 +51,13 @@ func RunDiff() error {
 		return fmt.Errorf("synthesis failed: %w", err)
 	}
 
-	currentTests := BuildRegressionTests(outcomes, litmusConfig.GlobalLabels)
+	currentTests := BuildRegressionTests(outcomes, cfg.GlobalLabels)
 
-	state, err := LoadRegressionState(litmusConfig.RegressionsYamlFilePath())
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("no baseline found — run 'litmus snapshot' to create one")
-		}
-		return fmt.Errorf("loading baseline: %w", err)
+	if ws.RegressionState == nil {
+		return fmt.Errorf("no baseline found — run 'litmus snapshot' to create one")
 	}
+
+	state := ws.RegressionState
 
 	existingTests := state.Tests
 	if len(existingTests) == 0 {
@@ -105,15 +107,5 @@ func PrintDiffReport(diff *types.RegressionDiff) {
 }
 
 func labelKeyForSort(m map[string]string) string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	var b strings.Builder
-	for _, k := range keys {
-		b.WriteString(k)
-		b.WriteString(m[k])
-	}
-	return b.String()
+	return utils.LabelFormat(m)
 }

@@ -147,3 +147,16 @@ func TestSnapshotSynthesizer_WarnsWhenNegativeMatchersReduceCoverage(t *testing.
 	require.True(t, warningsField.IsValid(), "SynthesisResult should report incomplete coverage warnings")
 	require.Greater(t, warningsField.Len(), 0, "partial synthesis should produce a warning when negative matchers were ignored")
 }
+
+func TestNewSnapshotSynthesizer_NilLoggerDoesNotPanic(t *testing.T) {
+	runner := pipeline.NewRunner(
+		stores.NewSilenceStore(nil),
+		stores.NewAlertStore(),
+		pipeline.NewRouter(&config.Route{Receiver: "default"}),
+		nil,
+	)
+	require.NotPanics(t, func() {
+		s := NewSnapshotSynthesizer(runner)
+		_, _ = s.DiscoverOutcomes(context.Background(), nil)
+	})
+}

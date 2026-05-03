@@ -1,0 +1,7 @@
+namespace: "db"
+routes:
+  - receiver: "critical"
+    match:
+      severity: "critical"
+receivers:
+  - name: "critical"

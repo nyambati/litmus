@@ -1,0 +1,5 @@
+namespace: "test"
+routes:
+  - receiver: "critical"
+receivers:
+  - name: "critical"

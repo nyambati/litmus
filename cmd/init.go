@@ -10,8 +10,10 @@ func newInitCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:          "init",
 		Short:        "Initialize a new litmus workspace",
-		Long:         "Creates .litmus.yaml, tests/ directory, and .gitattributes for a new workspace",
+		Long:         "Creates .litmus.yaml, tests/ directory for a new workspace",
 		SilenceUsage: true,
+		// Override root PersistentPreRunE — config does not exist yet when init runs.
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error { return nil },
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cli.RunInit()
 		},

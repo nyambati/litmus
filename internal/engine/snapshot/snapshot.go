@@ -29,12 +29,13 @@ type SnapshotSynthesizer struct {
 }
 
 // NewSnapshotSynthesizer creates synthesizer for snapshot generation.
+// Pass nil for logger to discard all log output.
 func NewSnapshotSynthesizer(runner *pipeline.Runner) *SnapshotSynthesizer {
 	return &SnapshotSynthesizer{
 		runner:       runner,
 		expander:     NewRegexExpander(),
 		combGen:      NewLabelCombinationGenerator(5),
-		failureLimit: 100, // Allow up to 100 failures before returning error
+		failureLimit: 100,
 	}
 }
 
