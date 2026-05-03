@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/nyambati/litmus/internal/config"
@@ -16,7 +17,10 @@ var (
 
 type contextKey string
 
-const LitmusConfigKey contextKey = "litmusConfig"
+const (
+	LitmusConfigKey contextKey = "litmusConfig"
+	litmusLoggerKey contextKey = "litmusLogger"
+)
 
 // SetStaticFS registers the embedded UI filesystem before the server starts.
 func SetStaticFS(f fs.FS) {
@@ -24,7 +28,7 @@ func SetStaticFS(f fs.FS) {
 }
 
 // RunUIServer starts the Litmus UI backend.
-func RunUIServer(port int, dev bool) error {
+func RunUIServer(port int, dev bool, logger logrus.FieldLogger) error {
 	if !dev {
 		// use gin in production mode to serve static files
 		gin.SetMode(gin.ReleaseMode)
@@ -40,6 +44,7 @@ func RunUIServer(port int, dev bool) error {
 	// CORS Middleware for development
 	router.Use(corsMiddleware())
 	router.Use(litmusConfigMiddleware(litmusConfig))
+	router.Use(litmusLoggerMiddleware(logger))
 
 	// API Endpoints
 	api := router.Group("/api/v1")
@@ -69,7 +74,13 @@ func RunUIServer(port int, dev bool) error {
 
 func corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		origin := c.Request.Header.Get("Origin")
+		if origin != "" {
+			// Only allow localhost or 127.0.0.1 for local development/CLI usage
+			if strings.HasPrefix(origin, "http://localhost") || strings.HasPrefix(origin, "http://127.0.0.1") {
+				c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			}
+		}
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
@@ -85,6 +96,13 @@ func corsMiddleware() gin.HandlerFunc {
 func litmusConfigMiddleware(litmusConfig *config.LitmusConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Set(string(LitmusConfigKey), litmusConfig)
+		c.Next()
+	}
+}
+
+func litmusLoggerMiddleware(logger logrus.FieldLogger) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Set(string(litmusLoggerKey), logger)
 		c.Next()
 	}
 }

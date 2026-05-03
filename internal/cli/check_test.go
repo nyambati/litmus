@@ -1,12 +1,10 @@
 package cli
 
 import (
-	"context"
-	"os"
 	"testing"
 
 	"github.com/nyambati/litmus/internal/config"
-	"github.com/nyambati/litmus/internal/engine/pipeline"
+	"github.com/nyambati/litmus/internal/engine/sanity"
 	"github.com/nyambati/litmus/internal/types"
 	amconfig "github.com/prometheus/alertmanager/config"
 	labels "github.com/prometheus/alertmanager/pkg/labels"
@@ -83,57 +81,6 @@ func TestFilterByTags_NilTagsOnTest(t *testing.T) {
 	require.Equal(t, "test2", result[0].Name)
 }
 
-func TestRunBehavioralTests_DoesNotDuplicateRootTests(t *testing.T) {
-	tmpDir := t.TempDir()
-	oldCwd, err := os.Getwd()
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = os.Chdir(oldCwd) })
-	require.NoError(t, os.Chdir(tmpDir))
-
-	require.NoError(t, os.WriteFile(".litmus.yaml", []byte(`
-workspace:
-  root: "config"
-  fragments: "fragments/*"
-`), 0600))
-	require.NoError(t, os.MkdirAll("config/tests", 0755))
-	require.NoError(t, os.WriteFile("config/alertmanager.yml", []byte(`
-route:
-  receiver: "default"
-receivers:
-  - name: "default"
-`), 0600))
-	require.NoError(t, os.WriteFile("config/tests/root.yml", []byte(`
-name: "root behavioral test"
-alert:
-  labels:
-    service: "api"
-expect:
-  outcome: "active"
-  receivers:
-    - "default"
-`), 0600))
-
-	cfg, err := config.LoadConfig()
-	require.NoError(t, err)
-
-	_, fragments, amCfg, err := cfg.LoadAssembledConfig()
-	require.NoError(t, err)
-
-	result := RunBehavioralTests(
-		context.Background(),
-		cfg,
-		fragments,
-		pipeline.NewRouter(amCfg.Route),
-		amCfg.InhibitRules,
-		nil,
-	)
-
-	require.Equal(t, 1, result.TotalTests)
-	require.Equal(t, 1, result.Tests)
-	require.Equal(t, 1, result.PassCount)
-	require.Empty(t, result.Failures)
-}
-
 func TestRunSanityChecks_NegativeOnlyRoutesMode(t *testing.T) {
 	matcher, err := labels.NewMatcher(labels.MatchNotEqual, "team", "ops")
 	require.NoError(t, err)
@@ -145,8 +92,26 @@ func TestRunSanityChecks_NegativeOnlyRoutesMode(t *testing.T) {
 		Receivers: []amconfig.Receiver{{Name: "default"}, {Name: "non-ops"}},
 	}
 
+	receiversMap := map[string]*amconfig.Receiver{
+		"default": {Name: "default"},
+		"non-ops": {Name: "non-ops"},
+	}
+	ctx := sanity.CheckContext{
+		Route:     amCfg.Route,
+		Receivers: receiversMap,
+	}
+
+	findCheck := func(result sanity.Result, name string) *sanity.CheckEntry {
+		for i := range result.Checks {
+			if result.Checks[i].Name == name {
+				return &result.Checks[i]
+			}
+		}
+		return nil
+	}
+
 	t.Run("fail mode fails sanity", func(t *testing.T) {
-		result := RunSanityChecks(amCfg, config.SanityConfig{
+		result := sanity.Run(ctx, config.SanityConfig{
 			OrphanReceivers:    config.SanityModeFail,
 			DeadReceivers:      config.SanityModeFail,
 			ShadowedRoutes:     config.SanityModeFail,
@@ -155,12 +120,14 @@ func TestRunSanityChecks_NegativeOnlyRoutesMode(t *testing.T) {
 		})
 
 		require.False(t, result.Passed)
-		require.Len(t, result.NegativeOnlyRouteIssues, 1)
-		require.Equal(t, string(config.SanityModeFail), result.NegativeOnlyRouteMode)
+		entry := findCheck(result, "negative_only_routes")
+		require.NotNil(t, entry)
+		require.Len(t, entry.Issues, 1)
+		require.Equal(t, string(config.SanityModeFail), entry.Mode)
 	})
 
 	t.Run("warn mode reports without failing sanity", func(t *testing.T) {
-		result := RunSanityChecks(amCfg, config.SanityConfig{
+		result := sanity.Run(ctx, config.SanityConfig{
 			OrphanReceivers:    config.SanityModeFail,
 			DeadReceivers:      config.SanityModeFail,
 			ShadowedRoutes:     config.SanityModeFail,
@@ -169,7 +136,9 @@ func TestRunSanityChecks_NegativeOnlyRoutesMode(t *testing.T) {
 		})
 
 		require.True(t, result.Passed)
-		require.Len(t, result.NegativeOnlyRouteIssues, 1)
-		require.Equal(t, string(config.SanityModeWarn), result.NegativeOnlyRouteMode)
+		entry := findCheck(result, "negative_only_routes")
+		require.NotNil(t, entry)
+		require.Len(t, entry.Issues, 1)
+		require.Equal(t, string(config.SanityModeWarn), entry.Mode)
 	})
 }

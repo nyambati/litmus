@@ -1,0 +1,17 @@
+global:
+  resolve_timeout: 5m
+  opsgenie_api_key: "env(OPSGENIE_API_KEY)"
+  slack_api_url: "env(SLACK_API_URL)"
+templates: []
+route:
+  receiver: default
+  group_by: [alertname]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes: []
+receivers:
+  - name: default
+    slack_configs:
+      - channel: "#alerts-unrouted"
+        send_resolved: true

@@ -13,6 +13,8 @@ import (
 	"github.com/nyambati/litmus/internal/engine/snapshot"
 	"github.com/nyambati/litmus/internal/stores"
 	"github.com/nyambati/litmus/internal/types"
+	"github.com/nyambati/litmus/internal/workspace"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -23,22 +25,26 @@ const (
 )
 
 // RunDiff compares current config against the baseline and prints a structural diff.
-func RunDiff() error {
-	litmusConfig, err := config.LoadConfig()
+func RunDiff(cfg *config.LitmusConfig, logger logrus.FieldLogger) error {
+	ws, err := workspace.Load(cfg.Workspace.Root, logger)
 	if err != nil {
-		return fmt.Errorf("loading litmus config: %w", err)
+		return err
 	}
 
-	alertConfig, _, _, err := litmusConfig.LoadAssembledConfig()
+	amCfg, err := ws.Config()
 	if err != nil {
-		return fmt.Errorf("loading alertmanager config: %w", err)
+		return fmt.Errorf("failed to load alertmanager config: %w", err)
+	}
+
+	if amCfg.Route == nil {
+		return fmt.Errorf("alertmanager config has no route defined")
 	}
 
 	ctx := context.Background()
-	router := pipeline.NewRouter(alertConfig.Route)
+	router := pipeline.NewRouter(amCfg.Route)
 	runner := pipeline.NewRunner(stores.NewSilenceStore(nil), stores.NewAlertStore(), router, nil)
 
-	walker := snapshot.NewRouteWalker(alertConfig.Route)
+	walker := snapshot.NewRouteWalker(amCfg.Route)
 	paths := walker.FindTerminalPaths()
 
 	synthesizer := snapshot.NewSnapshotSynthesizer(runner)
@@ -47,9 +53,9 @@ func RunDiff() error {
 		return fmt.Errorf("synthesis failed: %w", err)
 	}
 
-	currentTests := BuildRegressionTests(outcomes, litmusConfig.GlobalLabels)
+	currentTests := BuildRegressionTests(outcomes, cfg.GlobalLabels)
 
-	state, err := LoadRegressionState(litmusConfig.RegressionsYamlFilePath())
+	state, err := LoadRegressionState(cfg.RegressionsYamlFilePath())
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("no baseline found — run 'litmus snapshot' to create one")

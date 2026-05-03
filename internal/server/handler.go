@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -13,30 +12,44 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/nyambati/litmus/internal/cli"
 	"github.com/nyambati/litmus/internal/config"
-	"github.com/nyambati/litmus/internal/engine/behavioral"
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/engine/snapshot"
+	"github.com/nyambati/litmus/internal/fragment"
 	"github.com/nyambati/litmus/internal/stores"
 	"github.com/nyambati/litmus/internal/types"
+	"github.com/nyambati/litmus/internal/workspace"
 	amconfig "github.com/prometheus/alertmanager/config"
 	"github.com/prometheus/common/model"
+	"github.com/sirupsen/logrus"
 )
 
 // loadAssembled loads the assembled alertmanager config and fragments, writing
 // an error response and returning false on failure.
-func loadAssembled(c *gin.Context, litmusConfig *config.LitmusConfig) (*amconfig.Config, []*config.Fragment, bool) {
-	amCfg, fragments, _, err := litmusConfig.LoadAssembledConfig()
+func loadAssembled(c *gin.Context, litmusConfig *config.LitmusConfig) (*amconfig.Config, []*fragment.Fragment, *workspace.Workspace, bool) {
+	ws, err := workspace.Load(litmusConfig.Workspace.Root, getLogger(c))
 	if err != nil {
-		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading alertmanager config: %v", err))
-		return nil, nil, false
+		c.String(http.StatusInternalServerError, fmt.Sprintf("Assembling workspace: %v", err))
+		return nil, nil, nil, false
 	}
 
-	amConf, err := amCfg.ConvertToAMConfigStruct()
+	amConfig, err := ws.Config()
 	if err != nil {
-		c.String(http.StatusInternalServerError, fmt.Sprintf("Converting to Alertmanager config: %v", err))
-		return nil, nil, false
+		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading alertmanager config: %v", err))
+		return nil, nil, nil, false
 	}
-	return amConf, fragments, true
+
+	return amConfig, ws.Fragments(), ws, true
+}
+
+func getLogger(c *gin.Context) logrus.FieldLogger {
+	if val, exists := c.Get(string(litmusLoggerKey)); exists {
+		if log, ok := val.(logrus.FieldLogger); ok {
+			return log
+		}
+	}
+	l := logrus.New()
+	l.Out = nil // discard
+	return l
 }
 
 func getLitmusConfig(c *gin.Context) *config.LitmusConfig {
@@ -60,9 +73,8 @@ func configHandler(c *gin.Context) {
 	if litmusConfig == nil {
 		return
 	}
-	_, fragments, _, err := litmusConfig.LoadAssembledConfig()
-	if err != nil {
-		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading config: %v", err))
+	_, fragments, _, ok := loadAssembled(c, litmusConfig)
+	if !ok {
 		return
 	}
 	resp := ConfigResponse{
@@ -80,16 +92,14 @@ func fragmentsHandler(c *gin.Context) {
 	if litmusConfig == nil {
 		return
 	}
-	_, fragments, _, err := litmusConfig.LoadAssembledConfig()
-	if err != nil {
-		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading config: %v", err))
+	_, fragments, _, ok := loadAssembled(c, litmusConfig)
+	if !ok {
 		return
 	}
 	infos := make([]*FragmentInfo, 0, len(fragments))
 	for _, frag := range fragments {
 		info := &FragmentInfo{
-			Name:      frag.Name,
-			Namespace: frag.Namespace,
+			Name:      frag.Namespace,
 			Routes:    len(frag.Routes),
 			Receivers: len(frag.Receivers),
 			Tests:     len(frag.Tests),
@@ -124,9 +134,8 @@ func testsHandler(c *gin.Context) {
 		}
 		c.JSON(http.StatusOK, state.Tests)
 	default:
-		_, fragments, _, err := litmusConfig.LoadAssembledConfig()
-		if err != nil {
-			c.String(http.StatusInternalServerError, fmt.Sprintf("Loading config: %v", err))
+		_, fragments, _, ok := loadAssembled(c, litmusConfig)
+		if !ok {
 			return
 		}
 		var tests []*types.TestCase
@@ -142,9 +151,8 @@ func groupedTestsHandler(c *gin.Context) {
 	if litmusConfig == nil {
 		return
 	}
-	_, fragments, _, err := litmusConfig.LoadAssembledConfig()
-	if err != nil {
-		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading config: %v", err))
+	_, fragments, _, ok := loadAssembled(c, litmusConfig)
+	if !ok {
 		return
 	}
 	groups := make([]*FragmentTestGroup, 0, len(fragments))
@@ -153,9 +161,8 @@ func groupedTestsHandler(c *gin.Context) {
 			continue
 		}
 		group := &FragmentTestGroup{
-			Name:      frag.Name,
-			Namespace: frag.Namespace,
-			Tests:     frag.Tests,
+			Name:  frag.Namespace,
+			Tests: frag.Tests,
 		}
 		if frag.Group != nil {
 			group.Group = &FragmentGroupInfo{
@@ -174,7 +181,7 @@ func runTestsHandler(c *gin.Context) {
 		return
 	}
 
-	alertConfig, fragments, ok := loadAssembled(c, litmusConfig)
+	alertConfig, fragments, ws, ok := loadAssembled(c, litmusConfig)
 	if !ok {
 		return
 	}
@@ -208,14 +215,14 @@ func runTestsHandler(c *gin.Context) {
 				return
 			}
 		}
-		c.JSON(http.StatusOK, snapshot.NewRegressionTestExecutor().Execute(context.Background(), tests, router))
+		c.JSON(http.StatusOK, pipeline.NewTestExecutor(nil).ExecuteAll(context.Background(), tests, router))
 	default:
-		executor := behavioral.NewBehavioralTestExecutor(alertConfig.InhibitRules)
+		executor := pipeline.NewTestExecutor(alertConfig.InhibitRules)
 
 		// Fragment-scoped run: only execute tests from the named fragment.
 		if fragmentName := c.Query("fragment"); fragmentName != "" {
 			for _, frag := range fragments {
-				if frag.Name == fragmentName {
+				if frag.Namespace == fragmentName {
 					results := make([]*types.TestResult, 0, len(frag.Tests))
 					for _, test := range frag.Tests {
 						results = append(results, executor.Execute(context.Background(), test, router))
@@ -232,6 +239,8 @@ func runTestsHandler(c *gin.Context) {
 		for _, frag := range fragments {
 			tests = append(tests, frag.Tests...)
 		}
+		tests = append(tests, ws.Tests()...)
+
 		if name != "" {
 			for _, test := range tests {
 				if test.Name == name {
@@ -264,7 +273,7 @@ func evaluateHandler(c *gin.Context) {
 	}
 
 	// Reload config on every request for "live" feel
-	alertConfig, _, ok := loadAssembled(c, litmusConfig)
+	alertConfig, _, _, ok := loadAssembled(c, litmusConfig)
 	if !ok {
 		return
 	}
@@ -298,7 +307,7 @@ func suggestHandler(c *gin.Context) {
 	if litmusConfig == nil {
 		return
 	}
-	alertConfig, fragments, ok := loadAssembled(c, litmusConfig)
+	alertConfig, _, ws, ok := loadAssembled(c, litmusConfig)
 	if !ok {
 		return
 	}
@@ -333,15 +342,7 @@ func suggestHandler(c *gin.Context) {
 	}
 	walkRoute(alertConfig.Route)
 
-	loader := behavioral.NewBehavioralTestLoader()
-	tests, err := loader.LoadFromDirectory(litmusConfig.TestsDir())
-	if err != nil {
-		log.Printf("warning: failed to load tests for suggestions: %v", err)
-	}
-	for _, frag := range fragments {
-		tests = append(tests, frag.Tests...)
-	}
-	for _, test := range tests {
+	for _, test := range ws.Tests() {
 		if test.Alert == nil {
 			continue
 		}
@@ -390,7 +391,7 @@ func generateRegressionsHandler(c *gin.Context) {
 
 	update := c.Query("update") == "true" || errors.Is(err, os.ErrNotExist)
 
-	if err := cli.RunSnapshot(update, false); err != nil {
+	if err := cli.RunSnapshot(litmusConfig, getLogger(c), update, false); err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Snapshot failed: %v", err))
 		return
 	}
@@ -402,7 +403,7 @@ func diffHandler(c *gin.Context) {
 	if litmusConfig == nil {
 		return
 	}
-	alertConfig, _, ok := loadAssembled(c, litmusConfig)
+	alertConfig, _, _, ok := loadAssembled(c, litmusConfig)
 	if !ok {
 		return
 	}

@@ -1,22 +1,17 @@
 package config
 
-import (
-	"github.com/nyambati/litmus/internal/types"
-	amconfig "github.com/prometheus/alertmanager/config"
-)
-
 type (
 	// MimirConfig defines the connection parameters for Grafana Mimir.
 	MimirConfig struct {
-		Address  string `yaml:"address" mapstructure:"address"`
+		Address  string `yaml:"address" mapstructure:"address" validate:"required,url"`
 		TenantID string `yaml:"tenant_id" mapstructure:"tenant_id"`
 		APIKey   string `yaml:"api_key" mapstructure:"api_key"`
 	}
 
 	// WorkspaceConfig defines the package-based layout and history settings.
 	WorkspaceConfig struct {
-		Root       string `yaml:"root" mapstructure:"root"`
-		entrypoint string `yaml:"entrypoint" mapstructure:"entrypoint"`
+		Root       string `yaml:"root" mapstructure:"root" validate:"required"`
+		entrypoint string `yaml:"entrypoint" mapstructure:"entrypoint" `
 		Fragments  string `yaml:"fragments" mapstructure:"fragments"`
 		History    int    `yaml:"history" mapstructure:"history"`
 	}
@@ -55,25 +50,6 @@ type (
 		GlobalLabels map[string]string `yaml:"global_labels" mapstructure:"global_labels"`
 		Mimir        MimirConfig       `yaml:"mimir" mapstructure:"mimir"`
 	}
-
-	// FragmentGroup defines a synthetic parent route created during assembly.
-	FragmentGroup struct {
-		Match    map[string]string `yaml:"match"`
-		Receiver string            `yaml:"receiver"`
-	}
-
-	// Fragment represents a team-level configuration fragment.
-	Fragment struct {
-		Name         string                 `yaml:"name"`
-		Namespace    string                 `yaml:"namespace"`
-		Group        *FragmentGroup         `yaml:"group"`
-		Routes       []*amconfig.Route      `yaml:"routes"`
-		Receivers    []Receiver             `yaml:"receivers"`
-		InhibitRules []amconfig.InhibitRule `yaml:"inhibit_rules"`
-		// Tests are discovered from sibling *-tests.yml files and tests/ subdirectory.
-		// Never parsed from the fragment definition file itself.
-		Tests []*types.TestCase `yaml:"-"`
-	}
 )
 
 const (
@@ -83,4 +59,21 @@ const (
 
 func (m SanityMode) IsFail() bool {
 	return m == SanityModeFail
+}
+
+// ModeFor returns the configured SanityMode for the named check.
+// Unknown check names default to SanityModeFail.
+func (c SanityConfig) ModeFor(name string) SanityMode {
+	modes := map[string]SanityMode{
+		"orphan_receivers":     c.OrphanReceivers,
+		"dead_receivers":       c.DeadReceivers,
+		"shadowed_routes":      c.ShadowedRoutes,
+		"inhibition_cycles":    c.InhibitionCycles,
+		"policy_violations":    c.PolicyViolations,
+		"negative_only_routes": c.NegativeOnlyRoutes,
+	}
+	if m, ok := modes[name]; ok && m != "" {
+		return m
+	}
+	return SanityModeFail
 }

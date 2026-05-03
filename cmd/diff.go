@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/nyambati/litmus/internal/cli"
+	"github.com/nyambati/litmus/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -13,7 +14,9 @@ func newDiffCmd() *cobra.Command {
 		Long:         "Performs a structural comparison between the current configuration and the saved regression baseline.",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return cli.RunDiff()
+			cfg := config.FromContext(cmd.Context())
+			logger := config.LoggerFromContext(cmd.Context())
+			return cli.RunDiff(cfg, logger)
 		},
 	}
 }

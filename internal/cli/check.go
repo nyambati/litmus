@@ -11,12 +11,13 @@ import (
 	"time"
 
 	"github.com/nyambati/litmus/internal/config"
-	"github.com/nyambati/litmus/internal/engine/behavioral"
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/engine/sanity"
-	"github.com/nyambati/litmus/internal/engine/snapshot"
+	"github.com/nyambati/litmus/internal/fragment"
 	"github.com/nyambati/litmus/internal/types"
+	"github.com/nyambati/litmus/internal/workspace"
 	amconfig "github.com/prometheus/alertmanager/config"
+	"github.com/sirupsen/logrus"
 )
 
 const divider = "--------------------------------------------------"
@@ -28,28 +29,11 @@ type CheckExitCode int
 type CheckResult struct {
 	Passed     bool             `json:"passed"`
 	ConfigPath string           `json:"config_path"`
-	Sanity     SanityResult     `json:"sanity"`
+	Sanity     sanity.Result    `json:"sanity"`
 	Regression RegressionResult `json:"regression"`
 	Behavioral BehavioralResult `json:"behavioral"`
 	Duration   time.Duration    `json:"duration_ns"`
 	ExitCode   CheckExitCode    `json:"exit_code"`
-}
-
-// SanityResult holds per-category static analysis results.
-type SanityResult struct {
-	Passed                  bool     `json:"passed"`
-	ShadowedIssues          []string `json:"shadowed_issues,omitempty"`
-	OrphanIssues            []string `json:"orphan_issues,omitempty"`
-	InhibitionIssues        []string `json:"inhibition_issues,omitempty"`
-	PolicyIssues            []string `json:"policy_issues,omitempty"`
-	DeadReceiverIssues      []string `json:"dead_receiver_issues,omitempty"`
-	NegativeOnlyRouteIssues []string `json:"negative_only_route_issues,omitempty"`
-	ShadowedMode            string   `json:"shadowed_mode,omitempty"`
-	OrphanMode              string   `json:"orphan_mode,omitempty"`
-	InhibitionMode          string   `json:"inhibition_mode,omitempty"`
-	PolicyMode              string   `json:"policy_mode,omitempty"`
-	DeadReceiverMode        string   `json:"dead_receiver_mode,omitempty"`
-	NegativeOnlyRouteMode   string   `json:"negative_only_route_mode,omitempty"`
 }
 
 // TestFailure holds structured detail for a single test failure.
@@ -82,19 +66,34 @@ type BehavioralResult struct {
 
 // RunCheck loads config, runs all validation stages, prints results, and returns
 // the exit code the CLI layer should pass to os.Exit (0 = all passed).
-func RunCheck(format string, showDiff bool, tags []string) (CheckExitCode, error) {
+func RunCheck(cfg *config.LitmusConfig, logger logrus.FieldLogger, format string, showDiff bool, tags []string) (CheckExitCode, error) {
 	start := time.Now()
-
-	litmusConfig, router, fragments, amCfg, err := loadConfigAndRouter()
+	ws, err := workspace.Load(cfg.Workspace.Root, logger)
 	if err != nil {
 		return 1, err
 	}
 
-	sanityResult := runSanityChecks(litmusConfig, fragments, amCfg)
-	regressionResult := runRegressionTests(litmusConfig, router, tags)
-	behavioralResult := runBehavioralTests(amCfg.InhibitRules, litmusConfig, fragments, router, tags)
+	amCfg, err := ws.Config()
+	if err != nil {
+		return 1, fmt.Errorf("failed to load alertmanager config: %w", err)
+	}
 
-	result := buildCheckResult(litmusConfig.FilePath(), sanityResult, regressionResult, behavioralResult, time.Since(start))
+	if amCfg.Route == nil {
+		return 1, fmt.Errorf("alertmanager config has no route defined")
+	}
+
+	router := pipeline.NewRouter(amCfg.Route)
+
+	fragments := ws.Fragments()
+	if ws.RootFragment() != nil {
+		fragments = append([]*fragment.Fragment{ws.RootFragment()}, fragments...)
+	}
+	ctx := context.Background()
+	sanityResult := runSanityChecks(cfg, fragments, amCfg)
+	regressionResult := RunRegressionTests(ctx, cfg, router, tags)
+	behavioralResult := RunBehavioralTests(ctx, cfg, ws.Fragments(), ws.Tests(), router, amCfg.InhibitRules, tags)
+
+	result := buildCheckResult(cfg.FilePath(), sanityResult, regressionResult, behavioralResult, time.Since(start))
 
 	code := calculateExitCode(result)
 	result.ExitCode = code
@@ -106,55 +105,28 @@ func RunCheck(format string, showDiff bool, tags []string) (CheckExitCode, error
 	return code, nil
 }
 
-// loadConfigAndRouter loads the litmus config, assembles alertmanager config, and creates a router.
-func loadConfigAndRouter() (*config.LitmusConfig, *pipeline.Router, []*config.Fragment, *amconfig.Config, error) {
-	litmusConfig, err := config.LoadConfig()
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("loading litmus config: %w", err)
-	}
-
-	_, fragments, amCfg, err := litmusConfig.LoadAssembledConfig()
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("loading assembled alertmanager config: %w", err)
-	}
-
-	if amCfg.Route == nil {
-		return nil, nil, nil, nil, fmt.Errorf("alertmanager config has no route defined")
-	}
-
-	router := pipeline.NewRouter(amCfg.Route)
-	return litmusConfig, router, fragments, amCfg, nil
-}
-
 // runSanityChecks executes all sanity checks including policy enforcement.
-func runSanityChecks(litmusConfig *config.LitmusConfig, fragments []*config.Fragment, amCfg *amconfig.Config) SanityResult {
-	sanityResult := RunSanityChecks(amCfg, litmusConfig.Sanity)
-	checker := sanity.NewPolicyChecker(litmusConfig.Policy)
-	sanityResult.PolicyIssues = checker.Check(fragments)
-
-	policyMode := string(litmusConfig.Sanity.PolicyViolations)
-	sanityResult.PolicyMode = policyMode
-	if litmusConfig.Sanity.PolicyViolations.IsFail() && len(sanityResult.PolicyIssues) > 0 {
-		sanityResult.Passed = false
+func runSanityChecks(litmusConfig *config.LitmusConfig, fragments []*fragment.Fragment, amCfg *amconfig.Config) sanity.Result {
+	receiversMap := make(map[string]*amconfig.Receiver)
+	for i := range amCfg.Receivers {
+		receiversMap[amCfg.Receivers[i].Name] = &amCfg.Receivers[i]
 	}
-
-	return sanityResult
-}
-
-// runRegressionTests executes regression tests against the router.
-func runRegressionTests(litmusConfig *config.LitmusConfig, router *pipeline.Router, tags []string) RegressionResult {
-	ctx := context.Background()
-	return RunRegressionTests(ctx, litmusConfig, router, tags)
-}
-
-// runBehavioralTests executes behavioral tests against the router and inhibit rules.
-func runBehavioralTests(inhibitRules []amconfig.InhibitRule, litmusConfig *config.LitmusConfig, fragments []*config.Fragment, router *pipeline.Router, tags []string) BehavioralResult {
-	ctx := context.Background()
-	return RunBehavioralTests(ctx, litmusConfig, fragments, router, inhibitRules, tags)
+	rules := make([]*amconfig.InhibitRule, 0, len(amCfg.InhibitRules))
+	for i := range amCfg.InhibitRules {
+		rules = append(rules, &amCfg.InhibitRules[i])
+	}
+	ctx := sanity.CheckContext{
+		Route:     amCfg.Route,
+		Receivers: receiversMap,
+		Rules:     rules,
+		Policy:    litmusConfig.Policy,
+		Fragments: fragments,
+	}
+	return sanity.Run(ctx, litmusConfig.Sanity)
 }
 
 // buildCheckResult assembles the final check result from all test results.
-func buildCheckResult(configPath string, sanityResult SanityResult, regressionResult RegressionResult, behavioralResult BehavioralResult, duration time.Duration) CheckResult {
+func buildCheckResult(configPath string, sanityResult sanity.Result, regressionResult RegressionResult, behavioralResult BehavioralResult, duration time.Duration) CheckResult {
 	passed := sanityResult.Passed && regressionResult.Passed && behavioralResult.Passed
 
 	return CheckResult{
@@ -193,57 +165,6 @@ func outputResults(result CheckResult, format string, showDiff bool) error {
 	return nil
 }
 
-// RunSanityChecks runs all static analysis linters, returning per-category results.
-func RunSanityChecks(alertConfig *amconfig.Config, sanityConfig config.SanityConfig) SanityResult {
-	result := SanityResult{Passed: true}
-
-	shadowed := sanity.NewShadowedRouteDetector(alertConfig.Route)
-	result.ShadowedIssues = shadowed.Detect()
-	result.ShadowedMode = string(sanityConfig.ShadowedRoutes)
-
-	receiversMap := make(map[string]*amconfig.Receiver)
-	for i := range alertConfig.Receivers {
-		receiversMap[alertConfig.Receivers[i].Name] = &alertConfig.Receivers[i]
-	}
-	orphan := sanity.NewOrphanReceiverDetector(alertConfig.Route, receiversMap)
-	result.OrphanIssues = orphan.DetectOrphans()
-	result.OrphanMode = string(sanityConfig.OrphanReceivers)
-
-	rules := make([]*amconfig.InhibitRule, 0, len(alertConfig.InhibitRules))
-	for i := range alertConfig.InhibitRules {
-		rules = append(rules, &alertConfig.InhibitRules[i])
-	}
-	inhibition := sanity.NewInhibitionCycleDetector(rules)
-	result.InhibitionIssues = inhibition.DetectCycles()
-	result.InhibitionMode = string(sanityConfig.InhibitionCycles)
-
-	dead := sanity.NewDeadReceiverDetector(alertConfig.Route)
-	result.DeadReceiverIssues = dead.Detect()
-	result.DeadReceiverMode = string(sanityConfig.DeadReceivers)
-
-	negativeOnly := sanity.NewNegativeOnlyRouteDetector(alertConfig.Route)
-	result.NegativeOnlyRouteIssues = negativeOnly.Detect()
-	result.NegativeOnlyRouteMode = string(sanityConfig.NegativeOnlyRoutes)
-
-	if sanityConfig.ShadowedRoutes.IsFail() && len(result.ShadowedIssues) > 0 {
-		result.Passed = false
-	}
-	if sanityConfig.OrphanReceivers.IsFail() && len(result.OrphanIssues) > 0 {
-		result.Passed = false
-	}
-	if sanityConfig.InhibitionCycles.IsFail() && len(result.InhibitionIssues) > 0 {
-		result.Passed = false
-	}
-	if sanityConfig.DeadReceivers.IsFail() && len(result.DeadReceiverIssues) > 0 {
-		result.Passed = false
-	}
-	if sanityConfig.NegativeOnlyRoutes.IsFail() && len(result.NegativeOnlyRouteIssues) > 0 {
-		result.Passed = false
-	}
-
-	return result
-}
-
 // RunRegressionTests executes the regression baseline against the current router.
 func RunRegressionTests(ctx context.Context, litmusConfig *config.LitmusConfig, router *pipeline.Router, tags []string) RegressionResult {
 	result := RegressionResult{Passed: true}
@@ -264,9 +185,9 @@ func RunRegressionTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 	result.TotalTests = len(baseline)
 	baseline = filterByTags(baseline, tags)
 	result.Tests = len(baseline)
-	executor := snapshot.NewRegressionTestExecutor()
+	executor := pipeline.NewTestExecutor(nil)
 
-	for _, res := range executor.Execute(ctx, baseline, router) {
+	for _, res := range executor.ExecuteAll(ctx, baseline, router) {
 		if res.Pass {
 			result.PassCount++
 		} else {
@@ -285,13 +206,14 @@ func RunRegressionTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 }
 
 // RunBehavioralTests loads and executes all behavioral unit tests.
-func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, fragments []*config.Fragment, router *pipeline.Router, inhibitRules []amconfig.InhibitRule, tags []string) BehavioralResult {
+func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, fragments []*fragment.Fragment, workspaceTests []*types.TestCase, router *pipeline.Router, inhibitRules []amconfig.InhibitRule, tags []string) BehavioralResult {
 	result := BehavioralResult{Passed: true}
 
 	var tests []*types.TestCase
 	for _, frag := range fragments {
 		tests = append(tests, frag.Tests...)
 	}
+	tests = append(tests, workspaceTests...)
 
 	if len(tests) == 0 {
 		return result
@@ -300,7 +222,7 @@ func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 	result.TotalTests = len(tests)
 	tests = filterByTags(tests, tags)
 	result.Tests = len(tests)
-	executor := behavioral.NewBehavioralTestExecutor(inhibitRules)
+	executor := pipeline.NewTestExecutor(inhibitRules)
 
 	for _, test := range tests {
 		res := executor.Execute(ctx, test, router)
@@ -359,12 +281,9 @@ func PrintCheckResult(r CheckResult, showDiff bool) {
 
 	// 1. Sanity
 	fmt.Println("1. Sanity (Static Analysis)")
-	printSanityCategory("No shadowed routes detected", r.Sanity.ShadowedIssues, r.Sanity.ShadowedMode)
-	printSanityCategory("No orphan receivers", r.Sanity.OrphanIssues, r.Sanity.OrphanMode)
-	printSanityCategory("No inhibition cycles", r.Sanity.InhibitionIssues, r.Sanity.InhibitionMode)
-	printSanityCategory("No policy violations", r.Sanity.PolicyIssues, r.Sanity.PolicyMode)
-	printSanityCategory("No dead receivers detected", r.Sanity.DeadReceiverIssues, r.Sanity.DeadReceiverMode)
-	printSanityCategory("No negative-only routes detected", r.Sanity.NegativeOnlyRouteIssues, r.Sanity.NegativeOnlyRouteMode)
+	for _, c := range r.Sanity.Checks {
+		printSanityCategory(sanityCheckLabel(c.Name), c.Issues, c.Mode)
+	}
 	fmt.Println()
 
 	// 2. Regressions
@@ -498,10 +417,10 @@ func formatSummary(r CheckResult) string {
 	if n := len(r.Regression.Failures); n > 0 {
 		parts = append(parts, fmt.Sprintf("%d Regression%s", n, plural(n)))
 	}
-	sanityWarnings := len(r.Sanity.ShadowedIssues) +
-		len(r.Sanity.OrphanIssues) + len(r.Sanity.InhibitionIssues) +
-		len(r.Sanity.PolicyIssues) + len(r.Sanity.DeadReceiverIssues) +
-		len(r.Sanity.NegativeOnlyRouteIssues)
+	var sanityWarnings int
+	for _, c := range r.Sanity.Checks {
+		sanityWarnings += len(c.Issues)
+	}
 	if sanityWarnings > 0 {
 		parts = append(parts, fmt.Sprintf("%d Sanity Warning%s", sanityWarnings, plural(sanityWarnings)))
 	}
@@ -509,6 +428,22 @@ func formatSummary(r CheckResult) string {
 		parts = append(parts, fmt.Sprintf("%d Behavioral Failure%s", n, plural(n)))
 	}
 	return "FAIL (" + strings.Join(parts, ", ") + ")"
+}
+
+// sanityCheckLabel returns the human-readable ok message for a check name.
+func sanityCheckLabel(name string) string {
+	labels := map[string]string{
+		"shadowed_routes":      "No shadowed routes detected",
+		"orphan_receivers":     "No orphan receivers",
+		"inhibition_cycles":    "No inhibition cycles",
+		"policy_violations":    "No policy violations",
+		"dead_receivers":       "No dead receivers detected",
+		"negative_only_routes": "No negative-only routes detected",
+	}
+	if l, ok := labels[name]; ok {
+		return l
+	}
+	return fmt.Sprintf("No %s issues", name)
 }
 
 func formatDuration(d time.Duration) string {

@@ -38,7 +38,7 @@ docs/superpowers/
 *.mpk
 *.litmus.yml
 *.mpk.yml
-tests
+example/tests
 config/*.yml
 config/*.yaml
 config/templates

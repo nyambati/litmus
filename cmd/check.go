@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/nyambati/litmus/internal/cli"
+	"github.com/nyambati/litmus/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -15,10 +16,12 @@ func newCheckCmd() *cobra.Command {
 		Long:         "Runs sanity linter, regression tests, and behavioral unit tests",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg := config.FromContext(cmd.Context())
+			logger := config.LoggerFromContext(cmd.Context())
 			format, _ := cmd.Flags().GetString("format")
 			diff, _ := cmd.Flags().GetBool("diff")
 			tags, _ := cmd.Flags().GetStringSlice("tags")
-			code, err := cli.RunCheck(format, diff, tags)
+			code, err := cli.RunCheck(cfg, logger, format, diff, tags)
 			if err != nil {
 				return err
 			}
