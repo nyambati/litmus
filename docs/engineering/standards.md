@@ -69,7 +69,14 @@ We treat the release process as a first-class engineering concern.
 *   **Rule:** All releases must follow Semantic Versioning (SemVer).
 *   **Rule:** The release must always include the `.gitattributes` helper to ensure the MessagePack lockfiles are readable in Git environments.
 
-## 11. Go Coding Practices Based on Google Style Guide
+## 12. Resource Safety & Concurrency Management
+As a validation tool, Litmus must be resilient to large configurations and avoid resource leaks.
+
+*   **Iterator Cleanup:** Any function obtaining an iterator (e.g., `AlertIterator` from `AlertStore`) MUST use `defer iter.Close()` immediately after the iterator is returned. This prevents goroutine leaks in the underlying provider.
+*   **Concurrency Limits:** Batch I/O operations (like loading fragments from many subdirectories) MUST use a semaphore (e.g., a buffered channel) to limit the number of concurrent operations. This prevents file descriptor exhaustion.
+*   **Memory Efficiency:** Algorithms that generate combinations (like label synthesis for snapshots) should prioritize greedy or iterative approaches over materializing full Cartesian products to avoid Out-of-Memory (OOM) crashes.
+
+## 13. Go Coding Practices Based on Google Style Guide
 
 ### Naming Conventions
 #### Function and Method Names
