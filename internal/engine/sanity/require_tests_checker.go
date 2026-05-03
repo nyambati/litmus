@@ -26,7 +26,7 @@ func (rtc *RequireTestsChecker) Run(ctx CheckContext) []string {
 	}
 
 	var issues []string
-	skipTests := containsPolicyType(ctx.Policy.SkipRoot, "tests")
+	skipTests := containsPolicyType(ctx.Policy.SkipRoot, litconfig.PolicyTypeTests)
 
 	for _, frag := range ctx.Fragments {
 		if frag.Namespace == "root" && skipTests {

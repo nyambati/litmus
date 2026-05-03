@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/nyambati/litmus/internal/config"
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/engine/snapshot"
 	"github.com/nyambati/litmus/internal/stores"
 	"github.com/nyambati/litmus/internal/types"
+	"github.com/nyambati/litmus/internal/utils"
 	"github.com/nyambati/litmus/internal/workspace"
 	"github.com/sirupsen/logrus"
 )
@@ -107,15 +107,5 @@ func PrintDiffReport(diff *types.RegressionDiff) {
 }
 
 func labelKeyForSort(m map[string]string) string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	var b strings.Builder
-	for _, k := range keys {
-		b.WriteString(k)
-		b.WriteString(m[k])
-	}
-	return b.String()
+	return utils.LabelFormat(m)
 }

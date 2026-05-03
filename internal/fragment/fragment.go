@@ -114,11 +114,11 @@ func ParseTestDoc(data []byte) ([]*types.TestCase, error) {
 	if err := yaml.Unmarshal(data, &doc); err != nil {
 		return nil, err
 	}
-	for _, t := range doc.Tests {
-		t.Type = "unit"
-	}
 	if doc.Tests == nil {
 		return []*types.TestCase{}, nil
+	}
+	for _, t := range doc.Tests {
+		t.Type = "unit"
 	}
 	return doc.Tests, nil
 }

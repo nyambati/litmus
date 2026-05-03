@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -43,12 +44,15 @@ func ConfigFromContext(ctx context.Context) *LitmusConfig {
 	return nil
 }
 
-// LoggerFromContext retrieves logrus.FieldLogger from context.
+// LoggerFromContext retrieves logrus.FieldLogger from context. Returns a discard
+// logger when none is set so callers never need to nil-check.
 func LoggerFromContext(ctx context.Context) logrus.FieldLogger {
 	if logger, ok := ctx.Value(LoggerKey{}).(logrus.FieldLogger); ok {
 		return logger
 	}
-	return nil
+	l := logrus.New()
+	l.Out = io.Discard
+	return l
 }
 
 // LoadConfig is an alias for New to maintain compatibility with existing callers.

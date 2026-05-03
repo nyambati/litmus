@@ -159,7 +159,8 @@ func TestBuildCheckContext_MapsReceiversAndRules(t *testing.T) {
 	}
 	frags := []*fragment.Fragment{{Namespace: "db"}}
 	policy := config.PolicyConfig{Require: config.RequireConfig{Tests: true}}
-	ws := &workspace.Workspace{Fragments: frags}
+	ws := workspace.New(&config.LitmusConfig{}, nil)
+	ws.Fragments = frags
 
 	ctx := buildCheckContext(amCfg, ws, policy)
 
@@ -178,7 +179,7 @@ func TestBuildCheckContext_MapsReceiversAndRules(t *testing.T) {
 
 func TestBuildCheckContext_EmptyReceiversAndRules(t *testing.T) {
 	amCfg := &amconfig.Config{Route: &amconfig.Route{Receiver: "default"}}
-	ws := &workspace.Workspace{}
+	ws := workspace.New(&config.LitmusConfig{}, nil)
 
 	ctx := buildCheckContext(amCfg, ws, config.PolicyConfig{})
 

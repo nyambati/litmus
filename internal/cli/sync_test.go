@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,9 +24,9 @@ func captureStdout(t *testing.T, fn func()) string {
 	fn()
 
 	require.NoError(t, w.Close())
-	buf := make([]byte, 4096)
-	n, _ := r.Read(buf)
-	return string(buf[:n])
+	data, err := io.ReadAll(r)
+	require.NoError(t, err)
+	return string(data)
 }
 
 func TestPrintYAML_NoOutput_PrintsToStdout(t *testing.T) {

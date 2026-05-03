@@ -28,7 +28,7 @@ func (ec *EnforceChecker) Run(ctx CheckContext) []string {
 	}
 
 	var issues []string
-	skipEnforce := containsPolicyType(ctx.Policy.SkipRoot, "enforce")
+	skipEnforce := containsPolicyType(ctx.Policy.SkipRoot, litconfig.PolicyTypeEnforce)
 
 	for _, frag := range ctx.Fragments {
 		if frag.Namespace == "root" && skipEnforce {
@@ -46,9 +46,9 @@ func (ec *EnforceChecker) Run(ctx CheckContext) []string {
 }
 
 // containsPolicyType checks if a slice of PolicyType contains a specific item.
-func containsPolicyType(slice []litconfig.PolicyType, item string) bool {
+func containsPolicyType(slice []litconfig.PolicyType, item litconfig.PolicyType) bool {
 	for _, v := range slice {
-		if string(v) == item {
+		if v == item {
 			return true
 		}
 	}
@@ -76,7 +76,7 @@ func (ec *EnforceChecker) checkRoute(policy litconfig.PolicyConfig, fragName str
 		return ec.reportLeafViolation(policy, fragName, route, union)
 	}
 
-	return ec.checkChildRoutes(policy, fragName, route, union)
+	return ec.checkRoutes(policy, fragName, route.Routes, union)
 }
 
 // isLeafRoute checks if the route has no children.
@@ -87,15 +87,6 @@ func (ec *EnforceChecker) isLeafRoute(route *amconfig.Route) bool {
 // reportLeafViolation creates a violation for a leaf route that doesn't satisfy the policy.
 func (ec *EnforceChecker) reportLeafViolation(policy litconfig.PolicyConfig, fragName string, route *amconfig.Route, union map[string]struct{}) []string {
 	return []string{ec.formatViolation(policy, fragName, route.Receiver, ec.missingMatchers(policy, union))}
-}
-
-// checkChildRoutes processes child routes with the accumulated union of label names.
-func (ec *EnforceChecker) checkChildRoutes(policy litconfig.PolicyConfig, fragName string, route *amconfig.Route, union map[string]struct{}) []string {
-	childIssues := ec.checkRoutes(policy, fragName, route.Routes, union)
-	if len(childIssues) == 0 {
-		return nil
-	}
-	return childIssues
 }
 
 // missingMatchers returns which required matchers are absent from the accumulated label set.

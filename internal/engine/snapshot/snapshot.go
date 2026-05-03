@@ -79,6 +79,7 @@ func (ss *SnapshotSynthesizer) DiscoverOutcomes(ctx context.Context, paths []*Ro
 
 			outcome, err := ss.runner.Execute(ctx, labelSet)
 			if err != nil {
+				log.Printf("synthesis: pipeline execution failed for labels %v: %v", labels, err)
 				ss.failureCount++
 				if ss.failureCount > ss.failureLimit {
 					return nil, fmt.Errorf("synthesis failed: exceeded maximum failures (%d)", ss.failureLimit)

@@ -230,8 +230,9 @@ func runTestsHandler(c *gin.Context) {
 			return
 		}
 
+		tests := ws.Tests()
 		if name != "" {
-			for _, test := range ws.Tests() {
+			for _, test := range tests {
 				if test.Name == name {
 					c.JSON(http.StatusOK, []*types.TestResult{executor.Execute(context.Background(), test, router)})
 					return
@@ -240,8 +241,8 @@ func runTestsHandler(c *gin.Context) {
 			c.String(http.StatusNotFound, fmt.Sprintf("Test not found: %s", name))
 			return
 		}
-		results := make([]*types.TestResult, 0, len(ws.Tests()))
-		for _, test := range ws.Tests() {
+		results := make([]*types.TestResult, 0, len(tests))
+		for _, test := range tests {
 			results = append(results, executor.Execute(context.Background(), test, router))
 		}
 		c.JSON(http.StatusOK, results)
