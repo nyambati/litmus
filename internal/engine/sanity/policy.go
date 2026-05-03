@@ -9,6 +9,8 @@ import (
 	amconfig "github.com/prometheus/alertmanager/config"
 )
 
+const CheckPolicyViolations = "policy_violations"
+
 // PolicyChecker enforces workspace-level policy rules on fragment packages.
 type PolicyChecker struct {
 	policy litconfig.PolicyConfig

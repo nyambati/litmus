@@ -8,6 +8,8 @@ import (
 	"github.com/prometheus/alertmanager/config"
 )
 
+const CheckInhibitionCycles = "inhibition_cycles"
+
 // InhibitionCycleDetector detects cycles in inhibition rules.
 type InhibitionCycleDetector struct {
 	rules []*config.InhibitRule
@@ -19,7 +21,7 @@ func NewInhibitionCycleDetector(rules []*config.InhibitRule) *InhibitionCycleDet
 }
 
 // Name implements Check.
-func (icd *InhibitionCycleDetector) Name() string { return "inhibition_cycles" }
+func (icd *InhibitionCycleDetector) Name() string { return CheckInhibitionCycles }
 
 // Run implements Check.
 func (icd *InhibitionCycleDetector) Run(ctx CheckContext) []string {

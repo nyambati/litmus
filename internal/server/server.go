@@ -41,6 +41,9 @@ func RunUIServer(port int, dev bool, logger logrus.FieldLogger) error {
 
 	router := gin.Default()
 
+	if err := router.SetTrustedProxies([]string{"127.0.0.1"}); err != nil {
+		return fmt.Errorf("setting trusted proxies: %w", err)
+	}
 	// CORS Middleware for development
 	router.Use(corsMiddleware())
 	router.Use(litmusConfigMiddleware(litmusConfig))

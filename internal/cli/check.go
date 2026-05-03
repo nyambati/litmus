@@ -153,14 +153,17 @@ func calculateExitCode(result CheckResult) CheckExitCode {
 
 // outputResults formats and outputs the check results.
 func outputResults(result CheckResult, format string, showDiff bool) error {
-	if format == "json" {
+	switch format {
+	case "json":
 		data, err := json.MarshalIndent(result, "", "  ")
 		if err != nil {
 			return fmt.Errorf("marshal JSON: %w", err)
 		}
-		fmt.Println(string(data)) //nolint:forbidigo
-	} else {
+		fmt.Fprintln(os.Stdout, string(data))
+	case "text":
 		PrintCheckResult(result, showDiff)
+	default:
+		return fmt.Errorf("unsupported format: %s", format)
 	}
 	return nil
 }
@@ -433,12 +436,12 @@ func formatSummary(r CheckResult) string {
 // sanityCheckLabel returns the human-readable ok message for a check name.
 func sanityCheckLabel(name string) string {
 	labels := map[string]string{
-		"shadowed_routes":      "No shadowed routes detected",
-		"orphan_receivers":     "No orphan receivers",
-		"inhibition_cycles":    "No inhibition cycles",
-		"policy_violations":    "No policy violations",
-		"dead_receivers":       "No dead receivers detected",
-		"negative_only_routes": "No negative-only routes detected",
+		sanity.CheckShadowedRoutes:     "No shadowed routes detected",
+		sanity.CheckOrphanReceivers:    "No orphan receivers",
+		sanity.CheckInhibitionCycles:   "No inhibition cycles",
+		sanity.CheckPolicyViolations:   "No policy violations",
+		sanity.CheckDeadReceivers:      "No dead receivers detected",
+		sanity.CheckNegativeOnlyRoutes: "No negative-only routes detected",
 	}
 	if l, ok := labels[name]; ok {
 		return l

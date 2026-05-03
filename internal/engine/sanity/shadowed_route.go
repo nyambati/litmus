@@ -6,6 +6,8 @@ import (
 	"github.com/prometheus/alertmanager/config"
 )
 
+const CheckShadowedRoutes = "shadowed_routes"
+
 // ShadowedRouteDetector detects unreachable routes.
 type ShadowedRouteDetector struct {
 	root *config.Route
@@ -17,7 +19,7 @@ func NewShadowedRouteDetector(root *config.Route) *ShadowedRouteDetector {
 }
 
 // Name implements Check.
-func (srd *ShadowedRouteDetector) Name() string { return "shadowed_routes" }
+func (srd *ShadowedRouteDetector) Name() string { return CheckShadowedRoutes }
 
 // Run implements Check.
 func (srd *ShadowedRouteDetector) Run(ctx CheckContext) []string {

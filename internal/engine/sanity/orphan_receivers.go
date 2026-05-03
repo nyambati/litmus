@@ -6,6 +6,8 @@ import (
 	"github.com/prometheus/alertmanager/config"
 )
 
+const CheckOrphanReceivers = "orphan_receivers"
+
 // OrphanReceiverDetector detects receivers defined but never referenced by any route.
 type OrphanReceiverDetector struct {
 	root      *config.Route
@@ -18,7 +20,7 @@ func NewOrphanReceiverDetector(root *config.Route, receivers map[string]*config.
 }
 
 // Name implements Check.
-func (ord *OrphanReceiverDetector) Name() string { return "orphan_receivers" }
+func (ord *OrphanReceiverDetector) Name() string { return CheckOrphanReceivers }
 
 // Run implements Check.
 func (ord *OrphanReceiverDetector) Run(ctx CheckContext) []string {
