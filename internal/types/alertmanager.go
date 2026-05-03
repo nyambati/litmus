@@ -89,22 +89,32 @@ type (
 	}
 )
 
-func (c *AlertmanagerConfig) String() string {
+// Marshal serializes the config to YAML and expands env() references.
+// Callers that need proper error handling should use Marshal over String.
+func (c *AlertmanagerConfig) Marshal() ([]byte, error) {
 	var buff bytes.Buffer
-	var enc = yaml.NewEncoder(&buff)
+	enc := yaml.NewEncoder(&buff)
 	enc.SetIndent(2)
+	if err := enc.Encode(c); err != nil {
+		return nil, fmt.Errorf("encoding alertmanager config: %w", err)
+	}
+	if err := enc.Close(); err != nil {
+		return nil, fmt.Errorf("closing yaml encoder: %w", err)
+	}
+	expanded, err := utils.ExpandEnvVars(buff.String())
+	if err != nil {
+		return nil, fmt.Errorf("expanding env vars in alertmanager config: %w", err)
+	}
+	return []byte(expanded), nil
+}
 
-	defer enc.Close()
-
-	err := enc.Encode(c)
+// String implements fmt.Stringer. Errors are written to stderr and an empty
+// string is returned. Use Marshal for proper error propagation.
+func (c *AlertmanagerConfig) String() string {
+	data, err := c.Marshal()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to marshal alertmanager config: %v\n", err)
 		return ""
 	}
-	expanded, err := utils.ExpandEnvVars(buff.String())
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to expand env vars: %v\n", err)
-		return ""
-	}
-	return expanded
+	return string(data)
 }

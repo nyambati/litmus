@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/nyambati/litmus/internal/fragment"
 	"github.com/nyambati/litmus/internal/types"
+	"github.com/nyambati/litmus/internal/utils"
 	amconfig "github.com/prometheus/alertmanager/config"
 	"github.com/sirupsen/logrus"
 )
@@ -17,18 +17,21 @@ import (
 const fieldRoutes = "routes"
 
 // Assemble produces the complete *amconfig.Config in w.Root by reading the
-// workspace and merging every child fragment under <dir>/fragments. Child
-// test cases are appended to w.Tests.
+// workspace and merging every child fragment under <dir>/fragments.
 //
 // When w.Logger is non-nil, Assemble emits structured debug entries
 // describing each child as it is merged, plus a final summary. Errors
 // include the offending fragment's directory for fast diagnosis.
-func (w *Workspace) Assemble() (*Workspace, error) {
+func (w *Workspace) Assemble() error {
 	log := w.logger
+
+	// Reset accumulated state so Assemble is idempotent on the same instance.
+	w.Fragments = nil
+	w.Config = nil
 
 	meta, err := w.read()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	log.WithFields(logrus.Fields{
 		"dir":        meta.Dir,
@@ -43,38 +46,16 @@ func (w *Workspace) Assemble() (*Workspace, error) {
 		if errors.Is(err, os.ErrNotExist) {
 			children = &fragment.LoadResult{}
 		} else {
-			return nil, fmt.Errorf("load children dir=%q: %w", childrenDir, err)
+			return fmt.Errorf("load children dir=%q: %w", childrenDir, err)
 		}
 	}
 	log.WithField("count", len(children.Fragments)).Debug("children loaded")
 
 	for _, ch := range children.Fragments {
-		w.tests = append(w.tests, ch.Tests...)
-		w.fragments = append(w.fragments, ch.Fragment)
+		w.Fragments = append(w.Fragments, ch.Fragment)
 	}
 
-	// Snapshot root-only routes and receivers before assembly merges child
-	// fragments in. PolicyChecker uses this to enforce policy on the root.
-	w.rootFragment = rootSnapshot(w.root)
-
-	if err := assemble(w.root, children.Fragments, log); err != nil {
-		return nil, err
-	}
-	return w, nil
-}
-
-// rootSnapshot captures the root's own routes and receivers before assembly
-// merges child fragment data into root. The snapshot is used so PolicyChecker
-// can evaluate the root independently without seeing fragment contributions.
-func rootSnapshot(root *types.AlertmanagerConfig) *fragment.Fragment {
-	frag := &fragment.Fragment{Namespace: "root"}
-	if root.Route != nil && len(root.Route.Routes) > 0 {
-		frag.Routes = append([]*amconfig.Route{}, root.Route.Routes...)
-	}
-	if len(root.Receivers) > 0 {
-		frag.Receivers = append([]*types.Receiver{}, root.Receivers...)
-	}
-	return frag
+	return assemble(w.Config, children.Fragments, log)
 }
 
 // assemble is the pure merge function: given a root config and a slice of
@@ -153,7 +134,7 @@ func newGroupSet() *groupSet {
 }
 
 func (g *groupSet) add(frag *fragment.Fragment) error {
-	key := groupKey(frag.Group.Match)
+	key := utils.LabelFormat(frag.Group.Match)
 	entry, ok := g.entries[key]
 	if !ok {
 		entry = &groupEntry{
@@ -223,17 +204,4 @@ func prefixRouteReceivers(r *amconfig.Route, prefix string) {
 	for _, child := range r.Routes {
 		prefixRouteReceivers(child, prefix)
 	}
-}
-
-func groupKey(labels map[string]string) string {
-	keys := make([]string, 0, len(labels))
-	for k := range labels {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	parts := make([]string, 0, len(keys))
-	for _, k := range keys {
-		parts = append(parts, k+"="+labels[k])
-	}
-	return strings.Join(parts, ",")
 }

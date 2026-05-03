@@ -91,9 +91,8 @@ type deltaResult struct {
 }
 
 type diffResponse struct {
-	HasSnapshot bool           `json:"has_snapshot"`
-	Total       int            `json:"total"`
-	Passed      int            `json:"passed"`
-	Drifted     int            `json:"drifted"`
-	Results     []*deltaResult `json:"results"`
+	Total   int            `json:"total"`
+	Passed  int            `json:"passed"`
+	Drifted int            `json:"drifted"`
+	Results []*deltaResult `json:"results"`
 }

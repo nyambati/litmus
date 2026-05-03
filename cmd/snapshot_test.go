@@ -1,11 +1,13 @@
 package cmd
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/nyambati/litmus/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -45,6 +47,8 @@ receivers:
 
 	cmd := withConfig(newSnapshotCmd())
 	cmd.SetArgs([]string{"capture"})
+	ctx := context.WithValue(context.Background(), config.LoggerKey{}, testLogger)
+	cmd.SetContext(ctx)
 	err = cmd.Execute()
 
 	require.NoError(t, err)

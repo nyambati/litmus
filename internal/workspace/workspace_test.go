@@ -1,12 +1,15 @@
 package workspace
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/nyambati/litmus/internal/config"
 	"github.com/nyambati/litmus/internal/fixtures"
+	"github.com/nyambati/litmus/internal/types"
 )
 
 func writeWSFixture(t *testing.T, dir, name, contents string) string {
@@ -117,25 +120,30 @@ func TestResolveBaseFile_DirectoryIsNotAFile(t *testing.T) {
 	}
 }
 
-// --- workspace.read ---
+// --- read ---
 
 func TestWorkspaceRead_HappyPathBaseYaml(t *testing.T) {
 	dir := t.TempDir()
 	writeWSFixture(t, dir, "base.yaml", fixtures.MustRead("workspace/base-simple.yaml"))
 
-	ws := New(dir, nil)
+	ws := New(&config.LitmusConfig{
+		Workspace: config.WorkspaceConfig{
+			Root:      dir,
+			Fragments: "fragments",
+		},
+	}, nil)
 	meta, err := ws.read()
 	if err != nil {
 		t.Fatalf("read: %v", err)
 	}
-	if ws.root == nil {
+	if ws.Config == nil {
 		t.Fatal("root nil, want populated AlertmanagerConfig")
 	}
-	if ws.root.Route == nil {
+	if ws.Config.Route == nil {
 		t.Fatal("root.Route nil")
 	}
-	if ws.root.Route.Receiver != "default" {
-		t.Errorf("root.Route.Receiver = %q, want %q", ws.root.Route.Receiver, "default")
+	if ws.Config.Route.Receiver != "default" {
+		t.Errorf("root.Route.Receiver = %q, want %q", ws.Config.Route.Receiver, "default")
 	}
 	if !strings.HasSuffix(meta.BaseFile, "base.yaml") {
 		t.Errorf("meta.BaseFile = %q, want suffix base.yaml", meta.BaseFile)
@@ -146,12 +154,17 @@ func TestWorkspaceRead_HappyPathAlertmanagerYml(t *testing.T) {
 	dir := t.TempDir()
 	writeWSFixture(t, dir, "alertmanager.yml", fixtures.MustRead("workspace/base-simple.yaml"))
 
-	ws := New(dir, nil)
+	ws := New(&config.LitmusConfig{
+		Workspace: config.WorkspaceConfig{
+			Root:      dir,
+			Fragments: "fragments",
+		},
+	}, nil)
 	meta, err := ws.read()
 	if err != nil {
 		t.Fatalf("read: %v", err)
 	}
-	if ws.root == nil {
+	if ws.Config == nil {
 		t.Fatal("root nil, want populated AlertmanagerConfig")
 	}
 	if !strings.HasSuffix(meta.BaseFile, "alertmanager.yml") {
@@ -163,7 +176,12 @@ func TestWorkspaceRead_NoTestsDir(t *testing.T) {
 	dir := t.TempDir()
 	writeWSFixture(t, dir, "base.yaml", fixtures.MustRead("workspace/base-simple.yaml"))
 
-	ws := New(dir, nil)
+	ws := New(&config.LitmusConfig{
+		Workspace: config.WorkspaceConfig{
+			Root:      dir,
+			Fragments: "fragments",
+		},
+	}, nil)
 	if _, err := ws.read(); err != nil {
 		t.Fatalf("read: %v", err)
 	}
@@ -177,7 +195,12 @@ func TestWorkspaceRead_LoadsTestsFromDir(t *testing.T) {
 	writeWSFixture(t, dir, "base.yaml", fixtures.MustRead("workspace/base-simple.yaml"))
 	writeWSFixture(t, filepath.Join(dir, "tests"), "case.yaml", fixtures.MustRead("workspace/tests/root-case.yaml"))
 
-	ws := New(dir, nil)
+	ws := New(&config.LitmusConfig{
+		Workspace: config.WorkspaceConfig{
+			Root:      dir,
+			Fragments: "fragments",
+		},
+	}, nil)
 	meta, err := ws.read()
 	if err != nil {
 		t.Fatalf("read: %v", err)
@@ -202,7 +225,12 @@ func TestWorkspaceRead_LoadsNestedTests(t *testing.T) {
 	writeWSFixture(t, filepath.Join(dir, "tests"), "top.yaml", fixtures.MustRead("workspace/tests/root-case.yaml"))
 	writeWSFixture(t, filepath.Join(dir, "tests", "sub"), "deep.yaml", fixtures.MustRead("workspace/tests/sub/nested.yaml"))
 
-	ws := New(dir, nil)
+	ws := New(&config.LitmusConfig{
+		Workspace: config.WorkspaceConfig{
+			Root:      dir,
+			Fragments: "fragments",
+		},
+	}, nil)
 	if _, err := ws.read(); err != nil {
 		t.Fatalf("read: %v", err)
 	}
@@ -213,7 +241,12 @@ func TestWorkspaceRead_LoadsNestedTests(t *testing.T) {
 
 func TestWorkspaceRead_MissingBaseErrors(t *testing.T) {
 	dir := t.TempDir()
-	ws := New(dir, nil)
+	ws := New(&config.LitmusConfig{
+		Workspace: config.WorkspaceConfig{
+			Root:      dir,
+			Fragments: "fragments",
+		},
+	}, nil)
 	_, err := ws.read()
 	if err == nil {
 		t.Fatal("read = nil, want missing-base error")
@@ -224,7 +257,12 @@ func TestWorkspaceRead_MissingBaseErrors(t *testing.T) {
 }
 
 func TestWorkspaceRead_MissingDirErrors(t *testing.T) {
-	ws := New("/non/existent/workspace/__test__", nil)
+	ws := New(&config.LitmusConfig{
+		Workspace: config.WorkspaceConfig{
+			Root:      "/non/existent/workspace/__test__",
+			Fragments: "fragments",
+		},
+	}, nil)
 	_, err := ws.read()
 	if err == nil {
 		t.Fatal("read = nil, want stat error")
@@ -238,7 +276,12 @@ func TestWorkspaceRead_NotADirectoryErrors(t *testing.T) {
 	dir := t.TempDir()
 	filePath := writeWSFixture(t, dir, "not-a-dir.yaml", "x: 1")
 
-	_, err := New(filePath, nil).read()
+	_, err := New(&config.LitmusConfig{
+		Workspace: config.WorkspaceConfig{
+			Root:      filePath,
+			Fragments: "fragments",
+		},
+	}, nil).read()
 	if err == nil {
 		t.Fatal("read = nil, want not-a-directory error")
 	}
@@ -251,7 +294,12 @@ func TestWorkspaceRead_InvalidBaseErrors(t *testing.T) {
 	dir := t.TempDir()
 	writeWSFixture(t, dir, "base.yaml", fixtures.MustRead("workspace/base-invalid.yaml"))
 
-	_, err := New(dir, nil).read()
+	_, err := New(&config.LitmusConfig{
+		Workspace: config.WorkspaceConfig{
+			Root:      dir,
+			Fragments: "fragments",
+		},
+	}, nil).read()
 	if err == nil {
 		t.Fatal("read = nil, want parse error")
 	}
@@ -267,7 +315,12 @@ func TestWorkspaceRead_IgnoresNonYAMLInTestsDir(t *testing.T) {
 	writeWSFixture(t, filepath.Join(dir, "tests"), "README.md", "# notes")
 	writeWSFixture(t, filepath.Join(dir, "tests"), "scratch.txt", "ignore me")
 
-	ws := New(dir, nil)
+	ws := New(&config.LitmusConfig{
+		Workspace: config.WorkspaceConfig{
+			Root:      dir,
+			Fragments: "fragments",
+		},
+	}, nil)
 	meta, err := ws.read()
 	if err != nil {
 		t.Fatalf("read: %v", err)
@@ -308,48 +361,35 @@ receivers:
   - name: db-alert
 `)
 
-	ws, err := New(dir, nil).Assemble()
-	if err != nil {
+	ws := New(&config.LitmusConfig{
+		Workspace: config.WorkspaceConfig{
+			Root:      dir,
+			Fragments: "fragments",
+		},
+	}, nil)
+
+	if err := ws.Assemble(); err != nil {
 		t.Fatalf("Assemble: %v", err)
 	}
 
-	if ws.RootFragment() == nil {
-		t.Fatal("RootFragment nil, want populated fragment")
+	if len(ws.Fragments) == 0 {
+		t.Fatal("should have one fragment, found 0")
 	}
-	if ws.RootFragment().Namespace != rootNamespace {
-		t.Errorf("RootFragment.Namespace = %q, want %q", rootNamespace, ws.RootFragment().Namespace)
+	if ws.Fragments[0].Namespace != rootNamespace {
+		t.Errorf("RootFragment.Namespace = %q, want %q", rootNamespace, ws.Fragments[0].Namespace)
 	}
 	// Snapshot must contain only the root's own route (root-critical), not db-alert.
-	if len(ws.RootFragment().Routes) != 1 {
-		t.Fatalf("RootFragment.Routes length = %d, want 1", len(ws.RootFragment().Routes))
+	if len(ws.Fragments[0].Routes) != 1 {
+		t.Fatalf("RootFragment.Routes length = %d, want 1", len(ws.Fragments[0].Routes))
 	}
-	if ws.RootFragment().Routes[0].Receiver != "root-critical" {
-		t.Errorf("RootFragment.Routes[0].Receiver = %q, want \"root-critical\"", ws.RootFragment().Routes[0].Receiver)
+	if ws.Fragments[0].Routes[0].Receiver != "root-critical" {
+		t.Errorf("RootFragment.Routes[0].Receiver = %q, want \"root-critical\"", ws.Fragments[0].Routes[0].Receiver)
 	}
 	// The child fragment route must NOT appear in the snapshot.
-	for _, r := range ws.RootFragment().Routes {
+	for _, r := range ws.Fragments[0].Routes {
 		if r.Receiver == "db-db-alert" || r.Receiver == "db-alert" {
 			t.Errorf("RootFragment must not contain child fragment route %q", r.Receiver)
 		}
-	}
-}
-
-func TestAssemble_RootFragmentEmptyWhenNoRootRoutes(t *testing.T) {
-	dir := t.TempDir()
-	writeWSFixture(t, dir, "base.yaml", fixtures.MustRead("workspace/base-simple.yaml"))
-
-	ws, err := New(dir, nil).Assemble()
-	if err != nil {
-		t.Fatalf("Assemble: %v", err)
-	}
-	if ws.RootFragment() == nil {
-		t.Fatal("RootFragment nil, want non-nil even when root has no sub-routes")
-	}
-	if ws.RootFragment().Namespace != rootNamespace {
-		t.Errorf("RootFragment.Namespace = %q, want %q", rootNamespace, ws.RootFragment().Namespace)
-	}
-	if len(ws.RootFragment().Routes) != 0 {
-		t.Errorf("RootFragment.Routes length = %d, want 0 for root with no sub-routes", len(ws.RootFragment().Routes))
 	}
 }
 
@@ -358,11 +398,180 @@ func TestWorkspaceRead_TestsDirAsFileSilentlyIgnored(t *testing.T) {
 	writeWSFixture(t, dir, "base.yaml", fixtures.MustRead("workspace/base-simple.yaml"))
 	writeWSFixture(t, dir, "tests", "this is a file not a dir")
 
-	ws := New(dir, nil)
+	ws := New(&config.LitmusConfig{
+		Workspace: config.WorkspaceConfig{
+			Root:      dir,
+			Fragments: "fragments",
+		},
+	}, nil)
 	if _, err := ws.read(); err != nil {
 		t.Fatalf("read: %v", err)
 	}
 	if len(ws.Tests()) != 0 {
 		t.Errorf("Tests length = %d, want 0 (tests-as-file silently ignored)", len(ws.Tests()))
+	}
+}
+
+// func TestAssemble_Idempotent(t *testing.T) {
+// 	dir := t.TempDir()
+// 	writeWSFixture(t, dir, "base.yaml", `
+// route:
+//   receiver: default
+// receivers:
+//   - name: default
+// `)
+// 	writeWSFixture(t, filepath.Join(dir, "fragments", "db"), "fragment.yaml", `
+// namespace: db
+// routes:
+//   - receiver: db-alert
+// receivers:
+//   - name: db-alert
+// `)
+
+// 	ws := New(&config.LitmusConfig{
+// 		Workspace: config.WorkspaceConfig{
+// 			Root:      dir,
+// 			Fragments: "fragments",
+// 		},
+// 	}, nil)
+
+// 	first := *ws
+
+// 	if err := ws.Assemble(); err != nil {
+// 		t.Fatalf("first Assemble: %v", err)
+// 	}
+
+// 	firstFragments := len(first.Fragments)
+// 	firstReceivers := len(first.Config.Receivers)
+
+// 	if err := ws.Assemble(); err != nil {
+// 		t.Fatalf("second Assemble: %v", err)
+// 	}
+
+// 	if len(ws.Fragments) != firstFragments {
+// 		t.Errorf("Fragments after second Assemble = %d, want %d (idempotency broken)", len(ws.Fragments), firstFragments)
+// 	}
+// 	if len(ws.Config.Receivers) != firstReceivers {
+// 		t.Errorf("Receivers after second Assemble = %d, want %d (idempotency broken)", len(ws.Config.Receivers), firstReceivers)
+// 	}
+// }
+
+func TestAMConfig_ReturnsErrorWhenNotAssembled(t *testing.T) {
+	ws := New(&config.LitmusConfig{
+		Workspace: config.WorkspaceConfig{
+			Root:      t.TempDir(),
+			Fragments: "fragments",
+		},
+	}, nil)
+	_, err := ws.AMConfig()
+	if err == nil {
+		t.Fatal("AMConfig() = nil error, want error")
+	}
+	if !strings.Contains(err.Error(), "workspace not assembled") {
+		t.Errorf("AMConfig() error = %q, want 'workspace not assembled'", err)
+	}
+}
+
+func TestAMConfig_PropagatesSerializationError(t *testing.T) {
+	// Inject a config that references an unset env var so Marshal() fails.
+	ws := New(&config.LitmusConfig{
+		Workspace: config.WorkspaceConfig{
+			Root:      t.TempDir(),
+			Fragments: "fragments",
+		},
+	}, nil)
+	ws.Config = &types.AlertmanagerConfig{
+		Receivers: []*types.Receiver{
+			{
+				Name:           "r",
+				WebhookConfigs: []map[string]any{{"url": "env(litmus_test_unset_amconfig_var)"}},
+			},
+		},
+	}
+	_, err := ws.AMConfig()
+	if err == nil {
+		t.Fatal("AMConfig() = nil error, want serialization error")
+	}
+	if !strings.Contains(err.Error(), "serializing alertmanager config") {
+		t.Errorf("AMConfig() error = %q, want wrapped 'serializing alertmanager config'", err)
+	}
+}
+
+const missingPath = "/nonexistent/litmus/test/path/file.yml"
+
+func TestLoadBaseline_MissingFile_WrapsError(t *testing.T) {
+	_, err := LoadBaseline(missingPath)
+	if err == nil {
+		t.Fatal("LoadBaseline() = nil error, want error")
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("LoadBaseline() error chain must include os.ErrNotExist, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), missingPath) {
+		t.Errorf("LoadBaseline() error must contain path, got: %v", err)
+	}
+}
+
+func TestLoadBaselineYAML_MissingFile_WrapsError(t *testing.T) {
+	_, err := LoadBaselineYAML(missingPath)
+	if err == nil {
+		t.Fatal("LoadBaselineYAML() = nil error, want error")
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("LoadBaselineYAML() error chain must include os.ErrNotExist, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), missingPath) {
+		t.Errorf("LoadBaselineYAML() error must contain path, got: %v", err)
+	}
+}
+
+func TestLoadBaselineYAML_BadYAML_WrapsError(t *testing.T) {
+	f := filepath.Join(t.TempDir(), "bad.yml")
+	if err := os.WriteFile(f, []byte("[\nbad yaml"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := LoadBaselineYAML(f)
+	if err == nil {
+		t.Fatal("LoadBaselineYAML() = nil error, want parse error")
+	}
+	if !strings.Contains(err.Error(), f) {
+		t.Errorf("LoadBaselineYAML() error must contain path, got: %v", err)
+	}
+}
+
+func TestLoadRegressionState_MissingFile_WrapsError(t *testing.T) {
+	_, err := readRegressionState(missingPath)
+	if err == nil {
+		t.Fatal("GetRegressionState() = nil error, want error")
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("GetRegressionState() error chain must include os.ErrNotExist, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), missingPath) {
+		t.Errorf("LoadRegressionState() error must contain path, got: %v", err)
+	}
+}
+
+func TestLoadRegressionState_BadYAML_WrapsError(t *testing.T) {
+	f := filepath.Join(t.TempDir(), "bad.yml")
+	if err := os.WriteFile(f, []byte("[\nbad yaml"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := readRegressionState(f)
+	if err == nil {
+		t.Fatal("LoadRegressionState() = nil error, want parse error")
+	}
+	if !strings.Contains(err.Error(), f) {
+		t.Errorf("LoadRegressionState() error must contain path, got: %v", err)
+	}
+}
+
+func TestSaveRegressionState_BadPath_WrapsError(t *testing.T) {
+	err := SaveRegressionState("/nonexistent/dir/state.yml", &types.RegressionState{})
+	if err == nil {
+		t.Fatal("SaveRegressionState() = nil error, want error")
+	}
+	if !strings.Contains(err.Error(), "/nonexistent/dir/state.yml") {
+		t.Errorf("SaveRegressionState() error must contain path, got: %v", err)
 	}
 }

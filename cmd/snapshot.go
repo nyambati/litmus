@@ -28,7 +28,7 @@ func newSnapshotCaptureCmd() *cobra.Command {
 		Long:         "Captures current alertmanager routing behavior as regression baseline.",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg := config.FromContext(cmd.Context())
+			cfg := config.ConfigFromContext(cmd.Context())
 			logger := config.LoggerFromContext(cmd.Context())
 			strict, _ := cmd.Flags().GetBool("strict")
 			return cli.RunSnapshot(cfg, logger, false, strict)
@@ -47,7 +47,7 @@ func newSnapshotUpdateCmd() *cobra.Command {
 		Long:         "Updates baseline with current alertmanager routing behavior.",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg := config.FromContext(cmd.Context())
+			cfg := config.ConfigFromContext(cmd.Context())
 			logger := config.LoggerFromContext(cmd.Context())
 			strict, _ := cmd.Flags().GetBool("strict")
 			return cli.RunSnapshot(cfg, logger, true, strict)

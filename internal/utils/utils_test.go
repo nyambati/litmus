@@ -33,6 +33,53 @@ import (
 // 	assert.Equal(t, "test-key-123", cfg.Global.OpsGenieAPIKey)
 // }
 
+func TestLabelFormat(t *testing.T) {
+	tests := []struct {
+		name  string
+		input map[string]string
+		want  string
+	}{
+		{"nil map", nil, ""},
+		{"empty map", map[string]string{}, ""},
+		{"single entry", map[string]string{"env": "prod"}, "env=prod"},
+		{
+			"multiple entries sorted alphabetically",
+			map[string]string{"service": "api", "env": "prod", "team": "platform"},
+			"env=prod,service=api,team=platform",
+		},
+		{
+			"stable output",
+			map[string]string{"z": "last", "a": "first", "m": "middle"},
+			"a=first,m=middle,z=last",
+		},
+		{
+			"matches legacy groupKey output",
+			map[string]string{"scope": "teams", "region": "us-east"},
+			"region=us-east,scope=teams",
+		},
+		{
+			"matches legacy LabelKey output",
+			map[string]string{"alertname": "HighCPU", "severity": "critical"},
+			"alertname=HighCPU,severity=critical",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := LabelFormat(tt.input)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestLabelFormat_Idempotent(t *testing.T) {
+	m := map[string]string{"b": "2", "a": "1", "c": "3"}
+	first := LabelFormat(m)
+	for range 10 {
+		require.Equal(t, first, LabelFormat(m), "LabelFormat must be idempotent")
+	}
+}
+
 func TestExpandEnvVars(t *testing.T) {
 	os.Setenv("MY_VAR", "hello")
 	os.Setenv("OTHER_VAR", "world")

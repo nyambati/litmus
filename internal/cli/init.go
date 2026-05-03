@@ -16,22 +16,22 @@ func RunInit() error {
 		return fmt.Errorf(".litmus.yaml already exists in this directory")
 	}
 
-	if err := os.WriteFile(".litmus.yaml", []byte(templates.MustRead("litmus.yaml")), 0600); err != nil {
+	if err := os.WriteFile(".litmus.yaml", []byte(templates.MustRead("litmus.yaml")), 0o600); err != nil {
 		return fmt.Errorf("creating .litmus.yaml: %w", err)
 	}
 
 	dirs := []string{"config", "config/templates", "config/regressions", "config/tests", "config/fragments"}
 	for _, dir := range dirs {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return fmt.Errorf("creating %s directory: %w", dir, err)
 		}
 	}
 
-	if err := os.WriteFile(filepath.Join("config", "base.yaml"), []byte(templates.MustRead("base.yaml")), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join("config", "base.yaml"), []byte(templates.MustRead("base.yaml")), 0o600); err != nil {
 		return fmt.Errorf("creating config/base.yaml: %w", err)
 	}
 
-	if err := os.WriteFile(filepath.Join("config", "tests", "README.md"), []byte(templates.MustRead("README.md")), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join("config", "tests", "README.md"), []byte(templates.MustRead("README.md")), 0o600); err != nil {
 		return fmt.Errorf("creating config/tests/README.md: %w", err)
 	}
 

@@ -11,12 +11,6 @@ type (
 		Receiver string            `yaml:"receiver"`
 	}
 
-	InhibitRule struct {
-		SourceMatch map[string]string `yaml:"source_match"`
-		TargetMatch map[string]string `yaml:"target_match"`
-		Equal       []string          `yaml:"equal"`
-	}
-
 	Fragment struct {
 		// Namespace is the fragment's identity and the prefix applied to all receiver
 		// and route receiver names during assembly. Auto-set to the directory basename
@@ -42,9 +36,8 @@ type (
 	}
 
 	AugmentedFragment struct {
-		Fragment *Fragment         `yaml:"fragment,omitempty"`
-		Metadata *Metadata         `yaml:"metadata,omitempty"`
-		Tests    []*types.TestCase `yaml:"tests,omitempty"`
+		Fragment *Fragment `yaml:"fragment,omitempty"`
+		Metadata *Metadata `yaml:"metadata,omitempty"`
 	}
 
 	LoadResult struct {

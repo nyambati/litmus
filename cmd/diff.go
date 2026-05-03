@@ -14,7 +14,7 @@ func newDiffCmd() *cobra.Command {
 		Long:         "Performs a structural comparison between the current configuration and the saved regression baseline.",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg := config.FromContext(cmd.Context())
+			cfg := config.ConfigFromContext(cmd.Context())
 			logger := config.LoggerFromContext(cmd.Context())
 			return cli.RunDiff(cfg, logger)
 		},

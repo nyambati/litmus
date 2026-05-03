@@ -11,9 +11,15 @@ type (
 	// WorkspaceConfig defines the package-based layout and history settings.
 	WorkspaceConfig struct {
 		Root       string `yaml:"root" mapstructure:"root" validate:"required"`
-		entrypoint string `yaml:"entrypoint" mapstructure:"entrypoint" `
+		entrypoint string
 		Fragments  string `yaml:"fragments" mapstructure:"fragments"`
 		History    int    `yaml:"history" mapstructure:"history"`
+	}
+
+	// RequireConfig defines test requirement rules.
+	RequireConfig struct {
+		Tests      bool `yaml:"tests"      mapstructure:"tests"`
+		Regression bool `yaml:"regression" mapstructure:"regression"`
 	}
 
 	// EnforceConfig defines matcher enforcement rules for fragment routes.
@@ -22,15 +28,19 @@ type (
 		Matchers []string `yaml:"matchers" mapstructure:"matchers"`
 	}
 
+	PolicyType string
+
 	// PolicyConfig defines global rules for fragments.
 	PolicyConfig struct {
-		RequireTests bool          `yaml:"require_tests" mapstructure:"require_tests"`
-		SkipRoot     bool          `yaml:"skip_root"     mapstructure:"skip_root"`
-		Enforce      EnforceConfig `yaml:"enforce"      mapstructure:"enforce"`
+		Require  RequireConfig `yaml:"require"  mapstructure:"require"`
+		SkipRoot []PolicyType  `yaml:"skip_root" mapstructure:"skip_root"`
+		Enforce  EnforceConfig `yaml:"enforce"  mapstructure:"enforce"`
 	}
 
 	// SanityMode defines whether a sanity check should warn or fail.
 	SanityMode string
+
+	SanityCheck string
 
 	// SanityConfig defines sanity check behavior modes.
 	SanityConfig struct {
@@ -53,8 +63,14 @@ type (
 )
 
 const (
-	SanityModeFail SanityMode = "fail"
-	SanityModeWarn SanityMode = "warn"
+	SanityModeFail          SanityMode  = "fail"
+	SanityModeWarn          SanityMode  = "warn"
+	CheckPolicyViolations   SanityCheck = "policy_violations"
+	CheckOrphanReceivers    SanityCheck = "orphan_receivers"
+	CheckDeadReceivers      SanityCheck = "dead_receivers"
+	CheckShadowedRoutes     SanityCheck = "shadowed_routes"
+	CheckInhibitionCycles   SanityCheck = "inhibition_cycles"
+	CheckNegativeOnlyRoutes SanityCheck = "negative_only_routes"
 )
 
 func (m SanityMode) IsFail() bool {
@@ -63,14 +79,14 @@ func (m SanityMode) IsFail() bool {
 
 // ModeFor returns the configured SanityMode for the named check.
 // Unknown check names default to SanityModeFail.
-func (c SanityConfig) ModeFor(name string) SanityMode {
-	modes := map[string]SanityMode{
-		"orphan_receivers":     c.OrphanReceivers,
-		"dead_receivers":       c.DeadReceivers,
-		"shadowed_routes":      c.ShadowedRoutes,
-		"inhibition_cycles":    c.InhibitionCycles,
-		"policy_violations":    c.PolicyViolations,
-		"negative_only_routes": c.NegativeOnlyRoutes,
+func (c SanityConfig) ModeFor(name SanityCheck) SanityMode {
+	modes := map[SanityCheck]SanityMode{
+		CheckOrphanReceivers:    c.OrphanReceivers,
+		CheckDeadReceivers:      c.DeadReceivers,
+		CheckShadowedRoutes:     c.ShadowedRoutes,
+		CheckInhibitionCycles:   c.InhibitionCycles,
+		CheckPolicyViolations:   c.PolicyViolations,
+		CheckNegativeOnlyRoutes: c.NegativeOnlyRoutes,
 	}
 	if m, ok := modes[name]; ok && m != "" {
 		return m

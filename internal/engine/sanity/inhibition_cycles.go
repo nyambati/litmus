@@ -5,10 +5,9 @@ import (
 	"sort"
 	"strings"
 
+	litconfig "github.com/nyambati/litmus/internal/config"
 	"github.com/prometheus/alertmanager/config"
 )
-
-const CheckInhibitionCycles = "inhibition_cycles"
 
 // InhibitionCycleDetector detects cycles in inhibition rules.
 type InhibitionCycleDetector struct {
@@ -21,7 +20,9 @@ func NewInhibitionCycleDetector(rules []*config.InhibitRule) *InhibitionCycleDet
 }
 
 // Name implements Check.
-func (icd *InhibitionCycleDetector) Name() string { return CheckInhibitionCycles }
+func (icd *InhibitionCycleDetector) Name() litconfig.SanityCheck {
+	return litconfig.CheckInhibitionCycles
+}
 
 // Run implements Check.
 func (icd *InhibitionCycleDetector) Run(ctx CheckContext) []string {

@@ -13,6 +13,7 @@ import (
 	"github.com/nyambati/litmus/internal/codec"
 	"github.com/nyambati/litmus/internal/config"
 	"github.com/nyambati/litmus/internal/types"
+	"github.com/nyambati/litmus/internal/workspace"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +24,7 @@ var timeNow = time.Now
 // ArchiveBaseline saves tests as a new history entry and writes regressions.litmus.yml.
 func ArchiveBaseline(cfg *config.LitmusConfig, tests []*types.TestCase) (string, error) {
 	id := timeNow().Format(historyTimeFormat)
-	if err := os.MkdirAll(cfg.RegressionsDir(), 0755); err != nil {
+	if err := os.MkdirAll(cfg.RegressionsDir(), 0o755); err != nil {
 		return "", fmt.Errorf("creating history dir: %w", err)
 	}
 
@@ -39,7 +40,7 @@ func ArchiveBaseline(cfg *config.LitmusConfig, tests []*types.TestCase) (string,
 		return "", fmt.Errorf("encoding history entry: %w", err)
 	}
 
-	if err := SaveRegressionState(cfg.RegressionsYamlFilePath(), &RegressionState{ID: id, Tests: tests}); err != nil {
+	if err := workspace.SaveRegressionState(cfg.RegressionsYamlFilePath(), &types.RegressionState{ID: id, Tests: tests}); err != nil {
 		return "", fmt.Errorf("writing regression state: %w", err)
 	}
 
@@ -77,12 +78,12 @@ func RollbackToEntry(cfg *config.LitmusConfig, id string) error {
 	srcMpk := filepath.Join(cfg.RegressionsDir(), id+".mpk")
 
 	// Load the tests from the historical baseline
-	tests, err := LoadBaseline(srcMpk)
+	tests, err := workspace.LoadBaseline(srcMpk)
 	if err != nil {
 		return fmt.Errorf("loading history entry %q: %w", id, err)
 	}
 
-	if err := SaveRegressionState(cfg.RegressionsYamlFilePath(), &RegressionState{ID: id, Tests: tests}); err != nil {
+	if err := workspace.SaveRegressionState(cfg.RegressionsYamlFilePath(), &types.RegressionState{ID: id, Tests: tests}); err != nil {
 		return fmt.Errorf("writing regression state: %w", err)
 	}
 
@@ -125,11 +126,14 @@ func RunHistoryList(litmusConfig *config.LitmusConfig, cmd *cobra.Command) error
 		return nil
 	}
 
-	// Load current ID from regressions.litmus.yml
-	state, err := LoadRegressionState(litmusConfig.RegressionsYamlFilePath())
+	ws, err := workspace.Load(litmusConfig, nil)
+	if err != nil {
+		return err
+	}
+
 	var current string
-	if err == nil {
-		current = state.ID
+	if ws.RegressionState != nil {
+		current = ws.RegressionState.ID
 	}
 
 	cmd.Println("Available baselines:")

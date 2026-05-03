@@ -23,10 +23,10 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	os.Clearenv()
 	chdirTemp(t)
 
-	err := os.WriteFile(".litmus.yaml", []byte{}, 0600)
+	err := os.WriteFile(".litmus.yaml", []byte{}, 0o600)
 	require.NoError(t, err)
-	require.NoError(t, os.MkdirAll("config", 0755))
-	require.NoError(t, os.WriteFile(filepath.Join("config", "alertmanager.yml"), []byte{}, 0600))
+	require.NoError(t, os.MkdirAll("config", 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join("config", "alertmanager.yml"), []byte{}, 0o600))
 
 	cfg, err := New()
 	require.NoError(t, err)
@@ -44,10 +44,10 @@ func TestLoadConfig_NegativeOnlyRoutesSanityMode(t *testing.T) {
 	err := os.WriteFile(".litmus.yaml", []byte(`
 sanity:
   negative_only_routes: warn
-`), 0600)
+`), 0o600)
 	require.NoError(t, err)
-	require.NoError(t, os.MkdirAll("config", 0755))
-	require.NoError(t, os.WriteFile(filepath.Join("config", "alertmanager.yml"), []byte{}, 0600))
+	require.NoError(t, os.MkdirAll("config", 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join("config", "alertmanager.yml"), []byte{}, 0o600))
 
 	cfg, err := New()
 	require.NoError(t, err)
@@ -62,10 +62,10 @@ func TestLoadConfig_EnvOverrides(t *testing.T) {
 	os.Setenv("LITMUS_WORKSPACE_ROOT", "custom-root")
 	os.Setenv("LITMUS_MIMIR_ADDRESS", "https://mimir.io")
 
-	err := os.WriteFile(".litmus.yaml", []byte{}, 0600)
+	err := os.WriteFile(".litmus.yaml", []byte{}, 0o600)
 	require.NoError(t, err)
-	require.NoError(t, os.MkdirAll("custom-root", 0755))
-	require.NoError(t, os.WriteFile(filepath.Join("custom-root", "alertmanager.yml"), []byte{}, 0600))
+	require.NoError(t, os.MkdirAll("custom-root", 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join("custom-root", "alertmanager.yml"), []byte{}, 0o600))
 
 	cfg, err := New()
 	require.NoError(t, err)
@@ -85,10 +85,10 @@ mimir:
   address: "https://mimir.example.com"
   api_key: "env(MY_MIMIR_TOKEN)"
 `
-	err := os.WriteFile(".litmus.yaml", []byte(content), 0600)
+	err := os.WriteFile(".litmus.yaml", []byte(content), 0o600)
 	require.NoError(t, err)
-	require.NoError(t, os.MkdirAll("config", 0755))
-	require.NoError(t, os.WriteFile(filepath.Join("config", "alertmanager.yml"), []byte{}, 0600))
+	require.NoError(t, os.MkdirAll("config", 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join("config", "alertmanager.yml"), []byte{}, 0o600))
 
 	cfg, err := New()
 	require.NoError(t, err)
@@ -105,7 +105,7 @@ func TestLoadConfig_EnvSubstitution_Unset(t *testing.T) {
 mimir:
   api_key: "env(MISSING_VAR)"
 `
-	err := os.WriteFile(".litmus.yaml", []byte(content), 0600)
+	err := os.WriteFile(".litmus.yaml", []byte(content), 0o600)
 	require.NoError(t, err)
 
 	_, err = New()
@@ -207,10 +207,10 @@ func TestFilePath_EntrypointCandidates(t *testing.T) {
 			require.NoError(t, os.WriteFile(".litmus.yaml", []byte(`
 workspace:
   root: "config"
-`), 0600))
-			require.NoError(t, os.MkdirAll("config", 0755))
+`), 0o600))
+			require.NoError(t, os.MkdirAll("config", 0o755))
 			for _, file := range tt.files {
-				require.NoError(t, os.WriteFile(filepath.Join("config", file), []byte{}, 0600))
+				require.NoError(t, os.WriteFile(filepath.Join("config", file), []byte{}, 0o600))
 			}
 
 			cfg, err := New()

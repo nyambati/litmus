@@ -3,7 +3,6 @@ package cli
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -13,7 +12,6 @@ import (
 	"github.com/nyambati/litmus/internal/config"
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/engine/sanity"
-	"github.com/nyambati/litmus/internal/fragment"
 	"github.com/nyambati/litmus/internal/types"
 	"github.com/nyambati/litmus/internal/workspace"
 	amconfig "github.com/prometheus/alertmanager/config"
@@ -68,12 +66,12 @@ type BehavioralResult struct {
 // the exit code the CLI layer should pass to os.Exit (0 = all passed).
 func RunCheck(cfg *config.LitmusConfig, logger logrus.FieldLogger, format string, showDiff bool, tags []string) (CheckExitCode, error) {
 	start := time.Now()
-	ws, err := workspace.Load(cfg.Workspace.Root, logger)
+	ws, err := workspace.Load(cfg, logger)
 	if err != nil {
 		return 1, err
 	}
 
-	amCfg, err := ws.Config()
+	amCfg, err := ws.AMConfig()
 	if err != nil {
 		return 1, fmt.Errorf("failed to load alertmanager config: %w", err)
 	}
@@ -84,14 +82,10 @@ func RunCheck(cfg *config.LitmusConfig, logger logrus.FieldLogger, format string
 
 	router := pipeline.NewRouter(amCfg.Route)
 
-	fragments := ws.Fragments()
-	if ws.RootFragment() != nil {
-		fragments = append([]*fragment.Fragment{ws.RootFragment()}, fragments...)
-	}
 	ctx := context.Background()
-	sanityResult := runSanityChecks(cfg, fragments, amCfg)
-	regressionResult := RunRegressionTests(ctx, cfg, router, tags)
-	behavioralResult := RunBehavioralTests(ctx, cfg, ws.Fragments(), ws.Tests(), router, amCfg.InhibitRules, tags)
+	sanityResult := sanity.Run(buildCheckContext(amCfg, ws, cfg.Policy), cfg.Sanity)
+	regressionResult := RunRegressionTests(ctx, ws, router, tags)
+	behavioralResult := RunBehavioralTests(ctx, ws.Tests(), router, amCfg.InhibitRules, tags)
 
 	result := buildCheckResult(cfg.FilePath(), sanityResult, regressionResult, behavioralResult, time.Since(start))
 
@@ -103,26 +97,6 @@ func RunCheck(cfg *config.LitmusConfig, logger logrus.FieldLogger, format string
 	}
 
 	return code, nil
-}
-
-// runSanityChecks executes all sanity checks including policy enforcement.
-func runSanityChecks(litmusConfig *config.LitmusConfig, fragments []*fragment.Fragment, amCfg *amconfig.Config) sanity.Result {
-	receiversMap := make(map[string]*amconfig.Receiver)
-	for i := range amCfg.Receivers {
-		receiversMap[amCfg.Receivers[i].Name] = &amCfg.Receivers[i]
-	}
-	rules := make([]*amconfig.InhibitRule, 0, len(amCfg.InhibitRules))
-	for i := range amCfg.InhibitRules {
-		rules = append(rules, &amCfg.InhibitRules[i])
-	}
-	ctx := sanity.CheckContext{
-		Route:     amCfg.Route,
-		Receivers: receiversMap,
-		Rules:     rules,
-		Policy:    litmusConfig.Policy,
-		Fragments: fragments,
-	}
-	return sanity.Run(ctx, litmusConfig.Sanity)
 }
 
 // buildCheckResult assembles the final check result from all test results.
@@ -169,18 +143,14 @@ func outputResults(result CheckResult, format string, showDiff bool) error {
 }
 
 // RunRegressionTests executes the regression baseline against the current router.
-func RunRegressionTests(ctx context.Context, litmusConfig *config.LitmusConfig, router *pipeline.Router, tags []string) RegressionResult {
+func RunRegressionTests(ctx context.Context, ws *workspace.Workspace, router *pipeline.Router, tags []string) RegressionResult {
 	result := RegressionResult{Passed: true}
 
-	state, err := LoadRegressionState(litmusConfig.RegressionsYamlFilePath())
-	if err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			fmt.Fprintf(os.Stderr, "WARN: could not read regression baseline: %v\n", err)
-		}
+	if ws.RegressionState == nil {
 		return result
 	}
 
-	baseline := state.Tests
+	baseline := ws.RegressionState.Tests
 	if len(baseline) == 0 {
 		return result
 	}
@@ -209,14 +179,8 @@ func RunRegressionTests(ctx context.Context, litmusConfig *config.LitmusConfig, 
 }
 
 // RunBehavioralTests loads and executes all behavioral unit tests.
-func RunBehavioralTests(ctx context.Context, litmusConfig *config.LitmusConfig, fragments []*fragment.Fragment, workspaceTests []*types.TestCase, router *pipeline.Router, inhibitRules []amconfig.InhibitRule, tags []string) BehavioralResult {
+func RunBehavioralTests(ctx context.Context, tests []*types.TestCase, router *pipeline.Router, inhibitRules []amconfig.InhibitRule, tags []string) BehavioralResult {
 	result := BehavioralResult{Passed: true}
-
-	var tests []*types.TestCase
-	for _, frag := range fragments {
-		tests = append(tests, frag.Tests...)
-	}
-	tests = append(tests, workspaceTests...)
 
 	if len(tests) == 0 {
 		return result
@@ -299,7 +263,7 @@ func PrintCheckResult(r CheckResult, showDiff bool) {
 	} else if r.Regression.Passed {
 		fmt.Printf("   [PASS]  %d/%d cases passed\n", r.Regression.Tests, r.Regression.Tests)
 	} else {
-		fmt.Printf("   [PASS]  %d/%d cases passed\n", r.Regression.PassCount, r.Regression.Tests)
+		fmt.Printf("   [FAIL]  %d/%d cases passed\n", r.Regression.PassCount, r.Regression.Tests)
 		for _, f := range r.Regression.Failures {
 			fmt.Printf("   [FAIL]  %s\n", f.Name)
 			fmt.Printf("           - Labels:   %s\n", formatLabels(f.Labels))
@@ -338,7 +302,7 @@ func PrintCheckResult(r CheckResult, showDiff bool) {
 	} else if r.Behavioral.Passed {
 		fmt.Printf("   [PASS]  %d/%d unit tests passed\n", r.Behavioral.Tests, r.Behavioral.Tests)
 	} else {
-		fmt.Printf("   [PASS]  %d/%d unit tests passed\n", r.Behavioral.PassCount, r.Behavioral.Tests)
+		fmt.Printf("   [FAIL]  %d/%d unit tests passed\n", r.Behavioral.PassCount, r.Behavioral.Tests)
 		for _, f := range r.Behavioral.Failures {
 			fmt.Printf("   [FAIL]  %s\n", f.Name)
 			fmt.Printf("           - %s\n", f.Error)
@@ -434,14 +398,14 @@ func formatSummary(r CheckResult) string {
 }
 
 // sanityCheckLabel returns the human-readable ok message for a check name.
-func sanityCheckLabel(name string) string {
-	labels := map[string]string{
-		sanity.CheckShadowedRoutes:     "No shadowed routes detected",
-		sanity.CheckOrphanReceivers:    "No orphan receivers",
-		sanity.CheckInhibitionCycles:   "No inhibition cycles",
-		sanity.CheckPolicyViolations:   "No policy violations",
-		sanity.CheckDeadReceivers:      "No dead receivers detected",
-		sanity.CheckNegativeOnlyRoutes: "No negative-only routes detected",
+func sanityCheckLabel(name config.SanityCheck) string {
+	labels := map[config.SanityCheck]string{
+		config.CheckShadowedRoutes:     "No shadowed routes detected",
+		config.CheckOrphanReceivers:    "No orphan receivers",
+		config.CheckInhibitionCycles:   "No inhibition cycles",
+		config.CheckPolicyViolations:   "No policy violations",
+		config.CheckDeadReceivers:      "No dead receivers detected",
+		config.CheckNegativeOnlyRoutes: "No negative-only routes detected",
 	}
 	if l, ok := labels[name]; ok {
 		return l

@@ -2,9 +2,7 @@ package cli
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
@@ -26,12 +24,12 @@ const (
 
 // RunDiff compares current config against the baseline and prints a structural diff.
 func RunDiff(cfg *config.LitmusConfig, logger logrus.FieldLogger) error {
-	ws, err := workspace.Load(cfg.Workspace.Root, logger)
+	ws, err := workspace.Load(cfg, logger)
 	if err != nil {
 		return err
 	}
 
-	amCfg, err := ws.Config()
+	amCfg, err := ws.AMConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load alertmanager config: %w", err)
 	}
@@ -55,13 +53,11 @@ func RunDiff(cfg *config.LitmusConfig, logger logrus.FieldLogger) error {
 
 	currentTests := BuildRegressionTests(outcomes, cfg.GlobalLabels)
 
-	state, err := LoadRegressionState(cfg.RegressionsYamlFilePath())
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("no baseline found — run 'litmus snapshot' to create one")
-		}
-		return fmt.Errorf("loading baseline: %w", err)
+	if ws.RegressionState == nil {
+		return fmt.Errorf("no baseline found — run 'litmus snapshot' to create one")
 	}
+
+	state := ws.RegressionState
 
 	existingTests := state.Tests
 	if len(existingTests) == 0 {

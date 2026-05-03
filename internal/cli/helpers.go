@@ -1,72 +1,31 @@
 package cli
 
 import (
-	"os"
-
-	"github.com/nyambati/litmus/internal/codec"
-	"github.com/nyambati/litmus/internal/types"
-	"gopkg.in/yaml.v3"
+	"github.com/nyambati/litmus/internal/config"
+	"github.com/nyambati/litmus/internal/engine/sanity"
+	"github.com/nyambati/litmus/internal/workspace"
+	amconfig "github.com/prometheus/alertmanager/config"
 )
 
-// LoadBaseline reads a msgpack regression baseline from disk.
-func LoadBaseline(path string) ([]*types.TestCase, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
+// buildCheckContext constructs a sanity.CheckContext from an assembled
+// alertmanager config, fragment list, and policy. Centralises the receiver-map
+// and inhibit-rule-pointer construction that would otherwise be duplicated
+// across every command that runs sanity checks.
+func buildCheckContext(amCfg *amconfig.Config, ws *workspace.Workspace, policy config.PolicyConfig) sanity.CheckContext {
+	receiversMap := make(map[string]*amconfig.Receiver, len(amCfg.Receivers))
+	for i := range amCfg.Receivers {
+		receiversMap[amCfg.Receivers[i].Name] = &amCfg.Receivers[i]
 	}
-	defer func() { _ = file.Close() }()
-
-	var tests []*types.TestCase
-	if err := codec.DecodeMsgPack(file, &tests); err != nil {
-		return nil, err
+	rules := make([]*amconfig.InhibitRule, 0, len(amCfg.InhibitRules))
+	for i := range amCfg.InhibitRules {
+		rules = append(rules, &amCfg.InhibitRules[i])
 	}
-	return tests, nil
-}
-
-// LoadBaselineYAML reads a YAML regression baseline from disk.
-func LoadBaselineYAML(path string) ([]*types.TestCase, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
+	return sanity.CheckContext{
+		Route:           amCfg.Route,
+		Receivers:       receiversMap,
+		Rules:           rules,
+		Policy:          policy,
+		Fragments:       ws.Fragments,
+		RegressionState: ws.RegressionState,
 	}
-
-	var tests []*types.TestCase
-	if err := yaml.Unmarshal(data, &tests); err != nil {
-		return nil, err
-	}
-	return tests, nil
-}
-
-// RegressionState holds the current active baseline ID and its tests.
-type RegressionState struct {
-	ID    string            `yaml:"id"`
-	Tests []*types.TestCase `yaml:"tests"`
-}
-
-// LoadRegressionState reads the regression state (ID + tests) from regressions.litmus.yml.
-func LoadRegressionState(path string) (*RegressionState, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var state RegressionState
-	if err := yaml.Unmarshal(data, &state); err != nil {
-		return nil, err
-	}
-	return &state, nil
-}
-
-// SaveRegressionState writes the regression state (ID + tests) to regressions.litmus.yml.
-func SaveRegressionState(path string, state *RegressionState) error {
-	data, err := yaml.Marshal(state)
-	if err != nil {
-		return err
-	}
-
-	if err := os.WriteFile(path, data, 0600); err != nil {
-		return err
-	}
-
-	return nil
 }

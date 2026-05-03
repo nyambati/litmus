@@ -1,6 +1,7 @@
 package fragment
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -971,27 +972,6 @@ func TestTestFileParsedViaTestDoc(t *testing.T) {
 	}
 }
 
-func TestAugmentedFragmentSerializesTests(t *testing.T) {
-	root := t.TempDir()
-	writeFragmentFixture(t, filepath.Join(root, "frag"), "fragment.yaml", fixtures.MustRead("fragment/name-frag.yaml"))
-	writeFragmentFixture(t, filepath.Join(root, "frag", "tests"), "case.yaml", fixtures.MustRead("tests/case-case1.yaml"))
-
-	result, err := Load(root)
-	if err != nil {
-		t.Fatalf("Load: %v", err)
-	}
-	out, err := yaml.Marshal(result)
-	if err != nil {
-		t.Fatalf("Marshal: %v", err)
-	}
-	if !strings.Contains(string(out), "tests:") {
-		t.Errorf("YAML output must contain tests key on AugmentedFragment, got:\n%s", out)
-	}
-	if !strings.Contains(string(out), "case1") {
-		t.Errorf("YAML output must contain test data, got:\n%s", out)
-	}
-}
-
 func TestReadSkipsNonYAMLFiles(t *testing.T) {
 	dir := t.TempDir()
 	writeFragmentFixture(t, dir, "fragment.yaml", fixtures.MustRead("fragment/database-full.yaml"))
@@ -1030,8 +1010,116 @@ func TestReadWrapsYAMLErrorInTestFile(t *testing.T) {
 	}
 }
 
-// keep config import live for any future expansion
-var _ = config.Route{}
+func TestLoad_DeterministicOrder(t *testing.T) {
+	// Fragment route matching is first-match-wins in Alertmanager.
+	// Load uses concurrent goroutines whose finish order is non-deterministic,
+	// so the result must be sorted by namespace before returning.
+	// This test asserts the contract: namespace order is always alphabetical.
+	root := t.TempDir()
+
+	// Deliberately create directories whose names are NOT in alphabetical order
+	// so we detect if the sort is missing.
+	names := []string{"echo", "alpha", "delta", "bravo", "charlie"}
+	for _, name := range names {
+		writeFragmentFixture(t, filepath.Join(root, name), "fragment.yaml",
+			fmt.Sprintf(`namespace: %q`, name))
+	}
+
+	const runs = 10
+	for i := range runs {
+		result, err := Load(root)
+		if err != nil {
+			t.Fatalf("run %d: Load() error = %v", i, err)
+		}
+		if len(result.Fragments) != len(names) {
+			t.Fatalf("run %d: got %d fragments, want %d", i, len(result.Fragments), len(names))
+		}
+		for j := 1; j < len(result.Fragments); j++ {
+			prev := result.Fragments[j-1].Fragment.Namespace
+			curr := result.Fragments[j].Fragment.Namespace
+			if prev >= curr {
+				t.Errorf("run %d: fragments not sorted at index %d: %q >= %q", i, j, prev, curr)
+			}
+		}
+	}
+}
+
+func TestParseTestDoc(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		wantNames []string
+		wantTypes []string
+		wantErr   string
+	}{
+		{
+			name: "valid doc stamps type unit on all tests",
+			input: `
+tests:
+  - name: "t1"
+    alert:
+      labels:
+        service: api
+    expect:
+      outcome: active
+      receivers: [default]
+  - name: "t2"
+    alert:
+      labels:
+        service: db
+    expect:
+      outcome: active
+      receivers: [db-team]
+`,
+			wantNames: []string{"t1", "t2"},
+			wantTypes: []string{"unit", "unit"},
+		},
+		{
+			name:      "empty tests list returns empty slice",
+			input:     "tests: []\n",
+			wantNames: []string{},
+		},
+		{
+			name:      "missing tests key returns empty slice",
+			input:     "{}\n",
+			wantNames: []string{},
+		},
+		{
+			name:    "malformed yaml returns error",
+			input:   "tests: [\n  - name: unclosed",
+			wantErr: "yaml",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseTestDoc([]byte(tt.input))
+			if tt.wantErr != "" {
+				if err == nil {
+					t.Fatalf("ParseTestDoc() = nil error, want error containing %q", tt.wantErr)
+				}
+				if !strings.Contains(err.Error(), tt.wantErr) {
+					t.Errorf("ParseTestDoc() error = %q, want %q", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("ParseTestDoc() unexpected error: %v", err)
+			}
+			if len(got) != len(tt.wantNames) {
+				t.Fatalf("ParseTestDoc() returned %d tests, want %d", len(got), len(tt.wantNames))
+			}
+			for i, tc := range got {
+				if tc.Name != tt.wantNames[i] {
+					t.Errorf("test[%d].Name = %q, want %q", i, tc.Name, tt.wantNames[i])
+				}
+				if len(tt.wantTypes) > i && tc.Type != tt.wantTypes[i] {
+					t.Errorf("test[%d].Type = %q, want %q", i, tc.Type, tt.wantTypes[i])
+				}
+			}
+		})
+	}
+}
 
 func writeFragmentFixture(t *testing.T, dir, name, contents string) string {
 	t.Helper()

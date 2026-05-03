@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -18,14 +17,16 @@ import (
 
 const (
 	// DefaultConfigName is the base name of the configuration file.
-	defaultConfigName         = ".litmus"
-	defaultRegressionYamlFile = "regressions.litmus.yml"
-	defaultRegressionDir      = "regressions"
-	defaultConfigDir          = "config"
-	defaultConfigTemplatesDir = "templates"
-	defaultTestsDir           = "tests"
-	defaultFragmentsPattern   = "fragments/*"
-	defaultHistoryKeep        = 5
+	defaultConfigName                    = ".litmus"
+	defaultRegressionYamlFile            = "regressions.litmus.yml"
+	defaultRegressionDir                 = "regressions"
+	defaultConfigDir                     = "config"
+	defaultConfigTemplatesDir            = "templates"
+	defaultTestsDir                      = "tests"
+	defaultFragmentsPattern              = "fragments/*"
+	defaultHistoryKeep                   = 5
+	PolicyTypeTests           PolicyType = "tests"
+	PolicyTypeEnforce         PolicyType = "enforce"
 )
 
 // ConfigKey is the context key for LitmusConfig.
@@ -34,23 +35,20 @@ type ConfigKey struct{}
 // LoggerKey is the context key for logrus.FieldLogger.
 type LoggerKey struct{}
 
-// FromContext retrieves LitmusConfig from context.
-func FromContext(ctx context.Context) *LitmusConfig {
+// ConfigFromContext retrieves LitmusConfig from context.
+func ConfigFromContext(ctx context.Context) *LitmusConfig {
 	if cfg, ok := ctx.Value(ConfigKey{}).(*LitmusConfig); ok {
 		return cfg
 	}
 	return nil
 }
 
-// LoggerFromContext retrieves the logger from context. Returns a discard logger
-// when none is set so callers never need to nil-check.
+// LoggerFromContext retrieves logrus.FieldLogger from context.
 func LoggerFromContext(ctx context.Context) logrus.FieldLogger {
-	if log, ok := ctx.Value(LoggerKey{}).(logrus.FieldLogger); ok {
-		return log
+	if logger, ok := ctx.Value(LoggerKey{}).(logrus.FieldLogger); ok {
+		return logger
 	}
-	l := logrus.New()
-	l.Out = io.Discard
-	return l
+	return nil
 }
 
 // LoadConfig is an alias for New to maintain compatibility with existing callers.

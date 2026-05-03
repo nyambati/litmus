@@ -7,10 +7,12 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 
 	"dario.cat/mergo"
+	"github.com/nyambati/litmus/internal/types"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -105,6 +107,22 @@ func (f *Fragment) validate() error {
 	return errors.Join(errs...)
 }
 
+// ParseTestDoc deserializes a YAML test document and stamps every TestCase
+// with Type="unit". Returns an empty slice (not nil) when tests is empty.
+func ParseTestDoc(data []byte) ([]*types.TestCase, error) {
+	var doc TestDoc
+	if err := yaml.Unmarshal(data, &doc); err != nil {
+		return nil, err
+	}
+	for _, t := range doc.Tests {
+		t.Type = "unit"
+	}
+	if doc.Tests == nil {
+		return []*types.TestCase{}, nil
+	}
+	return doc.Tests, nil
+}
+
 func (f *Fragment) readFile(file string) error {
 	data, err := os.ReadFile(file)
 	if err != nil {
@@ -112,14 +130,11 @@ func (f *Fragment) readFile(file string) error {
 	}
 
 	if isTestFile(file) {
-		var doc TestDoc
-		if err := yaml.Unmarshal(data, &doc); err != nil {
+		parsed, err := ParseTestDoc(data)
+		if err != nil {
 			return fmt.Errorf("parse yaml in %q: %w", file, err)
 		}
-		for _, t := range doc.Tests {
-			t.Type = "unit"
-		}
-		f.Tests = append(f.Tests, doc.Tests...)
+		f.Tests = append(f.Tests, parsed...)
 		return nil
 	}
 
@@ -215,7 +230,6 @@ func Load(dir string) (*LoadResult, error) {
 			results <- resultItem{aug: AugmentedFragment{
 				Fragment: frag,
 				Metadata: meta,
-				Tests:    frag.Tests,
 			}}
 		}(entry)
 	}
@@ -235,6 +249,13 @@ func Load(dir string) (*LoadResult, error) {
 		}
 		finalResult.Fragments = append(finalResult.Fragments, res.aug)
 	}
+
+	// Sort by namespace for deterministic assembly order.
+	// Alertmanager route matching is first-match-wins; without this sort
+	// the goroutine finish order determines routing behaviour between runs.
+	sort.Slice(finalResult.Fragments, func(i, j int) bool {
+		return finalResult.Fragments[i].Fragment.Namespace < finalResult.Fragments[j].Fragment.Namespace
+	})
 
 	return finalResult, nil
 }

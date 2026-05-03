@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"strings"
 
+	litconfig "github.com/nyambati/litmus/internal/config"
 	"github.com/prometheus/alertmanager/config"
 	labels "github.com/prometheus/alertmanager/pkg/labels"
 )
-
-const CheckNegativeOnlyRoutes = "negative_only_routes"
 
 // NegativeOnlyRouteDetector flags routes whose own matchers are exclusively negative.
 type NegativeOnlyRouteDetector struct {
@@ -21,7 +20,9 @@ func NewNegativeOnlyRouteDetector(root *config.Route) *NegativeOnlyRouteDetector
 }
 
 // Name implements Check.
-func (d *NegativeOnlyRouteDetector) Name() string { return CheckNegativeOnlyRoutes }
+func (d *NegativeOnlyRouteDetector) Name() litconfig.SanityCheck {
+	return litconfig.CheckNegativeOnlyRoutes
+}
 
 // Run implements Check.
 func (d *NegativeOnlyRouteDetector) Run(ctx CheckContext) []string {

@@ -11,6 +11,7 @@ import (
 
 	"github.com/nyambati/litmus/internal/fragment"
 	"github.com/nyambati/litmus/internal/types"
+	"github.com/nyambati/litmus/internal/utils"
 	amconfig "github.com/prometheus/alertmanager/config"
 	"github.com/sirupsen/logrus"
 )
@@ -340,36 +341,36 @@ func TestApplyNamespace_NestedRouteReceivers(t *testing.T) {
 	}
 }
 
-// --- groupKey ---
+// --- utils.LabelFormat (via assembler) ---
 
-func TestGroupKey_Deterministic(t *testing.T) {
+func TestLabelFormat_Deterministic(t *testing.T) {
 	m := map[string]string{"team": "db", "scope": "infra"}
-	first, second := groupKey(m), groupKey(m)
+	first, second := utils.LabelFormat(m), utils.LabelFormat(m)
 	if first != second {
 		t.Errorf("groupKey = %q then %q, must be deterministic", first, second)
 	}
 }
 
-func TestGroupKey_OrderIndependent(t *testing.T) {
+func TestLabelFormat_OrderIndependent(t *testing.T) {
 	a := map[string]string{"team": "db", "scope": "infra"}
 	b := map[string]string{"scope": "infra", "team": "db"}
-	if groupKey(a) != groupKey(b) {
-		t.Errorf("groupKey(%v) = %q != groupKey(%v) = %q; must be order-independent",
-			a, groupKey(a), b, groupKey(b))
+	if utils.LabelFormat(a) != utils.LabelFormat(b) {
+		t.Errorf("utils.LabelFormat(%v) = %q != utils.LabelFormat(%v) = %q; must be order-independent",
+			a, utils.LabelFormat(a), b, utils.LabelFormat(b))
 	}
 }
 
-func TestGroupKey_DifferentLabelsDifferentKeys(t *testing.T) {
+func TestLabelFormat_DifferentLabelsDifferentKeys(t *testing.T) {
 	a := map[string]string{"team": "db"}
 	b := map[string]string{"team": "payments"}
-	if groupKey(a) == groupKey(b) {
-		t.Errorf("different labels produced same key %q", groupKey(a))
+	if utils.LabelFormat(a) == utils.LabelFormat(b) {
+		t.Errorf("different labels produced same key %q", utils.LabelFormat(a))
 	}
 }
 
-func TestGroupKey_EmptyMap(t *testing.T) {
-	if k := groupKey(nil); k != "" {
-		t.Errorf("groupKey(nil) = %q, want empty string", k)
+func TestLabelFormat_EmptyMap(t *testing.T) {
+	if k := utils.LabelFormat(nil); k != "" {
+		t.Errorf("utils.LabelFormat(nil) = %q, want empty string", k)
 	}
 }
 
@@ -396,14 +397,14 @@ func TestMergeFlat_AppendsAllFields(t *testing.T) {
 // --- rootSnapshot ---
 
 func TestRootSnapshot_CapturesRoutesAndReceivers(t *testing.T) {
-	root := &types.AlertmanagerConfig{
+	cfg := &types.AlertmanagerConfig{
 		Route: &amconfig.Route{
 			Receiver: "default",
 			Routes:   []*amconfig.Route{{Receiver: "critical"}, {Receiver: "warning"}},
 		},
 		Receivers: []*types.Receiver{{Name: "default"}, {Name: "critical"}},
 	}
-	snap := rootSnapshot(root)
+	snap := getRootFragment(cfg, []*types.TestCase{})
 
 	if snap.Namespace != "root" {
 		t.Errorf("Namespace = %q, want \"root\"", snap.Namespace)
@@ -417,8 +418,8 @@ func TestRootSnapshot_CapturesRoutesAndReceivers(t *testing.T) {
 }
 
 func TestRootSnapshot_NilRouteSafe(t *testing.T) {
-	root := &types.AlertmanagerConfig{Receivers: []*types.Receiver{{Name: "default"}}}
-	snap := rootSnapshot(root)
+	cfg := &types.AlertmanagerConfig{Receivers: []*types.Receiver{{Name: "default"}}}
+	snap := getRootFragment(cfg, []*types.TestCase{})
 
 	if snap.Namespace != "root" {
 		t.Errorf("Namespace = %q, want \"root\"", snap.Namespace)
@@ -429,24 +430,24 @@ func TestRootSnapshot_NilRouteSafe(t *testing.T) {
 }
 
 func TestRootSnapshot_IsIsolatedFromSubsequentMutations(t *testing.T) {
-	root := &types.AlertmanagerConfig{
+	cfg := &types.AlertmanagerConfig{
 		Route:     &amconfig.Route{Receiver: "default", Routes: []*amconfig.Route{{Receiver: "root-only"}}},
 		Receivers: []*types.Receiver{{Name: "default"}},
 	}
-	snap := rootSnapshot(root)
+	snap := getRootFragment(cfg, []*types.TestCase{})
 
 	// simulate what assemble() does — appends a fragment route to root
 	frag := &fragment.Fragment{
 		Namespace: "db",
 		Routes:    []*amconfig.Route{{Receiver: "db-critical"}},
 	}
-	if err := assemble(root, augment([]*fragment.Fragment{frag}), nopLogger()); err != nil {
+	if err := assemble(cfg, augment([]*fragment.Fragment{frag}), nopLogger()); err != nil {
 		t.Fatalf("assemble: %v", err)
 	}
 
 	// root now has 2 routes; snapshot must still have 1
-	if len(root.Route.Routes) != 2 {
-		t.Fatalf("root.Routes length = %d, want 2 after assemble", len(root.Route.Routes))
+	if len(cfg.Route.Routes) != 2 {
+		t.Fatalf("root.Routes length = %d, want 2 after assemble", len(cfg.Route.Routes))
 	}
 	if len(snap.Routes) != 1 {
 		t.Errorf("snapshot Routes length = %d, want 1 (must not reflect post-assemble mutation)", len(snap.Routes))

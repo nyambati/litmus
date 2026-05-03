@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"maps"
 	"os"
@@ -22,12 +21,12 @@ import (
 // In strict mode, drift causes an error and prints a diff.
 // Otherwise, drift only prints a warning and does not block the snapshot creation.
 func RunSnapshot(cfg *config.LitmusConfig, logger logrus.FieldLogger, update, strict bool) error {
-	ws, err := workspace.Load(cfg.Workspace.Root, logger)
+	ws, err := workspace.Load(cfg, logger)
 	if err != nil {
 		return err
 	}
 
-	amCfg, err := ws.Config()
+	amCfg, err := ws.AMConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load alertmanager config: %w", err)
 	}
@@ -56,14 +55,14 @@ func RunSnapshot(cfg *config.LitmusConfig, logger logrus.FieldLogger, update, st
 	regTests := BuildRegressionTests(outcomes, cfg.GlobalLabels)
 
 	var existing []*types.TestCase
-	existingHistory, err := ListHistory(cfg.RegressionsDir())
-	hasHistory := err == nil && len(existingHistory) > 0
+	existingHistory, histErr := ListHistory(cfg.RegressionsDir())
+	if histErr != nil {
+		return fmt.Errorf("listing regression history: %w", histErr)
+	}
+	hasHistory := len(existingHistory) > 0
 
-	state, err := LoadRegressionState(cfg.RegressionsYamlFilePath())
-	if err == nil && state != nil {
-		existing = state.Tests
-	} else if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("reading existing baseline: %w", err)
+	if ws.RegressionState != nil {
+		existing = ws.RegressionState.Tests
 	}
 
 	hasDrift := false
@@ -78,7 +77,7 @@ func RunSnapshot(cfg *config.LitmusConfig, logger logrus.FieldLogger, update, st
 		}
 	}
 
-	if err := os.MkdirAll(cfg.RegressionsDir(), 0755); err != nil {
+	if err := os.MkdirAll(cfg.RegressionsDir(), 0o755); err != nil {
 		return fmt.Errorf("creating regression directory: %w", err)
 	}
 

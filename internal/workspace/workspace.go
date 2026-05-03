@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/nyambati/litmus/internal/codec"
+	"github.com/nyambati/litmus/internal/config"
 	"github.com/nyambati/litmus/internal/fragment"
 	"github.com/nyambati/litmus/internal/types"
 	amconfig "github.com/prometheus/alertmanager/config"
@@ -17,43 +19,45 @@ import (
 
 const maxFileSize = 10 * 1024 * 1024 // 10MB
 
-func New(dir string, logger logrus.FieldLogger) *Workspace {
+// New creates a new workspace from a LitmusConfig.
+func New(cfg *config.LitmusConfig, logger logrus.FieldLogger) *Workspace {
 	if logger == nil {
 		l := logrus.New()
 		l.Out = io.Discard
 		logger = l
 	}
 	return &Workspace{
-		dir:    dir,
+		cfg:    cfg,
+		dir:    cfg.Workspace.Root,
 		logger: logger,
 	}
 }
 
-// Fragments returns the loaded child fragments.
-func (w *Workspace) Fragments() []*fragment.Fragment { return w.fragments }
-
-// Tests returns root-level test cases.
-func (w *Workspace) Tests() []*types.TestCase { return w.tests }
-
-// RootFragment returns the pre-assembly snapshot of the root fragment (for policy checks).
-func (w *Workspace) RootFragment() *fragment.Fragment { return w.rootFragment }
-
-func (w *Workspace) Config() (*amconfig.Config, error) {
-	if w.root == nil {
+func (w *Workspace) AMConfig() (*amconfig.Config, error) {
+	if w.Config == nil {
 		return nil, fmt.Errorf("workspace not assembled: call Assemble() first")
 	}
-	s := w.root.String()
-	if s == "" {
-		return nil, fmt.Errorf("failed to serialize alertmanager config (check stderr for encoding error)")
+	data, err := w.Config.Marshal()
+	if err != nil {
+		return nil, fmt.Errorf("serializing alertmanager config: %w", err)
 	}
-	return amconfig.Load(s)
+	return amconfig.Load(string(data))
 }
 
 func (w *Workspace) ConfigString() string {
-	if w.root == nil {
+	if w.Config == nil {
 		return ""
 	}
-	return w.root.String()
+	return w.Config.String()
+}
+
+// Tests returns all behavioral test cases from all loaded fragments.
+func (w *Workspace) Tests() []*types.TestCase {
+	var tests []*types.TestCase
+	for _, f := range w.Fragments {
+		tests = append(tests, f.Tests...)
+	}
+	return tests
 }
 
 func (w *Workspace) read() (*Metadata, error) {
@@ -75,19 +79,19 @@ func (w *Workspace) read() (*Metadata, error) {
 		return nil, err
 	}
 
-	root, err := readBase(basePath)
+	cfg, err := readBase(basePath)
 	if err != nil {
 		return nil, err
 	}
 
-	w.root = root
+	w.Config = cfg
 
 	tests, testFiles, err := readRootTests(filepath.Join(absPath, "tests"))
 	if err != nil {
 		return nil, err
 	}
 
-	w.tests = tests
+	w.Fragments = append(w.Fragments, getRootFragment(w.Config, tests))
 
 	return &Metadata{
 		Dir:       absPath,
@@ -135,14 +139,11 @@ func readRootTests(testsDir string) ([]*types.TestCase, []string, error) {
 		if err != nil {
 			return fmt.Errorf("read test file %q: %w", path, err)
 		}
-		var doc fragment.TestDoc
-		if err := yaml.Unmarshal(data, &doc); err != nil {
+		parsed, err := fragment.ParseTestDoc(data)
+		if err != nil {
 			return fmt.Errorf("parse yaml in %q: %w", path, err)
 		}
-		for _, tc := range doc.Tests {
-			tc.Type = "unit"
-		}
-		tests = append(tests, doc.Tests...)
+		tests = append(tests, parsed...)
 		files = append(files, path)
 		return nil
 	})
@@ -207,4 +208,109 @@ func readBase(path string) (*types.AlertmanagerConfig, error) {
 		return nil, fmt.Errorf("parse alertmanager config %q: %w", path, err)
 	}
 	return &cfg, nil
+}
+
+// rootSnapshot captures the root's own routes and receivers before assembly
+// merges child fragment data into root. The snapshot is used so PolicyChecker
+// can evaluate the root independently without seeing fragment contributions.
+func getRootFragment(root *types.AlertmanagerConfig, tests []*types.TestCase) *fragment.Fragment {
+	frag := &fragment.Fragment{
+		Namespace: "root",
+		Tests:     tests,
+	}
+	if root.Route != nil && len(root.Route.Routes) > 0 {
+		frag.Routes = append([]*amconfig.Route{}, root.Route.Routes...)
+	}
+	if len(root.Receivers) > 0 {
+		frag.Receivers = append([]*types.Receiver{}, root.Receivers...)
+	}
+	return frag
+}
+
+// GetRegressionState reads the regression state (ID + tests) from regressions.litmus.yml.
+func readRegressionState(path string) (*types.RegressionState, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var state types.RegressionState
+	if err := yaml.Unmarshal(data, &state); err != nil {
+		return nil, fmt.Errorf("parsing regression state %q: %w", path, err)
+	}
+	return &state, nil
+}
+
+// loadRegressionState loads the regression state into the workspace.
+func (w *Workspace) loadRegressionState() error {
+	if w.cfg == nil {
+		return fmt.Errorf("missing litmus configuration")
+	}
+	regPath := w.cfg.RegressionsYamlFilePath()
+	state, err := readRegressionState(regPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		w.logger.Warnf("loading regression state: %v", err)
+		return err
+	}
+	w.RegressionState = state
+	return nil
+}
+
+// EnsureRegressionState ensures the regression state is loaded into the workspace.
+func (w *Workspace) EnsureRegressionState() error {
+	return w.loadRegressionState()
+}
+
+// SaveRegressionState writes the regression state (ID + tests) to regressions.litmus.yml.
+func (w *Workspace) SaveRegressionState(state *types.RegressionState) error {
+	if w.cfg == nil {
+		return fmt.Errorf("no config set on workspace")
+	}
+	return SaveRegressionState(w.cfg.RegressionsYamlFilePath(), state)
+}
+
+// LoadBaseline reads a msgpack regression baseline from disk.
+func LoadBaseline(path string) ([]*types.TestCase, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = file.Close() }()
+
+	var tests []*types.TestCase
+	if err := codec.DecodeMsgPack(file, &tests); err != nil {
+		return nil, fmt.Errorf("decoding baseline %q: %w", path, err)
+	}
+	return tests, nil
+}
+
+// LoadBaselineYAML reads a YAML regression baseline from disk.
+func LoadBaselineYAML(path string) ([]*types.TestCase, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var tests []*types.TestCase
+	if err := yaml.Unmarshal(data, &tests); err != nil {
+		return nil, fmt.Errorf("parsing baseline YAML %q: %w", path, err)
+	}
+	return tests, nil
+}
+
+// SaveRegressionState writes the regression state (ID + tests) to regressions.litmus.yml.
+func SaveRegressionState(path string, state *types.RegressionState) error {
+	data, err := yaml.Marshal(state)
+	if err != nil {
+		return fmt.Errorf("serializing regression state: %w", err)
+	}
+
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		return err
+	}
+
+	return nil
 }

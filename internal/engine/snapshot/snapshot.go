@@ -29,12 +29,13 @@ type SnapshotSynthesizer struct {
 }
 
 // NewSnapshotSynthesizer creates synthesizer for snapshot generation.
+// Pass nil for logger to discard all log output.
 func NewSnapshotSynthesizer(runner *pipeline.Runner) *SnapshotSynthesizer {
 	return &SnapshotSynthesizer{
 		runner:       runner,
 		expander:     NewRegexExpander(),
 		combGen:      NewLabelCombinationGenerator(5),
-		failureLimit: 100, // Allow up to 100 failures before returning error
+		failureLimit: 100,
 	}
 }
 
@@ -78,7 +79,6 @@ func (ss *SnapshotSynthesizer) DiscoverOutcomes(ctx context.Context, paths []*Ro
 
 			outcome, err := ss.runner.Execute(ctx, labelSet)
 			if err != nil {
-				log.Printf("synthesis: pipeline execution failed for labels %v: %v", labels, err)
 				ss.failureCount++
 				if ss.failureCount > ss.failureLimit {
 					return nil, fmt.Errorf("synthesis failed: exceeded maximum failures (%d)", ss.failureLimit)

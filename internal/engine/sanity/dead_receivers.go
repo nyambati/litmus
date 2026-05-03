@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	litconfig "github.com/nyambati/litmus/internal/config"
 	"github.com/prometheus/alertmanager/config"
 )
-
-const CheckDeadReceivers = "dead_receivers"
 
 // DeadReceiverDetector flags routes whose cumulative ancestor matchers make them
 // permanently unreachable — a vertical complement to the sibling-focused ShadowedRouteDetector.
@@ -35,7 +34,9 @@ type contradiction struct {
 }
 
 // Name implements Check.
-func (d *DeadReceiverDetector) Name() string { return CheckDeadReceivers }
+func (d *DeadReceiverDetector) Name() litconfig.SanityCheck {
+	return litconfig.CheckDeadReceivers
+}
 
 // Run implements Check.
 func (d *DeadReceiverDetector) Run(ctx CheckContext) []string {

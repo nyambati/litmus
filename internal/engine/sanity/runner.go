@@ -6,16 +6,16 @@ import (
 
 // CheckResult holds the outcome of a single sanity check run.
 type CheckResult struct {
-	Name   string
+	Name   config.SanityCheck
 	Issues []string
 	Mode   config.SanityMode
 }
 
 // CheckEntry holds the serialisable result for a single check.
 type CheckEntry struct {
-	Name   string   `json:"name"`
-	Mode   string   `json:"mode"`
-	Issues []string `json:"issues,omitempty"`
+	Name   config.SanityCheck `json:"name"`
+	Mode   string             `json:"mode"`
+	Issues []string           `json:"issues,omitempty"`
 }
 
 // Result holds the aggregated results of all static analysis checks.
@@ -44,11 +44,11 @@ func Run(ctx CheckContext, cfg config.SanityConfig) Result {
 // Runner executes a set of registered checks and looks up their mode from config.
 type Runner struct {
 	checks []Check
-	modeFn func(string) config.SanityMode
+	modeFn func(config.SanityCheck) config.SanityMode
 }
 
 // NewRunner creates a runner with the given mode-lookup function and checks.
-func NewRunner(modeFn func(string) config.SanityMode, checks ...Check) *Runner {
+func NewRunner(modeFn func(config.SanityCheck) config.SanityMode, checks ...Check) *Runner {
 	return &Runner{checks: checks, modeFn: modeFn}
 }
 
@@ -73,6 +73,8 @@ func DefaultRunner(cfg config.SanityConfig) *Runner {
 		&InhibitionCycleDetector{},
 		&DeadReceiverDetector{},
 		&NegativeOnlyRouteDetector{},
-		&PolicyChecker{},
+		&RegressionChecker{},
+		&RequireTestsChecker{},
+		&EnforceChecker{},
 	)
 }

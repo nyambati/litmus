@@ -11,12 +11,13 @@ func ExactMatch(actual, expected []string) bool {
 	if len(actual) != len(expected) {
 		return false
 	}
-	actualMap := make(map[string]bool)
+	counts := make(map[string]int, len(actual))
 	for _, r := range actual {
-		actualMap[r] = true
+		counts[r]++
 	}
 	for _, r := range expected {
-		if !actualMap[r] {
+		counts[r]--
+		if counts[r] < 0 {
 			return false
 		}
 	}

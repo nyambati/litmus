@@ -3,10 +3,9 @@ package sanity
 import (
 	"fmt"
 
+	litconfig "github.com/nyambati/litmus/internal/config"
 	"github.com/prometheus/alertmanager/config"
 )
-
-const CheckOrphanReceivers = "orphan_receivers"
 
 // OrphanReceiverDetector detects receivers defined but never referenced by any route.
 type OrphanReceiverDetector struct {
@@ -20,7 +19,9 @@ func NewOrphanReceiverDetector(root *config.Route, receivers map[string]*config.
 }
 
 // Name implements Check.
-func (ord *OrphanReceiverDetector) Name() string { return CheckOrphanReceivers }
+func (ord *OrphanReceiverDetector) Name() litconfig.SanityCheck {
+	return litconfig.CheckOrphanReceivers
+}
 
 // Run implements Check.
 func (ord *OrphanReceiverDetector) Run(ctx CheckContext) []string {

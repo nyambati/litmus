@@ -28,7 +28,7 @@ func newHistoryListCmd() *cobra.Command {
 		Long:         "Display all baseline versions with the currently active version marked.",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg := config.FromContext(cmd.Context())
+			cfg := config.ConfigFromContext(cmd.Context())
 			return cli.RunHistoryList(cfg, cmd)
 		},
 	}
@@ -43,7 +43,7 @@ func newHistoryRollbackCmd() *cobra.Command {
 		Args:         cobra.ExactArgs(1),
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg := config.FromContext(cmd.Context())
+			cfg := config.ConfigFromContext(cmd.Context())
 			return cli.RunHistoryRollback(cfg, cmd, args[0])
 		},
 	}

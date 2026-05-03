@@ -4,8 +4,32 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 )
+
+// LabelFormat returns a stable, order-independent string key for a label map.
+// Output format: "k1=v1,k2=v2,..." sorted by key. Nil or empty map returns "".
+func LabelFormat(m map[string]string) string {
+	if len(m) == 0 {
+		return ""
+	}
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	var b strings.Builder
+	for i, k := range keys {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString(k)
+		b.WriteByte('=')
+		b.WriteString(m[k])
+	}
+	return b.String()
+}
 
 func ExpandEnvVars(s string) (string, error) {
 	var envPattern = regexp.MustCompile(`env\(([A-Za-z_][A-Za-z0-9_]*)\)`)

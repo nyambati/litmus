@@ -68,6 +68,18 @@ func TestExactMatch(t *testing.T) {
 			want:     false,
 		},
 		{
+			name:     "duplicate in expected masks missing actual element",
+			actual:   []string{"a", "b"},
+			expected: []string{"a", "a"},
+			want:     false,
+		},
+		{
+			name:     "duplicate in actual not in expected",
+			actual:   []string{"a", "a"},
+			expected: []string{"a", "b"},
+			want:     false,
+		},
+		{
 			name:     "case sensitive - different cases",
 			actual:   []string{"Slack"},
 			expected: []string{"slack"},

@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"github.com/nyambati/litmus/internal/config"
 	"github.com/nyambati/litmus/internal/fragment"
 	"github.com/nyambati/litmus/internal/types"
 	amconfig "github.com/prometheus/alertmanager/config"
@@ -9,12 +10,12 @@ import (
 
 type (
 	Workspace struct {
-		root         *types.AlertmanagerConfig `yaml:"root,omitempty"`
-		tests        []*types.TestCase         `yaml:"tests,omitempty"`
-		fragments    []*fragment.Fragment
-		rootFragment *fragment.Fragment `yaml:"-"`
-		logger       logrus.FieldLogger `yaml:"-"`
-		dir          string             `yaml:"-"`
+		Config          *types.AlertmanagerConfig
+		Fragments       []*fragment.Fragment
+		RegressionState *types.RegressionState
+		cfg             *config.LitmusConfig
+		logger          logrus.FieldLogger
+		dir             string
 	}
 
 	Metadata struct {

@@ -1,15 +1,22 @@
 package cmd
 
 import (
+	"context"
 	"os"
 	"testing"
 
+	"github.com/nyambati/litmus/internal/config"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
+
+var testLogger = logrus.FieldLogger(logrus.New())
 
 func execCheck(args []string) error {
 	cmd := withConfig(newCheckCmd())
 	cmd.SetArgs(args)
+	ctx := context.WithValue(context.Background(), config.LoggerKey{}, testLogger)
+	cmd.SetContext(ctx)
 	return cmd.Execute()
 }
 

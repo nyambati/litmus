@@ -3,10 +3,9 @@ package sanity
 import (
 	"fmt"
 
+	litconfig "github.com/nyambati/litmus/internal/config"
 	"github.com/prometheus/alertmanager/config"
 )
-
-const CheckShadowedRoutes = "shadowed_routes"
 
 // ShadowedRouteDetector detects unreachable routes.
 type ShadowedRouteDetector struct {
@@ -19,7 +18,9 @@ func NewShadowedRouteDetector(root *config.Route) *ShadowedRouteDetector {
 }
 
 // Name implements Check.
-func (srd *ShadowedRouteDetector) Name() string { return CheckShadowedRoutes }
+func (srd *ShadowedRouteDetector) Name() litconfig.SanityCheck {
+	return litconfig.CheckShadowedRoutes
+}
 
 // Run implements Check.
 func (srd *ShadowedRouteDetector) Run(ctx CheckContext) []string {

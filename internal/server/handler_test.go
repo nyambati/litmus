@@ -35,9 +35,9 @@ workspace:
   fragments: "fragments/*"
   history: 3
 global_labels: {}
-`), 0600))
+`), 0o600))
 
-	require.NoError(t, os.MkdirAll("config/tests", 0755))
+	require.NoError(t, os.MkdirAll("config/tests", 0o755))
 	require.NoError(t, os.WriteFile("config/alertmanager.yml", []byte(`
 global:
   resolve_timeout: 5m
@@ -45,11 +45,11 @@ route:
   receiver: 'default'
 receivers:
   - name: 'default'
-`), 0600))
+`), 0o600))
 
 	// Fragment in its own subdirectory — fragment.Load only processes dirs.
 	// Explicit namespace "db-team" so receiver names are predictable: db-team-db-critical.
-	require.NoError(t, os.MkdirAll("config/fragments/db-team", 0755))
+	require.NoError(t, os.MkdirAll("config/fragments/db-team", 0o755))
 	require.NoError(t, os.WriteFile("config/fragments/db-team/fragment.yml", []byte(`
 namespace: "db-team"
 group:
@@ -61,7 +61,7 @@ routes:
       service: "mysql"
 receivers:
   - name: "db-critical"
-`), 0600))
+`), 0o600))
 	require.NoError(t, os.WriteFile("config/fragments/db-team/db-team-tests.yml", []byte(`
 tests:
   - name: "mysql routes to db-critical"
@@ -74,7 +74,7 @@ tests:
       outcome: "active"
       receivers:
         - "db-team-db-critical"
-`), 0600))
+`), 0o600))
 
 	cfg, err := config.LoadConfig()
 	require.NoError(t, err)
@@ -95,16 +95,16 @@ workspace:
   fragments: "fragments/*"
   history: 3
 global_labels: {}
-`), 0600))
+`), 0o600))
 
-	require.NoError(t, os.MkdirAll("config/tests", 0755))
-	require.NoError(t, os.MkdirAll("config/fragments", 0755))
+	require.NoError(t, os.MkdirAll("config/tests", 0o755))
+	require.NoError(t, os.MkdirAll("config/fragments", 0o755))
 	require.NoError(t, os.WriteFile("config/alertmanager.yml", []byte(`
 route:
   receiver: 'default'
 receivers:
   - name: 'default'
-`), 0600))
+`), 0o600))
 	require.NoError(t, os.WriteFile("config/tests/root.yml", []byte(`
 tests:
   - name: "root test"
@@ -116,7 +116,7 @@ tests:
       outcome: "active"
       receivers:
         - "default"
-`), 0600))
+`), 0o600))
 
 	cfg, err := config.LoadConfig()
 	require.NoError(t, err)
@@ -200,7 +200,7 @@ func TestConfigHandler_ExposesWorkspaceAndFragmentCount(t *testing.T) {
 	assert.NotEmpty(t, resp.ConfigPath)
 	assert.Equal(t, "config", resp.Workspace.Root)
 	assert.Equal(t, "fragments/*", resp.Workspace.Fragments)
-	assert.Equal(t, 1, resp.FragmentCount, "db-team fragment")
+	assert.Equal(t, 2, resp.FragmentCount, "root + db-team fragments")
 }
 
 func TestFragmentsHandler_ListsFragmentsWithMetadata(t *testing.T) {
@@ -214,7 +214,7 @@ func TestFragmentsHandler_ListsFragmentsWithMetadata(t *testing.T) {
 	var frags []FragmentInfo
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &frags))
 
-	require.Len(t, frags, 1, "db-team")
+	require.Len(t, frags, 2, "root + db-team")
 
 	var dbFrag *FragmentInfo
 	for i := range frags {
@@ -241,4 +241,15 @@ func TestRunTestsHandler_DoesNotDuplicateRootTests(t *testing.T) {
 	var results []map[string]any
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &results))
 	require.Len(t, results, 1)
+}
+
+func TestGetLogger_FallbackDoesNotPanic(t *testing.T) {
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	// No logger injected into context — exercises the fallback path.
+	// Use Info (default level) so logrus actually attempts to write to Out.
+	require.NotPanics(t, func() {
+		l := getLogger(c)
+		l.Info("probe")
+	})
 }
