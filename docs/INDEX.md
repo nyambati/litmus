@@ -29,7 +29,7 @@ Welcome to Litmus documentation. Choose your starting point:
 - **[Project Organization](project_organization.md)** — Directory structure and module layout
 
 ### Standards & Practices
-- **[Engineering Standards](engineering_standards.md)** — Coding standards and guidelines
+- **[Engineering Standards](engineering/standards.md)** — Coding standards and guidelines
 
 ---
 
@@ -44,7 +44,7 @@ Welcome to Litmus documentation. Choose your starting point:
 | "Why does Litmus exist?" | [Whitepaper](whitepaper.md) |
 | "How is it designed?" | [Architecture](architecture.md) |
 | "What's next?" | [Backlog](backlog.md) |
-| "How do I contribute?" | [Engineering Standards](engineering_standards.md) |
+| "How do I contribute?" | [Engineering Standards](engineering/standards.md) |
 
 ---
 
@@ -81,8 +81,8 @@ A: Check [Backlog](backlog.md).
 
 ### Contributor-Facing
 - **project_organization.md** — Project structure
-- **engineering_standards.md** — Coding standards
+- **engineering/standards.md** — Coding standards
 
 ---
 
-Last Updated: 2026-05-03
+Last Updated: 2026-05-04

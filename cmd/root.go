@@ -1,5 +1,5 @@
 /*
-Copyright © 2026 NAME HERE <EMAIL ADDRESS>
+Copyright © 2026 Thomas Nyambati <thomasnyambati@gmail.com>
 */
 package cmd
 
@@ -13,13 +13,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const version = "0.1.0"
-
 var rootCmd = &cobra.Command{
-	Use:          "litmus",
-	Short:        "Litmus - Alertmanager Validator",
-	Long:         "Litmus validates Alertmanager configurations through regression and behavioral testing",
-	Version:      version,
+	Use:   "litmus",
+	Short: "Litmus - Alertmanager Validator",
+	Long:  "Litmus validates Alertmanager configurations through regression and behavioral testing",
+	// Version:      version,
 	SilenceUsage: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.New()
@@ -41,6 +39,11 @@ var rootCmd = &cobra.Command{
 		cmd.SetContext(ctx)
 		return nil
 	},
+}
+
+// SetVersion injects the build-time version into the root command.
+func SetVersion(v string) {
+	rootCmd.Version = v
 }
 
 func Execute() {
