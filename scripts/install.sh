@@ -14,7 +14,7 @@ OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 case "${OS}" in
   linux*)   OS='linux';;
   darwin*)  OS='darwin';;
-  msys*)    OS='windows';;
+  msys*)    OS='windows'; BINARY="${BINARY}.exe";;
   *)        echo "OS ${OS} not supported"; exit 1;;
 esac
 
