@@ -26,7 +26,7 @@ builds:
 
 archives:
   - id: default
-    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
       - .gitattributes
       - README.md
@@ -35,15 +35,55 @@ archives:
 
 release:
   github:
-    owner: thomasnyambati
+    owner: nyambati
     name: litmus
-  draft: false
-  prerelease: false
-  name_template: 'Release {{.Version}}'
+  draft: true
+  prerelease: auto
+  name_template: '{{.Version}}'
+
+dockers:
+  - image_templates:
+      - "ghcr.io/nyambati/litmus:{{ .Tag }}"
+      - "ghcr.io/nyambati/litmus:latest"
+    dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+      - "--build-arg=VERSION={{.Version}}"
+    goos: linux
+    goarch: amd64
+
+  - image_templates:
+      - "ghcr.io/nyambati/litmus:{{ .Tag }}-arm64"
+    dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+      - "--build-arg=VERSION={{.Version}}"
+    goos: linux
+    goarch: arm64
+
+docker_manifests:
+  - name_template: "ghcr.io/nyambati/litmus:{{ .Tag }}"
+    image_templates:
+      - "ghcr.io/nyambati/litmus:{{ .Tag }}"
+      - "ghcr.io/nyambati/litmus:{{ .Tag }}-arm64"
+  - name_template: "ghcr.io/nyambati/litmus:latest"
+    image_templates:
+      - "ghcr.io/nyambati/litmus:{{ .Tag }}"
+      - "ghcr.io/nyambati/litmus:{{ .Tag }}-arm64"
 
 changelog:
   sort: asc
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
+      - "^docs:"
+      - "^test:"

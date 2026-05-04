@@ -166,7 +166,7 @@ See [Backlog](docs/backlog.md) for planned features.
 
 ## Contributing
 
-Contributions welcome! See [Engineering Standards](docs/engineering_standards.md).
+Contributions welcome! See [Engineering Standards](docs/engineering/standards.md).
 
 ---
 

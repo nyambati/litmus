@@ -12,7 +12,10 @@ import (
 //go:embed ui/dist/*
 var staticFiles embed.FS
 
+var version = "dev"
+
 func main() {
+	cmd.SetVersion(version)
 	publicFS, err := fs.Sub(staticFiles, "ui/dist")
 	if err != nil {
 		log.Fatalf("failed to initialize UI filesystem: %v", err)
