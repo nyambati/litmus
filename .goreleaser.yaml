@@ -40,24 +40,23 @@ release:
   prerelease: auto
   name_template: '{{.Version}}'
 
-dockers_v2:
-  - images:
-      - "ghcr.io/nyambati/litmus"
-    tags:
-      - "{{ .Tag }}"
-      - "latest"
+dockers:
+  - ids:
+      - litmus
+    image_templates:
+      - "ghcr.io/nyambati/litmus:{{ .Tag }}"
+      - "ghcr.io/nyambati/litmus:latest"
     dockerfile: Dockerfile
-    platforms:
-      - linux/amd64
-      - linux/arm64
-    labels:
-      org.opencontainers.image.created: "{{.Date}}"
-      org.opencontainers.image.title: "{{.ProjectName}}"
-      org.opencontainers.image.revision: "{{.FullCommit}}"
-      org.opencontainers.image.version: "{{.Version}}"
-      org.opencontainers.image.source: "{{.GitURL}}"
-    build_args:
-      VERSION: "{{.Version}}"
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64,linux/arm64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+    extra_files:
+      - LICENSE
 
 changelog:
   sort: asc
