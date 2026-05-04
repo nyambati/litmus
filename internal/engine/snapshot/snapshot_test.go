@@ -37,7 +37,7 @@ func TestSnapshotSynthesizer_DiscoverOutcomes(t *testing.T) {
 		},
 	}
 
-	synth := NewSnapshotSynthesizer(runner)
+	synth := NewSnapshotSynthesizer(runner, nil)
 	results, err := synth.DiscoverOutcomes(context.Background(), paths)
 	require.NoError(t, err)
 
@@ -91,7 +91,7 @@ func TestSnapshotSynthesizer_SkipsNegativeOnlyRouteWithReason(t *testing.T) {
 	)
 
 	paths := NewRouteWalker(root).FindTerminalPaths()
-	synth := NewSnapshotSynthesizer(runner)
+	synth := NewSnapshotSynthesizer(runner, nil)
 	results, err := synth.DiscoverOutcomes(context.Background(), paths)
 	require.NoError(t, err)
 	require.Empty(t, results, "negative-only routes are not synthesizable and should be skipped")
@@ -128,7 +128,7 @@ func TestSnapshotSynthesizer_WarnsWhenNegativeMatchersReduceCoverage(t *testing.
 	)
 
 	paths := NewRouteWalker(root).FindTerminalPaths()
-	synth := NewSnapshotSynthesizer(runner)
+	synth := NewSnapshotSynthesizer(runner, nil)
 	results, err := synth.DiscoverOutcomes(context.Background(), paths)
 	require.NoError(t, err)
 	require.NotEmpty(t, results, "positive constraints should still produce a synthesized outcome")
@@ -156,7 +156,7 @@ func TestNewSnapshotSynthesizer_NilLoggerDoesNotPanic(t *testing.T) {
 		nil,
 	)
 	require.NotPanics(t, func() {
-		s := NewSnapshotSynthesizer(runner)
+		s := NewSnapshotSynthesizer(runner, nil)
 		_, _ = s.DiscoverOutcomes(context.Background(), nil)
 	})
 }

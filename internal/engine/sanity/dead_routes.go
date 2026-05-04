@@ -8,15 +8,15 @@ import (
 	"github.com/prometheus/alertmanager/config"
 )
 
-// DeadReceiverDetector flags routes whose cumulative ancestor matchers make them
-// permanently unreachable — a vertical complement to the sibling-focused ShadowedRouteDetector.
-type DeadReceiverDetector struct {
+// DeadRouteDetector flags routes whose cumulative ancestor matchers make them
+// permanently unreachable due to contradictions — a vertical complement to the sibling-focused ShadowedRouteDetector.
+type DeadRouteDetector struct {
 	root *config.Route
 }
 
-// NewDeadReceiverDetector creates a detector for the given route tree.
-func NewDeadReceiverDetector(root *config.Route) *DeadReceiverDetector {
-	return &DeadReceiverDetector{root: root}
+// NewDeadRouteDetector creates a detector for the given route tree.
+func NewDeadRouteDetector(root *config.Route) *DeadRouteDetector {
+	return &DeadRouteDetector{root: root}
 }
 
 // contradiction describes a pair of irreconcilable matchers on the same label.
@@ -34,18 +34,18 @@ type contradiction struct {
 }
 
 // Name implements Check.
-func (d *DeadReceiverDetector) Name() litconfig.SanityCheck {
-	return litconfig.CheckDeadReceivers
+func (d *DeadRouteDetector) Name() litconfig.SanityCheck {
+	return litconfig.CheckDeadRoutes
 }
 
 // Run implements Check.
-func (d *DeadReceiverDetector) Run(ctx CheckContext) []string {
-	return NewDeadReceiverDetector(ctx.Route).Detect()
+func (d *DeadRouteDetector) Run(ctx CheckContext) []string {
+	return NewDeadRouteDetector(ctx.Route).Detect()
 }
 
 // Detect returns one issue string per dead route. When a contradiction is found,
 // recursion into that subtree stops — descendants are implied dead and not re-reported.
-func (d *DeadReceiverDetector) Detect() []string {
+func (d *DeadRouteDetector) Detect() []string {
 	if d.root == nil {
 		return nil
 	}
@@ -58,7 +58,7 @@ func (d *DeadReceiverDetector) Detect() []string {
 	return issues
 }
 
-func (d *DeadReceiverDetector) walk(route *config.Route, inherited []sanityMatcher, crumb []string) []string {
+func (d *DeadRouteDetector) walk(route *config.Route, inherited []sanityMatcher, crumb []string) []string {
 	if route == nil {
 		return nil
 	}

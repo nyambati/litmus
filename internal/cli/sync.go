@@ -16,14 +16,15 @@ import (
 func RunSync(cfg *config.LitmusConfig, logger logrus.FieldLogger, address, tenantID, apiKey string, skipValidate, dryRun bool, output string) error {
 	ctx := context.Background()
 
+	mimirCfg := cfg.Mimir // local copy; does not mutate caller
 	if address != "" {
-		cfg.Mimir.Address = address
+		mimirCfg.Address = address
 	}
 	if tenantID != "" {
-		cfg.Mimir.TenantID = tenantID
+		mimirCfg.TenantID = tenantID
 	}
 	if apiKey != "" {
-		cfg.Mimir.APIKey = apiKey
+		mimirCfg.APIKey = apiKey
 	}
 
 	ws, err := workspace.Load(cfg, logger)
@@ -52,7 +53,7 @@ func RunSync(cfg *config.LitmusConfig, logger logrus.FieldLogger, address, tenan
 		return printYAML(ws.ConfigString(), output)
 	}
 
-	if err := cfg.Mimir.Validate(); err != nil {
+	if err := mimirCfg.Validate(); err != nil {
 		return err
 	}
 
@@ -61,7 +62,7 @@ func RunSync(cfg *config.LitmusConfig, logger logrus.FieldLogger, address, tenan
 		return err
 	}
 
-	client := mimir.NewClient(&cfg.Mimir)
+	client := mimir.NewClient(&mimirCfg)
 
 	payload := mimir.PushPayload{
 		Config:    ws.ConfigString(),
@@ -72,7 +73,7 @@ func RunSync(cfg *config.LitmusConfig, logger logrus.FieldLogger, address, tenan
 		return fmt.Errorf("pushing to mimir: %w", err)
 	}
 
-	fmt.Printf("✓ Alertmanager config synced to %s\n", cfg.Mimir.Address) //nolint:forbidigo
+	fmt.Printf("✓ Alertmanager config synced to %s\n", mimirCfg.Address) //nolint:forbidigo
 	return nil
 }
 

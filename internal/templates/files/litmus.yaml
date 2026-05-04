@@ -26,11 +26,13 @@ global_labels:
 # Sanity Checks (optional, defaults to fail mode for all categories)
 # sanity:
 #   orphan_receivers: warn       # "warn" or "fail"
-#   dead_receivers: warn         # "warn" or "fail"
+#   dead_routes: warn            # "warn" or "fail"
 #   shadowed_routes: warn        # "warn" or "fail"
 #   inhibition_cycles: warn      # "warn" or "fail"
 #   policy_violations: warn      # "warn" or "fail"
 #   negative_only_routes: warn   # "warn" or "fail"
+#   require_tests: warn          # "warn" or "fail" (policy: require.tests)
+#   require_regression: warn     # "warn" or "fail" (policy: require.regression)
 
 # Mimir Configuration (optional, used for 'litmus sync')
 # mimir:

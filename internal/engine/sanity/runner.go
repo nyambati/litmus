@@ -71,7 +71,7 @@ func DefaultRunner(cfg config.SanityConfig) *Runner {
 		&ShadowedRouteDetector{},
 		&OrphanReceiverDetector{},
 		&InhibitionCycleDetector{},
-		&DeadReceiverDetector{},
+		&DeadRouteDetector{},
 		&NegativeOnlyRouteDetector{},
 		&RegressionChecker{},
 		&RequireTestsChecker{},

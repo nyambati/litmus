@@ -344,7 +344,7 @@ workspace:
 
 	// Should fail because no base or alertmanager config exists in the root.
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "found 0 files matching")
+	require.Contains(t, err.Error(), "no base or alertmanager YAML file found")
 }
 
 func TestSnapshotHistory_ListsBaselines(t *testing.T) {

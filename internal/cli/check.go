@@ -257,7 +257,7 @@ func PrintCheckResult(r CheckResult, showDiff bool) {
 	fmt.Println("2. Regressions (Automated)")
 	//nolint:gocritic
 	if r.Regression.TotalTests == 0 {
-		fmt.Println("   [SKIP]  No baseline found — run 'litmus snapshot' first")
+		fmt.Println("   [SKIP]  No baseline found — run 'litmus snapshot capture' first")
 	} else if r.Regression.Tests == 0 {
 		fmt.Printf("   [SKIP]  No tests matched filter (0/%d baseline cases)\n", r.Regression.TotalTests)
 	} else if r.Regression.Passed {
@@ -404,8 +404,10 @@ func sanityCheckLabel(name config.SanityCheck) string {
 		config.CheckOrphanReceivers:    "No orphan receivers",
 		config.CheckInhibitionCycles:   "No inhibition cycles",
 		config.CheckPolicyViolations:   "No policy violations",
-		config.CheckDeadReceivers:      "No dead receivers detected",
+		config.CheckDeadRoutes:         "No dead routes detected",
 		config.CheckNegativeOnlyRoutes: "No negative-only routes detected",
+		config.CheckRequireTests:       "All fragments have required tests",
+		config.CheckRequireRegression:  "Regression baseline coverage satisfied",
 	}
 	if l, ok := labels[name]; ok {
 		return l

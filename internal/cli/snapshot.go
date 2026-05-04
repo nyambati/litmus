@@ -42,7 +42,7 @@ func RunSnapshot(cfg *config.LitmusConfig, logger logrus.FieldLogger, update, st
 	walker := snapshot.NewRouteWalker(amCfg.Route)
 	paths := walker.FindTerminalPaths()
 
-	synthesizer := snapshot.NewSnapshotSynthesizer(runner)
+	synthesizer := snapshot.NewSnapshotSynthesizer(runner, logger)
 	outcomes, err := synthesizer.DiscoverOutcomes(ctx, paths)
 	if err != nil {
 		return fmt.Errorf("synthesis failed: %w", err)

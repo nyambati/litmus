@@ -149,6 +149,9 @@ func (e *TestExecutor) executeRegression(ctx context.Context, test *types.TestCa
 	alertStore := stores.NewAlertStore()
 	runner := NewRunner(silenceStore, alertStore, router, nil)
 
+	var failingLabels []map[string]string
+	var lastActual []string
+
 	for _, labels := range test.Labels {
 		labelSet := make(model.LabelSet)
 		for k, v := range labels {
@@ -159,15 +162,20 @@ func (e *TestExecutor) executeRegression(ctx context.Context, test *types.TestCa
 			result.Pass = false
 			result.Error = fmt.Sprintf("pipeline execution failed: %v", err)
 			result.Labels = labels
-			break
+			return result
 		}
 		if !matching.ExactMatch(outcome.Receivers, test.Expect.Receivers) {
-			result.Pass = false
-			result.Labels = labels
-			result.Expected = test.Expect.Receivers
-			result.Actual = outcome.Receivers
-			break
+			failingLabels = append(failingLabels, labels)
+			lastActual = outcome.Receivers
 		}
+	}
+
+	if len(failingLabels) > 0 {
+		result.Pass = false
+		result.Labels = failingLabels[0]
+		result.FailingLabels = failingLabels
+		result.Expected = test.Expect.Receivers
+		result.Actual = lastActual
 	}
 
 	return result

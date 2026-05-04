@@ -11,17 +11,17 @@ import (
 // helpers -------------------------------------------------------------------
 
 func detectDeadRoutes(root *config.Route) []string {
-	return NewDeadReceiverDetector(root).Detect()
+	return NewDeadRouteDetector(root).Detect()
 }
 
-// isDeadReceiver returns true if receiver appears as the dead route in any issue.
-func isDeadReceiver(issues []string, receiver string) bool {
+// isDeadRoute returns true if receiver appears as the dead route in any issue.
+func isDeadRoute(issues []string, receiver string) bool {
 	return containsAny(issues, `Route to "`+receiver+`" can never`)
 }
 
 // Table-driven core cases ---------------------------------------------------
 
-func TestDeadReceiverDetector(t *testing.T) {
+func TestDeadRouteDetector(t *testing.T) {
 	// Pre-built matchers usable inside the test table (mustMatcher requires *testing.T).
 	svcApi := mustMatcher(t, labels.MatchEqual, "service", "api")
 	svcDb := mustMatcher(t, labels.MatchEqual, "service", "db")
@@ -238,11 +238,11 @@ func TestDeadReceiverDetector(t *testing.T) {
 			issues := detectDeadRoutes(tt.root)
 			require.Len(t, issues, tt.wantCount, "issues: %v", issues)
 			for _, want := range tt.wantIn {
-				require.True(t, isDeadReceiver(issues, want),
+				require.True(t, isDeadRoute(issues, want),
 					"expected %q as dead receiver in issues %v", want, issues)
 			}
 			for _, notWant := range tt.wantNotIn {
-				require.False(t, isDeadReceiver(issues, notWant),
+				require.False(t, isDeadRoute(issues, notWant),
 					"unexpected %q as dead receiver in issues %v", notWant, issues)
 			}
 		})
@@ -251,7 +251,7 @@ func TestDeadReceiverDetector(t *testing.T) {
 
 // Negative matcher edge cases -----------------------------------------------
 
-func TestDeadReceiverDetector_NegativeMatchers(t *testing.T) {
+func TestDeadRouteDetector_NegativeMatchers(t *testing.T) {
 	t.Run("parent_neg_child_pos_same_label_same_value_dead", func(t *testing.T) {
 		// parent: service!=api (excludes api), child: service=api (requires api) → dead
 		root := &config.Route{Receiver: "root", Routes: []*config.Route{
@@ -263,7 +263,7 @@ func TestDeadReceiverDetector_NegativeMatchers(t *testing.T) {
 		}}
 		issues := detectDeadRoutes(root)
 		require.Len(t, issues, 1)
-		require.True(t, isDeadReceiver(issues, "api-only"))
+		require.True(t, isDeadRoute(issues, "api-only"))
 	})
 
 	t.Run("parent_neg_child_pos_different_value_reachable", func(t *testing.T) {
@@ -312,7 +312,7 @@ func TestDeadReceiverDetector_NegativeMatchers(t *testing.T) {
 
 // Matcher format coverage ---------------------------------------------------
 
-func TestDeadReceiverDetector_MatcherFormats(t *testing.T) {
+func TestDeadRouteDetector_MatcherFormats(t *testing.T) {
 	t.Run("legacy_match_map_conflict", func(t *testing.T) {
 		// Both parent and child use legacy match: map format
 		root := &config.Route{Receiver: "root", Routes: []*config.Route{
@@ -324,7 +324,7 @@ func TestDeadReceiverDetector_MatcherFormats(t *testing.T) {
 		}}
 		issues := detectDeadRoutes(root)
 		require.Len(t, issues, 1)
-		require.True(t, isDeadReceiver(issues, "child"))
+		require.True(t, isDeadRoute(issues, "child"))
 	})
 
 	t.Run("modern_matchers_equal_conflict", func(t *testing.T) {
@@ -343,7 +343,7 @@ func TestDeadReceiverDetector_MatcherFormats(t *testing.T) {
 		}}
 		issues := detectDeadRoutes(root)
 		require.Len(t, issues, 1)
-		require.True(t, isDeadReceiver(issues, "child"))
+		require.True(t, isDeadRoute(issues, "child"))
 	})
 
 	t.Run("mixed_legacy_and_modern_conflict", func(t *testing.T) {
@@ -362,7 +362,7 @@ func TestDeadReceiverDetector_MatcherFormats(t *testing.T) {
 		}}
 		issues := detectDeadRoutes(root)
 		require.Len(t, issues, 1)
-		require.True(t, isDeadReceiver(issues, "child"))
+		require.True(t, isDeadRoute(issues, "child"))
 	})
 
 	t.Run("parent_pos_regex_child_exact_no_match_flagged", func(t *testing.T) {
@@ -376,7 +376,7 @@ func TestDeadReceiverDetector_MatcherFormats(t *testing.T) {
 		}}
 		issues := detectDeadRoutes(root)
 		require.Len(t, issues, 1)
-		require.True(t, isDeadReceiver(issues, "child"))
+		require.True(t, isDeadRoute(issues, "child"))
 	})
 
 	t.Run("parent_exact_child_pos_regex_no_match_flagged", func(t *testing.T) {
@@ -395,7 +395,7 @@ func TestDeadReceiverDetector_MatcherFormats(t *testing.T) {
 		}}
 		issues := detectDeadRoutes(root)
 		require.Len(t, issues, 1)
-		require.True(t, isDeadReceiver(issues, "child"))
+		require.True(t, isDeadRoute(issues, "child"))
 	})
 
 	t.Run("both_regex_same_label_not_flagged", func(t *testing.T) {
@@ -426,13 +426,13 @@ func TestDeadReceiverDetector_MatcherFormats(t *testing.T) {
 		}}
 		issues := detectDeadRoutes(root)
 		require.Len(t, issues, 1)
-		require.True(t, isDeadReceiver(issues, "child"))
+		require.True(t, isDeadRoute(issues, "child"))
 	})
 }
 
 // Nested route inheritance --------------------------------------------------
 
-func TestDeadReceiverDetector_NestedRoutes(t *testing.T) {
+func TestDeadRouteDetector_NestedRoutes(t *testing.T) {
 	t.Run("three_level_contradiction_at_leaf", func(t *testing.T) {
 		// root → A (service=api) → B (env=prod) → C (service=db) — contradiction at C
 		root := &config.Route{Receiver: "root", Routes: []*config.Route{
@@ -450,9 +450,9 @@ func TestDeadReceiverDetector_NestedRoutes(t *testing.T) {
 		}}
 		issues := detectDeadRoutes(root)
 		require.Len(t, issues, 1)
-		require.True(t, isDeadReceiver(issues, "C"))
-		require.False(t, isDeadReceiver(issues, "A"))
-		require.False(t, isDeadReceiver(issues, "B"))
+		require.True(t, isDeadRoute(issues, "C"))
+		require.False(t, isDeadRoute(issues, "A"))
+		require.False(t, isDeadRoute(issues, "B"))
 	})
 
 	t.Run("two_separate_trees_independent_contradictions", func(t *testing.T) {
@@ -471,8 +471,8 @@ func TestDeadReceiverDetector_NestedRoutes(t *testing.T) {
 		}}
 		issues := detectDeadRoutes(root)
 		require.Len(t, issues, 2)
-		require.True(t, isDeadReceiver(issues, "api-dead"))
-		require.True(t, isDeadReceiver(issues, "db-dead"))
+		require.True(t, isDeadRoute(issues, "api-dead"))
+		require.True(t, isDeadRoute(issues, "db-dead"))
 	})
 
 	t.Run("healthy_subtree_alongside_dead_subtree", func(t *testing.T) {
@@ -491,14 +491,14 @@ func TestDeadReceiverDetector_NestedRoutes(t *testing.T) {
 		}}
 		issues := detectDeadRoutes(root)
 		require.Len(t, issues, 1)
-		require.True(t, isDeadReceiver(issues, "dead-child"))
-		require.False(t, isDeadReceiver(issues, "db-child"))
+		require.True(t, isDeadRoute(issues, "dead-child"))
+		require.False(t, isDeadRoute(issues, "db-child"))
 	})
 }
 
 // Edge cases ----------------------------------------------------------------
 
-func TestDeadReceiverDetector_EdgeCases(t *testing.T) {
+func TestDeadRouteDetector_EdgeCases(t *testing.T) {
 	t.Run("nil_root", func(t *testing.T) {
 		require.Len(t, detectDeadRoutes(nil), 0)
 	})
@@ -511,7 +511,7 @@ func TestDeadReceiverDetector_EdgeCases(t *testing.T) {
 		// Root is always reachable — it has no ancestors to contradict it
 		root := &config.Route{Receiver: "root", Match: map[string]string{"service": "api"}}
 		issues := detectDeadRoutes(root)
-		require.False(t, isDeadReceiver(issues, "root"))
+		require.False(t, isDeadRoute(issues, "root"))
 	})
 
 	t.Run("contradiction_only_on_second_pos_matcher_with_same_label", func(t *testing.T) {
@@ -523,7 +523,7 @@ func TestDeadReceiverDetector_EdgeCases(t *testing.T) {
 		}}
 		issues := detectDeadRoutes(root)
 		require.Len(t, issues, 1)
-		require.True(t, isDeadReceiver(issues, "team"))
+		require.True(t, isDeadRoute(issues, "team"))
 	})
 
 	t.Run("empty_matchers_on_child_not_dead", func(t *testing.T) {
@@ -539,8 +539,8 @@ func TestDeadReceiverDetector_EdgeCases(t *testing.T) {
 	})
 }
 
-// TestDeadReceiverDetector_MessageFormat asserts Bundle 1 source attribution strings.
-func TestDeadReceiverDetector_MessageFormat(t *testing.T) {
+// TestDeadRouteDetector_MessageFormat asserts Bundle 1 source attribution strings.
+func TestDeadRouteDetector_MessageFormat(t *testing.T) {
 	t.Run("pos_pos_cross_route_names_ancestor", func(t *testing.T) {
 		root := &config.Route{
 			Receiver: "root",
@@ -630,8 +630,8 @@ func TestDeadReceiverDetector_MessageFormat(t *testing.T) {
 	})
 }
 
-// TestDeadReceiverDetector_RegexContradictions covers Bundle 2: regex-vs-exact detection.
-func TestDeadReceiverDetector_RegexContradictions(t *testing.T) {
+// TestDeadRouteDetector_RegexContradictions covers Bundle 2: regex-vs-exact detection.
+func TestDeadRouteDetector_RegexContradictions(t *testing.T) {
 	// helpers: regex matchers using modern syntax
 	posRE := func(name, pat string) *labels.Matcher { return mustMatcher(t, labels.MatchRegexp, name, pat) }
 	negRE := func(name, pat string) *labels.Matcher { return mustMatcher(t, labels.MatchNotRegexp, name, pat) }
@@ -653,7 +653,7 @@ func TestDeadReceiverDetector_RegexContradictions(t *testing.T) {
 		}
 		issues := detectDeadRoutes(root)
 		require.Len(t, issues, 1)
-		require.True(t, isDeadReceiver(issues, "db-team"))
+		require.True(t, isDeadRoute(issues, "db-team"))
 	})
 
 	t.Run("neg_regex_ancestor_exact_child_matches_dead", func(t *testing.T) {
@@ -672,7 +672,7 @@ func TestDeadReceiverDetector_RegexContradictions(t *testing.T) {
 		}
 		issues := detectDeadRoutes(root)
 		require.Len(t, issues, 1)
-		require.True(t, isDeadReceiver(issues, "api-team"))
+		require.True(t, isDeadRoute(issues, "api-team"))
 	})
 
 	t.Run("pos_regex_ancestor_exact_child_matches_reachable", func(t *testing.T) {
@@ -725,7 +725,7 @@ func TestDeadReceiverDetector_RegexContradictions(t *testing.T) {
 		}
 		issues := detectDeadRoutes(root)
 		require.Len(t, issues, 1)
-		require.True(t, isDeadReceiver(issues, "db-cache-team"))
+		require.True(t, isDeadRoute(issues, "db-cache-team"))
 	})
 
 	t.Run("pos_exact_ancestor_neg_regex_child_matches_dead", func(t *testing.T) {
@@ -744,7 +744,7 @@ func TestDeadReceiverDetector_RegexContradictions(t *testing.T) {
 		}
 		issues := detectDeadRoutes(root)
 		require.Len(t, issues, 1)
-		require.True(t, isDeadReceiver(issues, "no-web-api"))
+		require.True(t, isDeadRoute(issues, "no-web-api"))
 	})
 
 	t.Run("pos_exact_ancestor_neg_regex_child_no_match_reachable", func(t *testing.T) {
@@ -797,12 +797,12 @@ func TestDeadReceiverDetector_RegexContradictions(t *testing.T) {
 		}
 		issues := detectDeadRoutes(root)
 		require.Len(t, issues, 1)
-		require.True(t, isDeadReceiver(issues, "db-team"))
+		require.True(t, isDeadRoute(issues, "db-team"))
 	})
 }
 
-// TestDeadReceiverDetector_RegexMessageFormat asserts Bundle 2 message strings.
-func TestDeadReceiverDetector_RegexMessageFormat(t *testing.T) {
+// TestDeadRouteDetector_RegexMessageFormat asserts Bundle 2 message strings.
+func TestDeadRouteDetector_RegexMessageFormat(t *testing.T) {
 	posRE := func(name, pat string) *labels.Matcher { return mustMatcher(t, labels.MatchRegexp, name, pat) }
 	negRE := func(name, pat string) *labels.Matcher { return mustMatcher(t, labels.MatchNotRegexp, name, pat) }
 	posEQ := func(name, val string) *labels.Matcher { return mustMatcher(t, labels.MatchEqual, name, val) }
@@ -868,8 +868,8 @@ func TestDeadReceiverDetector_RegexMessageFormat(t *testing.T) {
 	})
 }
 
-// TestDeadReceiverDetector_Breadcrumb asserts Bundle 4: path breadcrumb in issue messages.
-func TestDeadReceiverDetector_Breadcrumb(t *testing.T) {
+// TestDeadRouteDetector_Breadcrumb asserts Bundle 4: path breadcrumb in issue messages.
+func TestDeadRouteDetector_Breadcrumb(t *testing.T) {
 	t.Run("direct_child_shows_root_to_dead", func(t *testing.T) {
 		// root → dead-child (depth 1): breadcrumb = "root → dead-child"
 		root := &config.Route{

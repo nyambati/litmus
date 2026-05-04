@@ -10,7 +10,7 @@ Litmus provides eight commands for managing alert configuration validation:
 
 ```
 litmus init       Initialize workspace
-litmus snapshot   Capture regression baseline
+litmus snapshot   Manage regression baseline (capture, update)
 litmus history    Manage baseline history (list, rollback)
 litmus check      Validate configuration (for CI/CD)
 litmus diff       Show changes from baseline
@@ -38,7 +38,7 @@ This creates:
 Before Litmus can validate, it needs a baseline to compare against:
 
 ```bash
-litmus snapshot
+litmus snapshot capture
 ```
 
 This generates:
@@ -112,7 +112,7 @@ litmus diff
 litmus check
 
 # If intentional, update baseline
-litmus snapshot --update
+litmus snapshot update
 
 # Commit the changes (include history snapshots so rollback works on any checkout)
 git add alertmanager.yaml regressions/
@@ -146,7 +146,7 @@ git diff alertmanager.yaml
 litmus check
 
 # If routes changed (intentional fix), update baseline
-litmus snapshot --update
+litmus snapshot update
 
 # Add test case to prevent regression
 cat >> tests/bug-fix.yml << 'EOF'
@@ -186,17 +186,16 @@ litmus init
 
 ### `litmus snapshot`
 
-Capture current configuration as regression baseline.
+Manage the regression baseline. Two subcommands:
 
 ```bash
-litmus snapshot            # Create baseline (fails if drift exists)
-litmus snapshot --update   # Accept drift and update baseline
-litmus snapshot -u         # Short form
-litmus snapshot --strict   # Fail with error if drift detected (CI/CD gate)
+litmus snapshot capture            # Create/check baseline (warns on drift)
+litmus snapshot capture --strict   # Fail with error if drift detected (CI/CD gate)
+litmus snapshot update             # Accept drift and update baseline
+litmus snapshot update --strict    # Fail if drift detected even on update
 ```
 
-**Flags:**
-- `-u, --update` — Accept new behavior and overwrite existing baseline
+**Flags (both subcommands):**
 - `-s, --strict` — Fail if drift is detected (useful for CI/CD gates)
 
 **Output:**
@@ -206,20 +205,20 @@ litmus snapshot --strict   # Fail with error if drift detected (CI/CD gate)
 **Behavior:**
 
 When configuration changes:
-- `litmus snapshot` (no flags) — Detects drift, warns you to use `--update` to accept
-- `litmus snapshot --update` — Archives current baseline to history, writes new active baseline
+- `litmus snapshot capture` — Detects drift, warns you to run `litmus snapshot update` to accept
+- `litmus snapshot update` — Archives current baseline to history, writes new active baseline
   - Returns: `✓ Snapshot processed successfully`
-- `litmus snapshot --strict` — Fails if any drift detected
+- `litmus snapshot capture --strict` — Fails if any drift detected
 
 When configuration is unchanged:
-- `litmus snapshot --update` — No backup created, no-op
+- `litmus snapshot update` — No backup created, no-op
   - Returns: `✓ No changes detected; baseline is up to date`
 
 **Use Cases:**
 
 If baseline exists and config differs:
 - Use `litmus diff` to see what changed
-- Use `litmus snapshot --update` to accept changes (creates new history entry)
+- Use `litmus snapshot update` to accept changes (creates new history entry)
 
 If you need to revert:
 - Use `litmus history list` to see available versions
@@ -227,7 +226,7 @@ If you need to revert:
 
 **Exit Codes:**
 - `0` — Baseline created/updated successfully
-- `1` — Drift detected (use `--update` to accept)
+- `1` — Drift detected (run `litmus snapshot update` to accept)
 
 ---
 
@@ -259,7 +258,7 @@ $ litmus history rollback 20260422-211233
 ✓ Rolled back baseline to 20260422-211233
 ```
 
-History entries are stored as timestamped `.mpk` files in the `regressions/` directory. A new entry is created only when `litmus snapshot --update` detects actual drift. Old entries are pruned based on `regression.keep` in `litmus.yaml`.
+History entries are stored as timestamped `.mpk` files in the `regressions/` directory. A new entry is created only when `litmus snapshot update` detects actual drift. Old entries are pruned based on `regression.keep` in `litmus.yaml`.
 
 **Exit Codes:**
 - `0` — Success
@@ -584,7 +583,7 @@ litmus diff
 git diff alertmanager.yaml
 
 # Accept if intentional
-litmus snapshot --update
+litmus snapshot update
 
 # Reject if accidental
 git checkout alertmanager.yaml
@@ -615,10 +614,10 @@ cat tests/your-test.yml
 ## Best Practices
 
 1. **Commit baselines and history to git** — Commit the entire `regressions/` directory so rollback works on any checkout
-2. **Review diffs** — Always use `litmus diff` before `litmus snapshot --update`
+2. **Review diffs** — Always use `litmus diff` before `litmus snapshot update`
 3. **Write tests for critical paths** — Behavioral tests catch intent errors
 4. **Run in CI/CD** — Catch configuration regressions before production
-5. **Update baseline intentionally** — Only use `--update` when you understand the change
+5. **Update baseline intentionally** — Only run `litmus snapshot update` when you understand the change
 
 ---
 

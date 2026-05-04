@@ -17,7 +17,7 @@ func NewRegressionChecker() *RegressionChecker {
 
 // Name implements Check.
 func (rc *RegressionChecker) Name() litconfig.SanityCheck {
-	return litconfig.CheckPolicyViolations
+	return litconfig.CheckRequireRegression
 }
 
 // Run implements Check.
@@ -27,7 +27,7 @@ func (rc *RegressionChecker) Run(ctx CheckContext) []string {
 	}
 
 	if ctx.RegressionState == nil {
-		return []string{"no regression baseline found, run 'litmus snapshot'"}
+		return []string{"no regression baseline found, run 'litmus snapshot capture'"}
 	}
 
 	if len(ctx.RegressionState.Tests) == 0 {

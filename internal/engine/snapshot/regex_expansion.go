@@ -5,6 +5,11 @@ import (
 	"strings"
 )
 
+// wildcardPlaceholder is intentionally the empty string. When a regex contains
+// a pure wildcard (.*/.+), there is no concrete value to synthesize, so the
+// empty string is used as a stand-in label value. Alertmanager matchers accept
+// empty strings as valid label values, so this produces a runnable synthetic
+// label set without silently dropping the label key.
 const wildcardPlaceholder = ""
 
 var (

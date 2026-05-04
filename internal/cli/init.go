@@ -41,7 +41,7 @@ func RunInit() error {
 	fmt.Println("\nWorkspace initialized! Next steps:")
 	fmt.Println("1. Edit config/base.yaml with your alertmanager configuration")
 	fmt.Println("2. Add team fragments to config/fragments/")
-	fmt.Println("3. Run 'litmus snapshot' to generate global regression baseline")
+	fmt.Println("3. Run 'litmus snapshot capture' to generate global regression baseline")
 
 	return nil
 }

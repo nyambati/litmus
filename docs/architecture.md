@@ -57,7 +57,7 @@ The regression baseline (`.mpk` file) is the single source of truth.
 1. You modify `alertmanager.yaml`
 2. `litmus check` detects drift
 3. You review changes with `litmus diff`
-4. You intentionally accept changes with `litmus snapshot --update`
+4. You intentionally accept changes with `litmus snapshot update`
 5. Both `.mpk` and `.yml` are updated and committed
 
 This ensures baseline updates are **deliberate**, not accidental.

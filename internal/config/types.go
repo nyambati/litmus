@@ -45,11 +45,13 @@ type (
 	// SanityConfig defines sanity check behavior modes.
 	SanityConfig struct {
 		OrphanReceivers    SanityMode `yaml:"orphan_receivers"     mapstructure:"orphan_receivers"`
-		DeadReceivers      SanityMode `yaml:"dead_receivers"       mapstructure:"dead_receivers"`
+		DeadRoutes         SanityMode `yaml:"dead_routes"          mapstructure:"dead_routes"`
 		ShadowedRoutes     SanityMode `yaml:"shadowed_routes"      mapstructure:"shadowed_routes"`
 		InhibitionCycles   SanityMode `yaml:"inhibition_cycles"    mapstructure:"inhibition_cycles"`
 		PolicyViolations   SanityMode `yaml:"policy_violations"    mapstructure:"policy_violations"`
 		NegativeOnlyRoutes SanityMode `yaml:"negative_only_routes" mapstructure:"negative_only_routes"`
+		RequireTests       SanityMode `yaml:"require_tests"        mapstructure:"require_tests"`
+		RequireRegression  SanityMode `yaml:"require_regression"   mapstructure:"require_regression"`
 	}
 
 	// LitmusConfig is the root configuration object.
@@ -67,10 +69,12 @@ const (
 	SanityModeWarn          SanityMode  = "warn"
 	CheckPolicyViolations   SanityCheck = "policy_violations"
 	CheckOrphanReceivers    SanityCheck = "orphan_receivers"
-	CheckDeadReceivers      SanityCheck = "dead_receivers"
+	CheckDeadRoutes         SanityCheck = "dead_routes"
 	CheckShadowedRoutes     SanityCheck = "shadowed_routes"
 	CheckInhibitionCycles   SanityCheck = "inhibition_cycles"
 	CheckNegativeOnlyRoutes SanityCheck = "negative_only_routes"
+	CheckRequireTests       SanityCheck = "require_tests"
+	CheckRequireRegression  SanityCheck = "require_regression"
 )
 
 func (m SanityMode) IsFail() bool {
@@ -82,11 +86,13 @@ func (m SanityMode) IsFail() bool {
 func (c SanityConfig) ModeFor(name SanityCheck) SanityMode {
 	modes := map[SanityCheck]SanityMode{
 		CheckOrphanReceivers:    c.OrphanReceivers,
-		CheckDeadReceivers:      c.DeadReceivers,
+		CheckDeadRoutes:         c.DeadRoutes,
 		CheckShadowedRoutes:     c.ShadowedRoutes,
 		CheckInhibitionCycles:   c.InhibitionCycles,
 		CheckPolicyViolations:   c.PolicyViolations,
 		CheckNegativeOnlyRoutes: c.NegativeOnlyRoutes,
+		CheckRequireTests:       c.RequireTests,
+		CheckRequireRegression:  c.RequireRegression,
 	}
 	if m, ok := modes[name]; ok && m != "" {
 		return m
