@@ -71,4 +71,4 @@ if ! echo "$PATH" | grep -q "${BINDIR}"; then
     echo "  export PATH=\$PATH:${BINDIR}"
 fi
 
-"${BINDIR}/${BINARY}" version 2>/dev/null || "${BINDIR}/${BINARY}" --help | head -n 1
+"${BINDIR}/${BINARY}" --version || "${BINDIR}/${BINARY}" --help | head -n 1

@@ -66,12 +66,18 @@ For a full guide, see the **[Interactive UI Guide](docs/ui_guide.md)**.
 
 ---
 
-## Installation
+<!--## Installation
 
-### From Source
+### Homebrew (macOS/Linux)
 
 ```bash
-go install github.com/nyambati/litmus/cmd/litmus@latest
+brew install nyambati/tap/litmus
+```-->
+
+### Script (curl)
+
+```bash
+curl -sSL https://raw.githubusercontent.com/nyambati/litmus/main/scripts/install.sh | sh
 ```
 
 ### Docker
