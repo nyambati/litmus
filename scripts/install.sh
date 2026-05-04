@@ -49,6 +49,7 @@ URL="https://github.com/${OWNER}/${REPO}/releases/download/${LATEST_RELEASE}/${F
 
 # Create temp directory
 TMP_DIR=$(mktemp -d)
+trap 'rm -rf "$TMP_DIR"' EXIT
 cd "${TMP_DIR}"
 
 echo "Downloading ${URL}..."
