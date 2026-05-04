@@ -52,6 +52,8 @@ sanity:
   inhibition_cycles: fail
   policy_violations: fail
   negative_only_routes: fail
+  require_tests: fail
+  require_regression: fail
 
 mimir:
   address: ""             # Grafana Mimir URL
@@ -72,6 +74,14 @@ mimir:
 | `policy.skip_root` | `[]` | Exempt root from `tests` and/or `enforce` checks |
 | `policy.enforce.strict` | `true` | AND mode: all matchers required; `false` = OR mode |
 | `policy.enforce.matchers` | `[]` | Label names every route path must accumulate |
+| `sanity.orphan_receivers` | `fail` | Receivers defined but never referenced by any route |
+| `sanity.dead_routes` | `fail` | Routes whose ancestor matchers make them permanently unreachable |
+| `sanity.shadowed_routes` | `fail` | Routes shadowed by an earlier sibling with broader matchers |
+| `sanity.inhibition_cycles` | `fail` | Inhibition rules that form mutual suppression cycles |
+| `sanity.negative_only_routes` | `fail` | Routes with only negative matchers (implicit over-broad matching) |
+| `sanity.policy_violations` | `fail` | Routes violating `policy.enforce.matchers` |
+| `sanity.require_tests` | `fail` | Fragments where `count(tests) < count(routes)` |
+| `sanity.require_regression` | `fail` | No committed regression baseline exists for the workspace |
 | `mimir.address` | `""` | Grafana Mimir push URL |
 | `mimir.tenant_id` | `""` | Mimir tenant ID |
 | `mimir.api_key` | `""` | Mimir API key |

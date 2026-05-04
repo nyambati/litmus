@@ -10,6 +10,8 @@ sanity:
   inhibition_cycles: fail
   negative_only_routes: warn
   policy_violations: fail
+  require_tests: fail
+  require_regression: fail
 ```
 
 ---
@@ -116,7 +118,9 @@ sanity:
   policy_violations: warn | fail   # default: fail
 ```
 
-#### Require tests (`require_tests`)
+---
+
+### `require_tests`
 
 **Definition:** A fragment has fewer behavioral unit tests than routes defined in it.
 
@@ -131,7 +135,25 @@ policy:
   skip_root:
     - tests                  # skip the root fragment from test requirement
 sanity:
-  policy_violations: warn | fail   # default: fail
+  require_tests: warn | fail   # default: fail
+```
+
+---
+
+### `require_regression`
+
+**Definition:** No committed regression baseline exists for the workspace.
+
+**What it catches:** Missing snapshot coverage at the system level. When `policy.require.regression` is true, a captured baseline (`.mpk`) must exist before `litmus check` passes. This enforces that routing behavior has been snapshotted at least once, so future changes are caught by regression comparison. Run `litmus snapshot capture` to satisfy this check.
+
+**Configuration:**
+
+```yaml
+policy:
+  require:
+    regression: true
+sanity:
+  require_regression: warn | fail   # default: fail
 ```
 
 ---
