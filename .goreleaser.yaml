@@ -43,20 +43,40 @@ release:
 dockers:
   - ids:
       - litmus
+    goos: linux
+    goarch: amd64
     image_templates:
-      - "ghcr.io/nyambati/litmus:{{ .Tag }}"
-      - "ghcr.io/nyambati/litmus:latest"
+      - "ghcr.io/nyambati/litmus:{{ .Tag }}-amd64"
     dockerfile: Dockerfile
-    use: buildx
     build_flag_templates:
-      - "--platform=linux/amd64,linux/arm64"
       - "--label=org.opencontainers.image.created={{.Date}}"
       - "--label=org.opencontainers.image.title={{.ProjectName}}"
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
       - "--label=org.opencontainers.image.source={{.GitURL}}"
-    extra_files:
-      - LICENSE
+  - ids:
+      - litmus
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "ghcr.io/nyambati/litmus:{{ .Tag }}-arm64"
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+
+docker_manifests:
+  - name_template: "ghcr.io/nyambati/litmus:{{ .Tag }}"
+    image_templates:
+      - "ghcr.io/nyambati/litmus:{{ .Tag }}-amd64"
+      - "ghcr.io/nyambati/litmus:{{ .Tag }}-arm64"
+  - name_template: "ghcr.io/nyambati/litmus:latest"
+    image_templates:
+      - "ghcr.io/nyambati/litmus:{{ .Tag }}-amd64"
+      - "ghcr.io/nyambati/litmus:{{ .Tag }}-arm64"
 
 changelog:
   sort: asc
