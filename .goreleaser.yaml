@@ -28,7 +28,6 @@ archives:
   - id: default
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
-      - .gitattributes
       - README.md
       - LICENSE
       - docs/**/*
@@ -41,45 +40,24 @@ release:
   prerelease: auto
   name_template: '{{.Version}}'
 
-dockers:
-  - image_templates:
-      - "ghcr.io/nyambati/litmus:{{ .Tag }}"
-      - "ghcr.io/nyambati/litmus:latest"
+dockers_v2:
+  - images:
+      - "ghcr.io/nyambati/litmus"
+    tags:
+      - "{{ .Tag }}"
+      - "latest"
     dockerfile: Dockerfile
-    use: buildx
-    build_flag_templates:
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--label=org.opencontainers.image.source={{.GitURL}}"
-      - "--build-arg=VERSION={{.Version}}"
-    goos: linux
-    goarch: amd64
-
-  - image_templates:
-      - "ghcr.io/nyambati/litmus:{{ .Tag }}-arm64"
-    dockerfile: Dockerfile
-    use: buildx
-    build_flag_templates:
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--label=org.opencontainers.image.source={{.GitURL}}"
-      - "--build-arg=VERSION={{.Version}}"
-    goos: linux
-    goarch: arm64
-
-docker_manifests:
-  - name_template: "ghcr.io/nyambati/litmus:{{ .Tag }}"
-    image_templates:
-      - "ghcr.io/nyambati/litmus:{{ .Tag }}"
-      - "ghcr.io/nyambati/litmus:{{ .Tag }}-arm64"
-  - name_template: "ghcr.io/nyambati/litmus:latest"
-    image_templates:
-      - "ghcr.io/nyambati/litmus:{{ .Tag }}"
-      - "ghcr.io/nyambati/litmus:{{ .Tag }}-arm64"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    labels:
+      org.opencontainers.image.created: "{{.Date}}"
+      org.opencontainers.image.title: "{{.ProjectName}}"
+      org.opencontainers.image.revision: "{{.FullCommit}}"
+      org.opencontainers.image.version: "{{.Version}}"
+      org.opencontainers.image.source: "{{.GitURL}}"
+    build_args:
+      VERSION: "{{.Version}}"
 
 changelog:
   sort: asc
