@@ -10,11 +10,16 @@ Policies are optional. Add a `policy:` block to `.litmus.yaml` to enable them.
 
 ```yaml
 policy:
-  require_tests: true          # every fragment must have at least one test
-  skip_root: true              # exclude the root package from all policy checks
+  require:
+    tests: true        # every fragment with routes must have at least 1 test per route
+    regression: true   # every fragment must have a regression baseline
+
+  skip_root:
+    - tests            # exempt root from require.tests
+    - enforce          # exempt root from enforce_matchers
 
   enforce:
-    strict: true               # AND mode (default) — all labels must be covered
+    strict: true       # AND mode (default) — all labels must be covered
     matchers:
       - label_team
       - severity
@@ -22,27 +27,49 @@ policy:
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `require_tests` | bool | `false` | Fragment must have at least one behavioral test |
-| `skip_root` | bool | `false` | Exempt the root package from all checks |
+| `require.tests` | bool | `false` | `count(tests) >= count(routes)` — test count must meet or exceed route count |
+| `require.regression` | bool | `false` | Workspace must have a committed regression baseline (`regressions.litmus.yml`) |
+| `skip_root` | list | `[]` | Exempt root from specific checks: `tests`, `enforce` |
 | `enforce.matchers` | list | `[]` | Label names that must appear somewhere in each route path |
 | `enforce.strict` | bool | `true` | `true` = AND mode, `false` = OR mode (see below) |
 
 ---
 
-## `require_tests`
+## `require.tests`
 
-When `true`, every fragment that has routes must also have at least one behavioral test. Fragments with no routes are exempt.
+When `true`, the total number of tests in a fragment must be greater than or equal to the total number of routes. Routes are counted recursively across the full route tree. Fragments with no routes are exempt.
 
 ```yaml
 policy:
-  require_tests: true
+  require:
+    tests: true
 ```
 
-**Pass:** fragment has a `*-tests.yml` sibling or a `tests/` subdirectory with at least one test case.
+**Pass:** `count(tests) >= count(routes)`.
 
 **Fail:**
 ```
-fragment "payments" has no tests (policy: require_tests=true)
+fragment "payments" has 1 test(s) but 3 route(s); need at least 1 test per route (policy: require.tests=true)
+```
+
+To exempt the root fragment:
+
+```yaml
+policy:
+  skip_root:
+    - tests
+```
+
+---
+
+## `require.regression`
+
+When `true`, the workspace must have a committed regression baseline. There is one baseline for the entire system — not per-fragment. The current baseline is tracked in `regressions.litmus.yml`, which points to a timestamped snapshot file (`<YYYYMMDD-HHmmss.μs>.mpk`) stored in the regressions directory. Run `litmus snapshot capture` to generate one, or `litmus snapshot update` to update it.
+
+```yaml
+policy:
+  require:
+    regression: true
 ```
 
 ---
@@ -136,7 +163,7 @@ parent      [label_team]
 parent      []
   child1    [label_team]      union={label_team} → has ≥1 required label → covered
   child2    [severity]        union={severity}   → has ≥1 required label → covered
-→ no violations (all branches satisfied via children)
+→ no violations
 ```
 
 ```
@@ -157,13 +184,14 @@ parent      []
 | Nothing anywhere | Violation | Violation |
 | Parent covers everything | No violations | No violations |
 
-### `skip_root`
+### `skip_root` for enforce
 
-Root package routes are often catch-all or structural routes that intentionally lack team or severity matchers. Set `skip_root: true` to exclude the root package from enforce_matchers checks entirely.
+Root package routes are often catch-all or structural routes that intentionally lack team or severity matchers. Add `enforce` to `skip_root` to exclude the root package from enforce_matchers checks.
 
 ```yaml
 policy:
-  skip_root: true
+  skip_root:
+    - enforce
   enforce:
     strict: true
     matchers: [label_team, severity]
@@ -175,8 +203,12 @@ policy:
 
 ```yaml
 policy:
-  require_tests: true
-  skip_root: true
+  require:
+    tests: true
+    regression: true
+  skip_root:
+    - tests
+    - enforce
   enforce:
     strict: true
     matchers:
@@ -185,6 +217,7 @@ policy:
 ```
 
 With this configuration:
-- Every fragment (except root) must have at least one test.
+- Every fragment (except root) must have at least one test per route.
+- The workspace must have a committed regression baseline.
 - Every routing path in every fragment must carry both `label_team` and `severity` somewhere in its ancestor chain before reaching a receiver.
-- The root package is exempt from both checks.
+- The root package is exempt from both the test-coverage and enforce-matchers checks.

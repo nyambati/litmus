@@ -45,7 +45,7 @@ func RunDiff(cfg *config.LitmusConfig, logger logrus.FieldLogger) error {
 	walker := snapshot.NewRouteWalker(amCfg.Route)
 	paths := walker.FindTerminalPaths()
 
-	synthesizer := snapshot.NewSnapshotSynthesizer(runner)
+	synthesizer := snapshot.NewSnapshotSynthesizer(runner, logger)
 	outcomes, err := synthesizer.DiscoverOutcomes(ctx, paths)
 	if err != nil {
 		return fmt.Errorf("synthesis failed: %w", err)
@@ -54,7 +54,7 @@ func RunDiff(cfg *config.LitmusConfig, logger logrus.FieldLogger) error {
 	currentTests := BuildRegressionTests(outcomes, cfg.GlobalLabels)
 
 	if ws.RegressionState == nil {
-		return fmt.Errorf("no baseline found — run 'litmus snapshot' to create one")
+		return fmt.Errorf("no baseline found — run 'litmus snapshot capture' to create one")
 	}
 
 	state := ws.RegressionState

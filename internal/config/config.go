@@ -73,7 +73,7 @@ func New() (*LitmusConfig, error) {
 	v.SetDefault("mimir.api_key", "")
 	v.SetDefault("policy.enforce.strict", true)
 	v.SetDefault("sanity.orphan_receivers", SanityModeFail)
-	v.SetDefault("sanity.dead_receivers", SanityModeFail)
+	v.SetDefault("sanity.dead_routes", SanityModeFail)
 	v.SetDefault("sanity.shadowed_routes", SanityModeFail)
 	v.SetDefault("sanity.inhibition_cycles", SanityModeFail)
 	v.SetDefault("sanity.policy_violations", SanityModeFail)
@@ -197,6 +197,8 @@ func (c *LitmusConfig) findEntrypoint() error {
 		return nil
 	}
 
-	return fmt.Errorf("found %d files matching base or alertmanager (%s) in root directory: %s",
-		len(matches), strings.Join(matches, ","), c.Workspace.Root)
+	if len(matches) == 0 {
+		return fmt.Errorf("no base or alertmanager YAML file found in root directory %q (expected base.yaml, base.yml, alertmanager.yaml, or alertmanager.yml)", c.Workspace.Root)
+	}
+	return fmt.Errorf("ambiguous base config in %q: found %d files (%s); expected exactly one", c.Workspace.Root, len(matches), strings.Join(matches, ", "))
 }

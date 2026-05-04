@@ -12,6 +12,7 @@ Welcome to Litmus documentation. Choose your starting point:
 - **[Interactive UI Guide](ui_guide.md)** — How to use the web interface
 - **[Configuration](cli/configuration.md)** — Complete `litmus.yaml` schema and options
 - **[Policies](policies.md)** — Enforce workspace-wide rules (require_tests, enforce_matchers)
+- **[Sanity Checks](sanity.md)** — Static analysis checks run against Alertmanager config
 
 ### Understanding Litmus
 - **[Whitepaper](whitepaper.md)** — Vision and motivation (5 min read)
@@ -39,6 +40,7 @@ Welcome to Litmus documentation. Choose your starting point:
 | "How do I use Litmus?" | [User Guide](cli/user_guide.md) |
 | "How do I configure it?" | [Configuration](cli/configuration.md) |
 | "How do I enforce routing rules?" | [Policies](policies.md) |
+| "What static checks does Litmus run?" | [Sanity Checks](sanity.md) |
 | "Why does Litmus exist?" | [Whitepaper](whitepaper.md) |
 | "How is it designed?" | [Architecture](architecture.md) |
 | "What's next?" | [Backlog](backlog.md) |
@@ -74,6 +76,8 @@ A: Check [Backlog](backlog.md).
 - **whitepaper.md** — Vision and motivation
 - **architecture.md** — Design and philosophy
 - **backlog.md** — Future features
+- **policies.md** — Workspace-wide policy rules
+- **sanity.md** — Static analysis check reference
 
 ### Contributor-Facing
 - **project_organization.md** — Project structure
@@ -81,4 +85,4 @@ A: Check [Backlog](backlog.md).
 
 ---
 
-Last Updated: 2026-04-22
+Last Updated: 2026-05-03

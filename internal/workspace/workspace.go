@@ -252,7 +252,6 @@ func (w *Workspace) loadRegressionState() error {
 		if os.IsNotExist(err) {
 			return nil
 		}
-		w.logger.Warnf("loading regression state: %v", err)
 		return err
 	}
 	w.RegressionState = state

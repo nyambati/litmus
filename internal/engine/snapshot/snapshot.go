@@ -3,12 +3,13 @@ package snapshot
 import (
 	"context"
 	"fmt"
-	"log"
+	"io"
 	"sort"
 	"strings"
 
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/prometheus/common/model"
+	"github.com/sirupsen/logrus"
 )
 
 // SynthesisResult holds outcome for synthesized alert.
@@ -23,18 +24,25 @@ type SnapshotSynthesizer struct {
 	runner       *pipeline.Runner
 	expander     *RegexExpander
 	combGen      *LabelCombinationGenerator
+	logger       logrus.FieldLogger
 	diagnostics  []string
 	failureCount int
 	failureLimit int
 }
 
-// NewSnapshotSynthesizer creates synthesizer for snapshot generation.
+// NewSnapshotSynthesizer creates a synthesizer for snapshot generation.
 // Pass nil for logger to discard all log output.
-func NewSnapshotSynthesizer(runner *pipeline.Runner) *SnapshotSynthesizer {
+func NewSnapshotSynthesizer(runner *pipeline.Runner, logger logrus.FieldLogger) *SnapshotSynthesizer {
+	if logger == nil {
+		nop := logrus.New()
+		nop.SetOutput(io.Discard)
+		logger = nop
+	}
 	return &SnapshotSynthesizer{
 		runner:       runner,
 		expander:     NewRegexExpander(),
 		combGen:      NewLabelCombinationGenerator(5),
+		logger:       logger,
 		failureLimit: 100,
 	}
 }
@@ -79,7 +87,7 @@ func (ss *SnapshotSynthesizer) DiscoverOutcomes(ctx context.Context, paths []*Ro
 
 			outcome, err := ss.runner.Execute(ctx, labelSet)
 			if err != nil {
-				log.Printf("synthesis: pipeline execution failed for labels %v: %v", labels, err)
+				ss.logger.WithField("labels", labels).Warnf("synthesis: pipeline execution failed: %v", err)
 				ss.failureCount++
 				if ss.failureCount > ss.failureLimit {
 					return nil, fmt.Errorf("synthesis failed: exceeded maximum failures (%d)", ss.failureLimit)
@@ -113,7 +121,7 @@ func (ss *SnapshotSynthesizer) DiscoverOutcomes(ctx context.Context, paths []*Ro
 	}
 
 	if ss.failureCount > 0 {
-		log.Printf("synthesis completed with %d pipeline execution failures", ss.failureCount)
+		ss.logger.Warnf("synthesis completed with %d pipeline execution failures", ss.failureCount)
 	}
 
 	return results, nil

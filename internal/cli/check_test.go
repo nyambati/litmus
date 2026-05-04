@@ -115,7 +115,7 @@ func TestRunSanityChecks_NegativeOnlyRoutesMode(t *testing.T) {
 	t.Run("fail mode fails sanity", func(t *testing.T) {
 		result := sanity.Run(ctx, config.SanityConfig{
 			OrphanReceivers:    config.SanityModeFail,
-			DeadReceivers:      config.SanityModeFail,
+			DeadRoutes:         config.SanityModeFail,
 			ShadowedRoutes:     config.SanityModeFail,
 			InhibitionCycles:   config.SanityModeFail,
 			NegativeOnlyRoutes: config.SanityModeFail,
@@ -131,7 +131,7 @@ func TestRunSanityChecks_NegativeOnlyRoutesMode(t *testing.T) {
 	t.Run("warn mode reports without failing sanity", func(t *testing.T) {
 		result := sanity.Run(ctx, config.SanityConfig{
 			OrphanReceivers:    config.SanityModeFail,
-			DeadReceivers:      config.SanityModeFail,
+			DeadRoutes:         config.SanityModeFail,
 			ShadowedRoutes:     config.SanityModeFail,
 			InhibitionCycles:   config.SanityModeFail,
 			NegativeOnlyRoutes: config.SanityModeWarn,

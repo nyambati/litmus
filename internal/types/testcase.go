@@ -19,11 +19,12 @@ type TestCase struct {
 
 // TestResult is the unified execution result for both unit and regression tests.
 type TestResult struct {
-	Name     string            `json:"name"`
-	Type     string            `json:"type"`
-	Pass     bool              `json:"pass"`
-	Error    string            `json:"error,omitempty"`
-	Labels   map[string]string `json:"labels,omitempty"`
-	Expected []string          `json:"expected,omitempty"`
-	Actual   []string          `json:"actual,omitempty"`
+	Name          string              `json:"name"`
+	Type          string              `json:"type"`
+	Pass          bool                `json:"pass"`
+	Error         string              `json:"error,omitempty"`
+	Labels        map[string]string   `json:"labels,omitempty"`
+	FailingLabels []map[string]string `json:"failing_labels,omitempty"` // all failing label sets (regression only)
+	Expected      []string            `json:"expected,omitempty"`
+	Actual        []string            `json:"actual,omitempty"`
 }

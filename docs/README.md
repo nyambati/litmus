@@ -23,7 +23,8 @@ Litmus prevents these failures by validating your Alertmanager configuration *be
 Litmus synthesizes a "ground truth" baseline of your current configuration, capturing where every possible alert will be routed. Any future change that alters this behavior is immediately flagged.
 
 ```bash
-litmus snapshot        # Create/update regression baseline
+litmus snapshot capture   # Create regression baseline
+litmus snapshot update    # Accept drift and update baseline
 litmus check           # Validate configuration matches baseline
 litmus diff            # See what changed
 ```
@@ -89,19 +90,19 @@ litmus init
 ```
 
 Creates:
-- `litmus.yaml` — Configuration file
+- `.litmus.yaml` — Configuration file
 - `tests/` — Directory for behavioral unit tests
 - `.gitattributes` — Git support for binary diffs
 
 ### Create a Baseline
 
 ```bash
-litmus snapshot
+litmus snapshot capture
 ```
 
 Generates:
-- `regressions.litmus.mpk` — Binary regression baseline (protected from accidental edits)
-- `regressions.litmus.yml` — Human-readable mirror for Git diffs
+- `regressions/regressions.litmus.yml` — Active baseline state (`id` + `tests`)
+- `regressions/<timestamp>.mpk` — Timestamped binary snapshot archived to history
 
 ### Validate Your Config
 
@@ -126,7 +127,8 @@ Exit codes:
 | Command | Purpose |
 |---------|---------|
 | `litmus init` | Initialize workspace |
-| `litmus snapshot [--update]` | Create/update regression baseline |
+| `litmus snapshot capture` | Create regression baseline (warns on drift) |
+| `litmus snapshot update` | Accept drift and update baseline |
 | `litmus check` | Validate configuration (CI/CD) |
 | `litmus diff` | Show changes from baseline |
 | `litmus inspect` | Read binary regression file |
@@ -193,7 +195,7 @@ Litmus validates thousands of routing paths in under 2 seconds using in-memory s
    litmus init
 
 2. Create initial baseline:
-   litmus snapshot
+   litmus snapshot capture
 
 3. Write behavioral tests:
    # Create tests/critical-alerts.yml
@@ -208,7 +210,7 @@ Litmus validates thousands of routing paths in under 2 seconds using in-memory s
 6. Validate changes:
    litmus check              # Fails if regression detected
    litmus diff              # See what changed
-   litmus snapshot --update # Accept changes if intentional
+   litmus snapshot update   # Accept changes if intentional
 ```
 
 ---
@@ -225,7 +227,7 @@ litmus check    # Run full validation suite
 Write behavioral tests in `tests/`. Litmus verifies your routing and silencing logic.
 
 ### "Can I safely refactor my config?"
-Use `litmus snapshot --update` to accept new baseline, then test with `litmus check`.
+Use `litmus snapshot update` to accept new baseline, then test with `litmus check`.
 
 ### "What's the impact of this change?"
 Use `litmus diff` to see which alerts are rerouted, which teams are affected.

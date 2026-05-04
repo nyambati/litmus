@@ -124,31 +124,31 @@ func TestFilePath_EntrypointCandidates(t *testing.T) {
 		{
 			name:        "missing files returns discovery error",
 			wantErr:     true,
-			errContains: "found 0 files matching",
+			errContains: "no base or alertmanager YAML file found",
 		},
 		{
 			name:        "non yaml alertmanager file is ignored",
 			files:       []string{"alertmanager.toml"},
 			wantErr:     true,
-			errContains: "found 0 files matching",
+			errContains: "no base or alertmanager YAML file found",
 		},
 		{
 			name:        "database yaml does not match base substring",
 			files:       []string{"database.yml"},
 			wantErr:     true,
-			errContains: "found 0 files matching",
+			errContains: "no base or alertmanager YAML file found",
 		},
 		{
 			name:        "baseline yaml does not match base substring",
 			files:       []string{"baseline.yml"},
 			wantErr:     true,
-			errContains: "found 0 files matching",
+			errContains: "no base or alertmanager YAML file found",
 		},
 		{
 			name:        "alertmanager backup yaml does not match alertmanager substring",
 			files:       []string{"alertmanager-backup.yml"},
 			wantErr:     true,
-			errContains: "found 0 files matching",
+			errContains: "no base or alertmanager YAML file found",
 		},
 		{
 			name:        "unrelated yaml beside one entrypoint is ignored",
@@ -180,19 +180,19 @@ func TestFilePath_EntrypointCandidates(t *testing.T) {
 			name:        "multiple matching stems return discovery error",
 			files:       []string{"base.yml", "alertmanager.yaml"},
 			wantErr:     true,
-			errContains: "found 2 files matching",
+			errContains: "ambiguous base config",
 		},
 		{
 			name:        "multiple matching extensions return discovery error",
 			files:       []string{"base.yaml", "base.yml"},
 			wantErr:     true,
-			errContains: "found 2 files matching",
+			errContains: "ambiguous base config",
 		},
 		{
 			name:        "multiple matching candidates return discovery error",
 			files:       []string{"base.yml", "base.yaml", "alertmanager.yaml", "alertmanager.yml"},
 			wantErr:     true,
-			errContains: "found 4 files matching",
+			errContains: "ambiguous base config",
 		},
 	}
 

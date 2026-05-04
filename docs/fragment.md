@@ -24,11 +24,15 @@ workspace:
   history: 5               # Regression baselines to keep
 
 # Policy is optional. Enforced during 'litmus check'.
-# Applies to root and all fragments unless skip_root: true.
+# Applies to root and all fragments (use skip_root to exempt root).
 # See docs/policies.md for full details on strict vs non-strict mode.
 # policy:
-#   require_tests: true
-#   skip_root: false
+#   require:
+#     tests: true      # count(tests) >= count(routes) per fragment
+#     regression: true # a regression baseline must exist
+#   skip_root:
+#     - tests          # exempt root from require.tests
+#     - enforce        # exempt root from enforce_matchers
 #   enforce:
 #     strict: true     # AND — all labels must be present in the accumulated path
 #     matchers:
@@ -148,10 +152,10 @@ Policy rules run during `litmus check` as part of the sanity stage.
 
 | Rule | Applies to | Behaviour |
 | :--- | :--- | :--- |
-| Rule | Applies to | Behaviour |
-| `require_tests` | Root + all fragments | Each package must have ≥1 test |
+| `require.tests` | All fragments | `count(tests) >= count(routes)` per fragment |
+| `require.regression` | Workspace | A committed regression baseline must exist |
 | `enforce.matchers` | All routes (recursive) | Every route path must accumulate the required labels |
-| `skip_root` | Root package | When `true`, root is exempt from all policy checks |
+| `skip_root` | Root package | List: `[tests, enforce]` — exempts root from specified checks |
 
 `enforce.matchers` checks the **accumulated** label names from a route and all its ancestors, not just the route's own matchers. A route that inherits a required label from a parent is not flagged. See [docs/policies.md](policies.md) for strict vs non-strict mode and full traces.
 

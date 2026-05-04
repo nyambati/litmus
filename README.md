@@ -27,7 +27,7 @@ Litmus is a testing and validation framework for Prometheus Alertmanager configu
 litmus init
 
 # Create regression baseline
-litmus snapshot
+litmus snapshot capture
 
 # Validate configuration
 litmus check
@@ -90,9 +90,9 @@ $ litmus init
 Created litmus.yaml, tests/, .gitattributes
 
 # 2. Create baseline
-$ litmus snapshot
-✓ Generated baseline: regressions/regressions.litmus.mpk
-✓ YAML mirror: regressions/regressions.litmus.yml
+$ litmus snapshot capture
+✓ Generated baseline: regressions/regressions.litmus.yml
+✓ Archived: regressions/<timestamp>.mpk
 
 # 3. Write a test
 $ cat > tests/critical-alert.yml << 'EOF'
@@ -151,7 +151,7 @@ litmus check   # Validate the change
 Write behavioral tests. Litmus verifies routing and silencing logic.
 
 ### "Can I safely refactor my config?"
-Use `litmus snapshot --update` to accept changes, then test with `litmus check`.
+Use `litmus snapshot update` to accept changes, then test with `litmus check`.
 
 ---
 

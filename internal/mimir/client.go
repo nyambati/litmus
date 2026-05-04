@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/nyambati/litmus/internal/config"
 )
@@ -31,14 +32,14 @@ func NewClient(config *config.MimirConfig) *Client {
 		address:    config.Address,
 		tenantID:   config.TenantID,
 		apiKey:     config.APIKey,
-		httpClient: &http.Client{},
+		httpClient: &http.Client{Timeout: 30 * time.Second},
 	}
 }
 
 // Push sends the alertmanager config and templates to Mimir /api/v1/alerts.
 // Returns error on non-201 response.
 func (c *Client) Push(ctx context.Context, payload PushPayload) error {
-	body := map[string]interface{}{
+	body := map[string]any{
 		"alertmanager_config": payload.Config,
 		"template_files":      payload.Templates,
 	}

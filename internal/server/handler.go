@@ -408,7 +408,7 @@ func diffHandler(c *gin.Context) {
 	walker := snapshot.NewRouteWalker(alertConfig.Route)
 	paths := walker.FindTerminalPaths()
 
-	synthesizer := snapshot.NewSnapshotSynthesizer(runner)
+	synthesizer := snapshot.NewSnapshotSynthesizer(runner, getLogger(c))
 	outcomes, err := synthesizer.DiscoverOutcomes(context.Background(), paths)
 	if err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Synthesis failed: %v", err))
