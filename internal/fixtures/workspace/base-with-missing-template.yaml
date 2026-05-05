@@ -1,0 +1,7 @@
+global: {}
+templates:
+  - missing.tmpl
+receivers:
+  - name: noop
+route:
+  receiver: noop

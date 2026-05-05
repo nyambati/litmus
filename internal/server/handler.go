@@ -32,7 +32,7 @@ func loadAssembled(c *gin.Context, litmusConfig *config.LitmusConfig) (*amconfig
 		return nil, nil, false
 	}
 
-	amConfig, err := ws.AMConfig()
+	amConfig, err := ws.Config()
 	if err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Loading alertmanager config: %v", err))
 		return nil, nil, false
@@ -414,7 +414,7 @@ func diffHandler(c *gin.Context) {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Synthesis failed: %v", err))
 		return
 	}
-	currentTests := cli.BuildRegressionTests(outcomes, litmusConfig.GlobalLabels)
+	currentTests := snapshot.BuildRegressionTests(outcomes, litmusConfig.GlobalLabels)
 
 	resp := diffResponse{
 		Total:   len(currentTests),
@@ -452,7 +452,7 @@ func diffHandler(c *gin.Context) {
 			Actual:   delta.Actual,
 		}
 
-		if delta.Kind != types.DeltaRemoved {
+		if delta.Kind != snapshot.DeltaRemoved {
 			labelSet := make(model.LabelSet)
 			for k, v := range delta.Labels {
 				labelSet[model.LabelName(k)] = model.LabelValue(v)
@@ -461,7 +461,7 @@ func diffHandler(c *gin.Context) {
 
 			driftedMap[snapshot.LabelKey(delta.Labels)] = true
 
-			if delta.Kind == types.DeltaModified {
+			if delta.Kind == snapshot.DeltaModified {
 				for _, expectedReceiver := range delta.Expected {
 					routes := findRoutesByReceiver(alertConfig.Route, expectedReceiver)
 					if len(routes) == 0 {

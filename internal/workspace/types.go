@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"github.com/nyambati/litmus/internal/config"
+	"github.com/nyambati/litmus/internal/engine/snapshot"
 	"github.com/nyambati/litmus/internal/fragment"
 	"github.com/nyambati/litmus/internal/types"
 	amconfig "github.com/prometheus/alertmanager/config"
@@ -10,9 +11,9 @@ import (
 
 type (
 	Workspace struct {
-		Config          *types.AlertmanagerConfig
+		config          *types.AlertmanagerConfig
 		Fragments       []*fragment.Fragment
-		RegressionState *types.RegressionState
+		RegressionState *snapshot.RegressionState
 		cfg             *config.LitmusConfig
 		logger          logrus.FieldLogger
 		dir             string

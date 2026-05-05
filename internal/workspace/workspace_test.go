@@ -136,14 +136,14 @@ func TestWorkspaceRead_HappyPathBaseYaml(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read: %v", err)
 	}
-	if ws.Config == nil {
+	if ws.config == nil {
 		t.Fatal("root nil, want populated AlertmanagerConfig")
 	}
-	if ws.Config.Route == nil {
+	if ws.config.Route == nil {
 		t.Fatal("root.Route nil")
 	}
-	if ws.Config.Route.Receiver != "default" {
-		t.Errorf("root.Route.Receiver = %q, want %q", ws.Config.Route.Receiver, "default")
+	if ws.config.Route.Receiver != "default" {
+		t.Errorf("root.Route.Receiver = %q, want %q", ws.config.Route.Receiver, "default")
 	}
 	if !strings.HasSuffix(meta.BaseFile, "base.yaml") {
 		t.Errorf("meta.BaseFile = %q, want suffix base.yaml", meta.BaseFile)
@@ -164,7 +164,7 @@ func TestWorkspaceRead_HappyPathAlertmanagerYml(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read: %v", err)
 	}
-	if ws.Config == nil {
+	if ws.config == nil {
 		t.Fatal("root nil, want populated AlertmanagerConfig")
 	}
 	if !strings.HasSuffix(meta.BaseFile, "alertmanager.yml") {
@@ -456,23 +456,23 @@ func TestWorkspaceRead_TestsDirAsFileSilentlyIgnored(t *testing.T) {
 // 	}
 // }
 
-func TestAMConfig_ReturnsErrorWhenNotAssembled(t *testing.T) {
+func TestConfig_ReturnsErrorWhenNotAssembled(t *testing.T) {
 	ws := New(&config.LitmusConfig{
 		Workspace: config.WorkspaceConfig{
 			Root:      t.TempDir(),
 			Fragments: "fragments",
 		},
 	}, nil)
-	_, err := ws.AMConfig()
+	_, err := ws.Config()
 	if err == nil {
-		t.Fatal("AMConfig() = nil error, want error")
+		t.Fatal("Config() = nil error, want error")
 	}
 	if !strings.Contains(err.Error(), "workspace not assembled") {
-		t.Errorf("AMConfig() error = %q, want 'workspace not assembled'", err)
+		t.Errorf("Config() error = %q, want 'workspace not assembled'", err)
 	}
 }
 
-func TestAMConfig_PropagatesSerializationError(t *testing.T) {
+func TestConfig_PropagatesSerializationError(t *testing.T) {
 	// Inject a config that references an unset env var so Marshal() fails.
 	ws := New(&config.LitmusConfig{
 		Workspace: config.WorkspaceConfig{
@@ -480,64 +480,213 @@ func TestAMConfig_PropagatesSerializationError(t *testing.T) {
 			Fragments: "fragments",
 		},
 	}, nil)
-	ws.Config = &types.AlertmanagerConfig{
+	ws.config = &types.AlertmanagerConfig{
 		Receivers: []*types.Receiver{
 			{
 				Name:           "r",
-				WebhookConfigs: []map[string]any{{"url": "env(litmus_test_unset_amconfig_var)"}},
+				WebhookConfigs: []map[string]any{{"url": "env(litmus_test_unset_Config_var)"}},
 			},
 		},
 	}
-	_, err := ws.AMConfig()
+	_, err := ws.Config()
 	if err == nil {
-		t.Fatal("AMConfig() = nil error, want serialization error")
+		t.Fatal("Config() = nil error, want serialization error")
 	}
 	if !strings.Contains(err.Error(), "serializing alertmanager config") {
-		t.Errorf("AMConfig() error = %q, want wrapped 'serializing alertmanager config'", err)
+		t.Errorf("Config() error = %q, want wrapped 'serializing alertmanager config'", err)
+	}
+}
+
+func TestTemplates_NotAssembled_ReturnsError(t *testing.T) {
+	ws := New(&config.LitmusConfig{
+		Workspace: config.WorkspaceConfig{
+			Root:      t.TempDir(),
+			Fragments: "fragments",
+		},
+	}, nil)
+	_, err := ws.Templates()
+	if err == nil {
+		t.Fatal("Templates() = nil error, want error")
+	}
+	if !strings.Contains(err.Error(), "workspace not assembled") {
+		t.Errorf("Templates() error = %q, want 'workspace not assembled'", err)
+	}
+}
+
+func TestTemplates_NoTemplates_ReturnsEmptyMap(t *testing.T) {
+	dir := t.TempDir()
+	writeWSFixture(t, dir, "base.yaml", fixtures.MustRead("workspace/base-simple.yaml"))
+
+	litmusConfig := &config.LitmusConfig{
+		Workspace: config.WorkspaceConfig{
+			Root:      dir,
+			Fragments: "fragments",
+		},
+	}
+	ws, err := Load(litmusConfig, nil)
+	if err != nil {
+		t.Fatalf("Load() = %v, want nil", err)
+	}
+
+	templates, err := ws.Templates()
+	if err != nil {
+		t.Fatalf("Templates() = %v, want nil", err)
+	}
+	if len(templates) != 0 {
+		t.Errorf("Templates() = %d items, want 0", len(templates))
+	}
+}
+
+func TestTemplates_ValidTemplateSyntax_ReturnsContent(t *testing.T) {
+	dir := t.TempDir()
+	writeWSFixture(t, dir, "base.yaml", fixtures.MustRead("workspace/base-with-template.yaml"))
+	writeWSFixture(t, dir, "templates/my.tmpl", `{{ .GroupLabels }}`)
+
+	litmusConfig := &config.LitmusConfig{
+		Workspace: config.WorkspaceConfig{
+			Root:      dir,
+			Fragments: "fragments",
+		},
+	}
+	ws, err := Load(litmusConfig, nil)
+	if err != nil {
+		t.Fatalf("Load() = %v, want nil", err)
+	}
+
+	templates, err := ws.Templates()
+	if err != nil {
+		t.Fatalf("Templates() = %v, want nil", err)
+	}
+	if len(templates) != 1 {
+		t.Errorf("Templates() = %d items, want 1", len(templates))
+	}
+	if content, ok := templates["my.tmpl"]; !ok || content != `{{ .GroupLabels }}` {
+		t.Errorf("Templates() content mismatch: got %q", content)
+	}
+}
+
+func TestTemplates_MissingFile_ReturnsError(t *testing.T) {
+	dir := t.TempDir()
+	writeWSFixture(t, dir, "base.yaml", fixtures.MustRead("workspace/base-with-missing-template.yaml"))
+
+	litmusConfig := &config.LitmusConfig{
+		Workspace: config.WorkspaceConfig{
+			Root:      dir,
+			Fragments: "fragments",
+		},
+	}
+	ws, err := Load(litmusConfig, nil)
+	if err != nil {
+		t.Fatalf("Load() = %v, want nil", err)
+	}
+
+	_, err = ws.Templates()
+	if err == nil {
+		t.Fatal("Templates() = nil error, want error for missing file")
+	}
+	if !strings.Contains(err.Error(), "template file") {
+		t.Errorf("Templates() error = %q, want 'template file' substring", err)
+	}
+}
+
+func TestTemplates_InvalidSyntax_ReturnsError(t *testing.T) {
+	dir := t.TempDir()
+	writeWSFixture(t, dir, "base.yaml", fixtures.MustRead("workspace/base-with-bad-template.yaml"))
+	writeWSFixture(t, dir, "templates/bad.tmpl", `{{ .Foo | unknownfilter }}`)
+
+	litmusConfig := &config.LitmusConfig{
+		Workspace: config.WorkspaceConfig{
+			Root:      dir,
+			Fragments: "fragments",
+		},
+	}
+	ws, err := Load(litmusConfig, nil)
+	if err != nil {
+		t.Fatalf("Load() = %v, want nil", err)
+	}
+
+	_, err = ws.Templates()
+	if err == nil {
+		t.Fatal("Templates() = nil error, want syntax error")
+	}
+	if !strings.Contains(err.Error(), "invalid syntax") {
+		t.Errorf("Templates() error = %q, want 'invalid syntax' substring", err)
+	}
+}
+
+func TestTemplates_MultipleValid_ReturnsAllContent(t *testing.T) {
+	dir := t.TempDir()
+	writeWSFixture(t, dir, "base.yaml", fixtures.MustRead("workspace/base-with-multiple-templates.yaml"))
+	writeWSFixture(t, dir, "templates/first.tmpl", `{{ .Alerts }}`)
+	writeWSFixture(t, dir, "templates/second.tmpl", `{{ .Status }}`)
+
+	litmusConfig := &config.LitmusConfig{
+		Workspace: config.WorkspaceConfig{
+			Root:      dir,
+			Fragments: "fragments",
+		},
+	}
+	ws, err := Load(litmusConfig, nil)
+	if err != nil {
+		t.Fatalf("Load() = %v, want nil", err)
+	}
+
+	templates, err := ws.Templates()
+	if err != nil {
+		t.Fatalf("Templates() = %v, want nil", err)
+	}
+	if len(templates) != 2 {
+		t.Errorf("Templates() = %d items, want 2", len(templates))
+	}
+	if templates["first.tmpl"] != `{{ .Alerts }}` {
+		t.Errorf("first.tmpl content = %q, want '{{ .Alerts }}'", templates["first.tmpl"])
+	}
+	if templates["second.tmpl"] != `{{ .Status }}` {
+		t.Errorf("second.tmpl content = %q, want '{{ .Status }}'", templates["second.tmpl"])
+	}
+}
+
+func TestTemplates_AbsolutePathValid_ReturnsContent(t *testing.T) {
+	tmpDir := t.TempDir()
+	templateContent := `{{ .Receiver }}`
+	templateFile := filepath.Join(tmpDir, "abs.tmpl")
+	if err := os.WriteFile(templateFile, []byte(templateContent), 0o600); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+
+	dir := t.TempDir()
+	writeWSFixture(t, dir, "base.yaml", `
+global: {}
+templates:
+  - `+templateFile+`
+receivers:
+  - name: noop
+`)
+
+	litmusConfig := &config.LitmusConfig{
+		Workspace: config.WorkspaceConfig{
+			Root:      dir,
+			Fragments: "fragments",
+		},
+	}
+	ws, err := Load(litmusConfig, nil)
+	if err != nil {
+		t.Fatalf("Load() = %v, want nil", err)
+	}
+
+	templates, err := ws.Templates()
+	if err != nil {
+		t.Fatalf("Templates() = %v, want nil", err)
+	}
+	if len(templates) != 1 {
+		t.Errorf("Templates() = %d items, want 1", len(templates))
+	}
+	if templates["abs.tmpl"] != templateContent {
+		t.Errorf("abs.tmpl content mismatch: got %q", templates["abs.tmpl"])
 	}
 }
 
 const missingPath = "/nonexistent/litmus/test/path/file.yml"
-
-func TestLoadBaseline_MissingFile_WrapsError(t *testing.T) {
-	_, err := LoadBaseline(missingPath)
-	if err == nil {
-		t.Fatal("LoadBaseline() = nil error, want error")
-	}
-	if !errors.Is(err, os.ErrNotExist) {
-		t.Errorf("LoadBaseline() error chain must include os.ErrNotExist, got: %v", err)
-	}
-	if !strings.Contains(err.Error(), missingPath) {
-		t.Errorf("LoadBaseline() error must contain path, got: %v", err)
-	}
-}
-
-func TestLoadBaselineYAML_MissingFile_WrapsError(t *testing.T) {
-	_, err := LoadBaselineYAML(missingPath)
-	if err == nil {
-		t.Fatal("LoadBaselineYAML() = nil error, want error")
-	}
-	if !errors.Is(err, os.ErrNotExist) {
-		t.Errorf("LoadBaselineYAML() error chain must include os.ErrNotExist, got: %v", err)
-	}
-	if !strings.Contains(err.Error(), missingPath) {
-		t.Errorf("LoadBaselineYAML() error must contain path, got: %v", err)
-	}
-}
-
-func TestLoadBaselineYAML_BadYAML_WrapsError(t *testing.T) {
-	f := filepath.Join(t.TempDir(), "bad.yml")
-	if err := os.WriteFile(f, []byte("[\nbad yaml"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	_, err := LoadBaselineYAML(f)
-	if err == nil {
-		t.Fatal("LoadBaselineYAML() = nil error, want parse error")
-	}
-	if !strings.Contains(err.Error(), f) {
-		t.Errorf("LoadBaselineYAML() error must contain path, got: %v", err)
-	}
-}
 
 func TestLoadRegressionState_MissingFile_WrapsError(t *testing.T) {
 	_, err := readRegressionState(missingPath)
@@ -563,15 +712,5 @@ func TestLoadRegressionState_BadYAML_WrapsError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), f) {
 		t.Errorf("LoadRegressionState() error must contain path, got: %v", err)
-	}
-}
-
-func TestSaveRegressionState_BadPath_WrapsError(t *testing.T) {
-	err := SaveRegressionState("/nonexistent/dir/state.yml", &types.RegressionState{})
-	if err == nil {
-		t.Fatal("SaveRegressionState() = nil error, want error")
-	}
-	if !strings.Contains(err.Error(), "/nonexistent/dir/state.yml") {
-		t.Errorf("SaveRegressionState() error must contain path, got: %v", err)
 	}
 }

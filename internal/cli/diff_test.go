@@ -6,24 +6,24 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nyambati/litmus/internal/types"
+	"github.com/nyambati/litmus/internal/engine/snapshot"
 )
 
 func TestPrintDiffReport_AllCases(t *testing.T) {
-	diff := &types.RegressionDiff{
-		Deltas: []types.RegressionDelta{
+	diff := &snapshot.RegressionDiff{
+		Deltas: []snapshot.RegressionDelta{
 			{
-				Kind:   types.DeltaAdded,
+				Kind:   snapshot.DeltaAdded,
 				Labels: map[string]string{"team": "new-team", "severity": "critical"},
 				Actual: []string{"new-receiver"},
 			},
 			{
-				Kind:     types.DeltaRemoved,
+				Kind:     snapshot.DeltaRemoved,
 				Labels:   map[string]string{"team": "old-team", "severity": "warning"},
 				Expected: []string{"old-receiver"},
 			},
 			{
-				Kind:     types.DeltaModified,
+				Kind:     snapshot.DeltaModified,
 				Labels:   map[string]string{"team": "existing-team", "severity": "info"},
 				Expected: []string{"receiver-old"},
 				Actual:   []string{"receiver-new"},
@@ -67,7 +67,7 @@ func TestPrintDiffReport_AllCases(t *testing.T) {
 }
 
 func TestPrintDiffReport_NoChanges(t *testing.T) {
-	diff := &types.RegressionDiff{Deltas: []types.RegressionDelta{}}
+	diff := &snapshot.RegressionDiff{Deltas: []snapshot.RegressionDelta{}}
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()

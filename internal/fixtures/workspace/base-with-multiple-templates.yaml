@@ -1,0 +1,8 @@
+global: {}
+templates:
+  - first.tmpl
+  - second.tmpl
+receivers:
+  - name: noop
+route:
+  receiver: noop

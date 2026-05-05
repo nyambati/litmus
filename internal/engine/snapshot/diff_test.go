@@ -20,7 +20,7 @@ func TestComputeDiff_Added(t *testing.T) {
 
 	diff := ComputeDiff(oldTests, newTests)
 	require.Len(t, diff.Deltas, 1)
-	require.Equal(t, types.DeltaAdded, diff.Deltas[0].Kind)
+	require.Equal(t, DeltaAdded, diff.Deltas[0].Kind)
 }
 
 func TestComputeDiff_Removed(t *testing.T) {
@@ -36,7 +36,7 @@ func TestComputeDiff_Removed(t *testing.T) {
 
 	diff := ComputeDiff(oldTests, newTests)
 	require.Len(t, diff.Deltas, 1)
-	require.Equal(t, types.DeltaRemoved, diff.Deltas[0].Kind)
+	require.Equal(t, DeltaRemoved, diff.Deltas[0].Kind)
 }
 
 func TestComputeDiff_Modified(t *testing.T) {
@@ -59,7 +59,7 @@ func TestComputeDiff_Modified(t *testing.T) {
 
 	diff := ComputeDiff(oldTests, newTests)
 	require.Len(t, diff.Deltas, 1)
-	require.Equal(t, types.DeltaModified, diff.Deltas[0].Kind)
+	require.Equal(t, DeltaModified, diff.Deltas[0].Kind)
 	require.Equal(t, "receiver-a", diff.Deltas[0].Expected[0])
 	require.Equal(t, "receiver-a-new", diff.Deltas[0].Actual[0])
 }
@@ -127,12 +127,12 @@ func TestComputeDiff_Mixed(t *testing.T) {
 	diff := ComputeDiff(oldTests, newTests)
 	require.Len(t, diff.Deltas, 3)
 
-	kinds := make(map[types.DeltaKind]int)
+	kinds := make(map[DeltaKind]int)
 	for _, delta := range diff.Deltas {
 		kinds[delta.Kind]++
 	}
 
-	require.Equal(t, 1, kinds[types.DeltaRemoved])
-	require.Equal(t, 1, kinds[types.DeltaModified])
-	require.Equal(t, 1, kinds[types.DeltaAdded])
+	require.Equal(t, 1, kinds[DeltaRemoved])
+	require.Equal(t, 1, kinds[DeltaModified])
+	require.Equal(t, 1, kinds[DeltaAdded])
 }

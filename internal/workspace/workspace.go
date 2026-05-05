@@ -7,12 +7,14 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
-	"github.com/nyambati/litmus/internal/codec"
 	"github.com/nyambati/litmus/internal/config"
+	"github.com/nyambati/litmus/internal/engine/snapshot"
 	"github.com/nyambati/litmus/internal/fragment"
 	"github.com/nyambati/litmus/internal/types"
 	amconfig "github.com/prometheus/alertmanager/config"
+	amtemplate "github.com/prometheus/alertmanager/template"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
@@ -33,22 +35,76 @@ func New(cfg *config.LitmusConfig, logger logrus.FieldLogger) *Workspace {
 	}
 }
 
-func (w *Workspace) AMConfig() (*amconfig.Config, error) {
-	if w.Config == nil {
+func (w *Workspace) Config() (*amconfig.Config, error) {
+	if w.config == nil {
 		return nil, fmt.Errorf("workspace not assembled: call Assemble() first")
 	}
-	data, err := w.Config.Marshal()
+	data, err := w.config.Marshal()
 	if err != nil {
 		return nil, fmt.Errorf("serializing alertmanager config: %w", err)
 	}
-	return amconfig.Load(string(data))
+	cfg, err := amconfig.Load(string(data))
+	if err != nil {
+		return nil, fmt.Errorf("loading alertmanager config: %w", err)
+	}
+
+	if cfg.Route == nil {
+		return nil, fmt.Errorf("alertmanager config has no route defined")
+	}
+
+	return cfg, nil
+}
+
+// Templates validates and loads template files referenced in the config.
+// It checks for file existence and validates Go template syntax.
+func (w *Workspace) Templates() (map[string]string, error) {
+	if w.config == nil {
+		return nil, fmt.Errorf("workspace not assembled: call Assemble() first")
+	}
+	if w.cfg == nil {
+		return nil, fmt.Errorf("missing litmus configuration")
+	}
+
+	templates := make(map[string]string)
+
+	for _, filename := range w.config.Templates {
+		filePath := filepath.Join(w.cfg.TemplatesDir(), filename)
+		if filepath.IsAbs(filename) {
+			filePath = filename
+		}
+
+		// Check file existence
+		if _, err := os.Stat(filePath); err != nil {
+			return nil, fmt.Errorf("template file %q: %w", filename, err)
+		}
+
+		// Read file
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("reading template %q: %w", filename, err)
+		}
+
+		// Validate Go template syntax
+		t, err := amtemplate.New()
+		if err != nil {
+			return nil, fmt.Errorf("creating template parser for %q: %w", filename, err)
+		}
+		if err := t.Parse(strings.NewReader(string(data))); err != nil {
+			return nil, fmt.Errorf("template %q has invalid syntax: %w", filename, err)
+		}
+
+		key := filepath.Base(filename)
+		templates[key] = string(data)
+	}
+
+	return templates, nil
 }
 
 func (w *Workspace) ConfigString() string {
-	if w.Config == nil {
+	if w.config == nil {
 		return ""
 	}
-	return w.Config.String()
+	return w.config.String()
 }
 
 // Tests returns all behavioral test cases from all loaded fragments.
@@ -84,14 +140,14 @@ func (w *Workspace) read() (*Metadata, error) {
 		return nil, err
 	}
 
-	w.Config = cfg
+	w.config = cfg
 
 	tests, testFiles, err := readRootTests(filepath.Join(absPath, "tests"))
 	if err != nil {
 		return nil, err
 	}
 
-	w.Fragments = append(w.Fragments, getRootFragment(w.Config, tests))
+	w.Fragments = append(w.Fragments, getRootFragment(w.config, tests))
 
 	return &Metadata{
 		Dir:       absPath,
@@ -228,13 +284,13 @@ func getRootFragment(root *types.AlertmanagerConfig, tests []*types.TestCase) *f
 }
 
 // GetRegressionState reads the regression state (ID + tests) from regressions.litmus.yml.
-func readRegressionState(path string) (*types.RegressionState, error) {
+func readRegressionState(path string) (*snapshot.RegressionState, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var state types.RegressionState
+	var state snapshot.RegressionState
 	if err := yaml.Unmarshal(data, &state); err != nil {
 		return nil, fmt.Errorf("parsing regression state %q: %w", path, err)
 	}
@@ -264,52 +320,9 @@ func (w *Workspace) EnsureRegressionState() error {
 }
 
 // SaveRegressionState writes the regression state (ID + tests) to regressions.litmus.yml.
-func (w *Workspace) SaveRegressionState(state *types.RegressionState) error {
+func (w *Workspace) SaveRegressionState(state *snapshot.RegressionState) error {
 	if w.cfg == nil {
 		return fmt.Errorf("no config set on workspace")
 	}
-	return SaveRegressionState(w.cfg.RegressionsYamlFilePath(), state)
-}
-
-// LoadBaseline reads a msgpack regression baseline from disk.
-func LoadBaseline(path string) ([]*types.TestCase, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = file.Close() }()
-
-	var tests []*types.TestCase
-	if err := codec.DecodeMsgPack(file, &tests); err != nil {
-		return nil, fmt.Errorf("decoding baseline %q: %w", path, err)
-	}
-	return tests, nil
-}
-
-// LoadBaselineYAML reads a YAML regression baseline from disk.
-func LoadBaselineYAML(path string) ([]*types.TestCase, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var tests []*types.TestCase
-	if err := yaml.Unmarshal(data, &tests); err != nil {
-		return nil, fmt.Errorf("parsing baseline YAML %q: %w", path, err)
-	}
-	return tests, nil
-}
-
-// SaveRegressionState writes the regression state (ID + tests) to regressions.litmus.yml.
-func SaveRegressionState(path string, state *types.RegressionState) error {
-	data, err := yaml.Marshal(state)
-	if err != nil {
-		return fmt.Errorf("serializing regression state: %w", err)
-	}
-
-	if err := os.WriteFile(path, data, 0o600); err != nil {
-		return err
-	}
-
-	return nil
+	return snapshot.SaveRegressionState(w.cfg.RegressionsYamlFilePath(), state)
 }

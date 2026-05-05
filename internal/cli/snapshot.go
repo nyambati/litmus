@@ -3,9 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
-	"maps"
 	"os"
-	"strings"
 
 	"github.com/nyambati/litmus/internal/config"
 	"github.com/nyambati/litmus/internal/engine/pipeline"
@@ -26,12 +24,9 @@ func RunSnapshot(cfg *config.LitmusConfig, logger logrus.FieldLogger, update, st
 		return err
 	}
 
-	amCfg, err := ws.AMConfig()
+	amCfg, err := ws.Config()
 	if err != nil {
 		return fmt.Errorf("failed to load alertmanager config: %w", err)
-	}
-	if amCfg.Route == nil {
-		return fmt.Errorf("alertmanager config has no route defined")
 	}
 
 	ctx := context.Background()
@@ -52,10 +47,10 @@ func RunSnapshot(cfg *config.LitmusConfig, logger logrus.FieldLogger, update, st
 		fmt.Fprintf(os.Stderr, "WARN: synthesis produced zero outcomes; baseline will be empty\n")
 	}
 
-	regTests := BuildRegressionTests(outcomes, cfg.GlobalLabels)
+	regTests := snapshot.BuildRegressionTests(outcomes, cfg.GlobalLabels)
 
 	var existing []*types.TestCase
-	existingHistory, histErr := ListHistory(cfg.RegressionsDir())
+	existingHistory, histErr := snapshot.ListHistory(cfg.RegressionsDir())
 	if histErr != nil {
 		return fmt.Errorf("listing regression history: %w", histErr)
 	}
@@ -108,22 +103,4 @@ func RunSnapshot(cfg *config.LitmusConfig, logger logrus.FieldLogger, update, st
 
 	fmt.Println("✓ Baseline is current") //nolint:forbidigo
 	return nil
-}
-
-// BuildRegressionTests converts synthesis outcomes into executable regression test cases.
-func BuildRegressionTests(outcomes []*snapshot.SynthesisResult, globalLabels map[string]string) []*types.TestCase {
-	tests := make([]*types.TestCase, 0, len(outcomes))
-	for _, outcome := range outcomes {
-		labels := make(map[string]string)
-		maps.Copy(labels, globalLabels)
-		maps.Copy(labels, outcome.Labels)
-		tests = append(tests, &types.TestCase{
-			Type:   "regression",
-			Name:   fmt.Sprintf("Route to %s", strings.Join(outcome.Receivers, ", ")),
-			Labels: []map[string]string{labels},
-			Expect: &types.BehavioralExpect{Outcome: "active", Receivers: outcome.Receivers},
-			Tags:   []string{"regression"},
-		})
-	}
-	return tests
 }

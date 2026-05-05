@@ -8,8 +8,8 @@ import (
 
 // ComputeDiff compares two sets of regression TestCases and identifies deltas.
 // Tests are matched by their first label set (assuming canonical synthesis).
-func ComputeDiff(oldTests, newTests []*types.TestCase) *types.RegressionDiff {
-	diff := &types.RegressionDiff{Deltas: []types.RegressionDelta{}}
+func ComputeDiff(oldTests, newTests []*types.TestCase) *RegressionDiff {
+	diff := &RegressionDiff{Deltas: []RegressionDelta{}}
 
 	oldIdx := indexByLabels(oldTests)
 	newIdx := indexByLabels(newTests)
@@ -21,8 +21,8 @@ func ComputeDiff(oldTests, newTests []*types.TestCase) *types.RegressionDiff {
 		}
 		oldTest, exists := oldIdx[lKey]
 		if !exists {
-			diff.Deltas = append(diff.Deltas, types.RegressionDelta{
-				Kind:   types.DeltaAdded,
+			diff.Deltas = append(diff.Deltas, RegressionDelta{
+				Kind:   DeltaAdded,
 				Labels: newTest.Labels[0],
 				Actual: newTest.Expect.Receivers,
 			})
@@ -30,8 +30,8 @@ func ComputeDiff(oldTests, newTests []*types.TestCase) *types.RegressionDiff {
 		}
 
 		if !matching.ExactMatch(newTest.Expect.Receivers, oldTest.Expect.Receivers) {
-			diff.Deltas = append(diff.Deltas, types.RegressionDelta{
-				Kind:     types.DeltaModified,
+			diff.Deltas = append(diff.Deltas, RegressionDelta{
+				Kind:     DeltaModified,
 				Labels:   newTest.Labels[0],
 				Expected: oldTest.Expect.Receivers,
 				Actual:   newTest.Expect.Receivers,
@@ -45,8 +45,8 @@ func ComputeDiff(oldTests, newTests []*types.TestCase) *types.RegressionDiff {
 			continue
 		}
 		if _, exists := newIdx[lKey]; !exists {
-			diff.Deltas = append(diff.Deltas, types.RegressionDelta{
-				Kind:     types.DeltaRemoved,
+			diff.Deltas = append(diff.Deltas, RegressionDelta{
+				Kind:     DeltaRemoved,
 				Labels:   oldTest.Labels[0],
 				Expected: oldTest.Expect.Receivers,
 			})

@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/nyambati/litmus/internal/workspace"
+	"github.com/nyambati/litmus/internal/engine/snapshot"
 	"gopkg.in/yaml.v3"
 )
 
 // RunInspect loads a msgpack baseline and prints it as YAML or JSON.
 func RunInspect(filePath, format string) error {
-	tests, err := workspace.LoadBaseline(filePath)
+	tests, err := snapshot.LoadBaseline(filePath)
 	if err != nil {
 		return fmt.Errorf("loading baseline: %w", err)
 	}
