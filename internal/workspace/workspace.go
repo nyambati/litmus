@@ -52,6 +52,10 @@ func (w *Workspace) Config() (*amconfig.Config, error) {
 		return nil, fmt.Errorf("alertmanager config has no route defined")
 	}
 
+	if cfg.Global == nil {
+		return nil, fmt.Errorf("alertmanager config has no global configuration")
+	}
+
 	return cfg, nil
 }
 
@@ -63,6 +67,11 @@ func (w *Workspace) Templates() (map[string]string, error) {
 	}
 	if w.cfg == nil {
 		return nil, fmt.Errorf("missing litmus configuration")
+	}
+
+	t, err := amtemplate.New()
+	if err != nil {
+		return nil, fmt.Errorf("creating template parser: %w", err)
 	}
 
 	templates := make(map[string]string)
@@ -84,11 +93,6 @@ func (w *Workspace) Templates() (map[string]string, error) {
 			return nil, fmt.Errorf("reading template %q: %w", filename, err)
 		}
 
-		// Validate Go template syntax
-		t, err := amtemplate.New()
-		if err != nil {
-			return nil, fmt.Errorf("creating template parser for %q: %w", filename, err)
-		}
 		if err := t.Parse(strings.NewReader(string(data))); err != nil {
 			return nil, fmt.Errorf("template %q has invalid syntax: %w", filename, err)
 		}

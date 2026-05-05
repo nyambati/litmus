@@ -9,10 +9,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/goccy/go-yaml"
 	"github.com/nyambati/litmus/internal/codec"
 	"github.com/nyambati/litmus/internal/config"
 	"github.com/nyambati/litmus/internal/types"
+	"gopkg.in/yaml.v3"
 )
 
 // RegressionState holds the current active baseline ID and its tests.
