@@ -38,7 +38,7 @@ release:
     name: litmus
   draft: true
   prerelease: auto
-  name_template: '{{.Version}}'
+  name_template: "{{.Version}}"
 
 dockers:
   - ids:
