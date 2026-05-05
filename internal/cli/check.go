@@ -12,6 +12,7 @@ import (
 	"github.com/nyambati/litmus/internal/config"
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/engine/sanity"
+	"github.com/nyambati/litmus/internal/engine/snapshot"
 	"github.com/nyambati/litmus/internal/types"
 	"github.com/nyambati/litmus/internal/workspace"
 	amconfig "github.com/prometheus/alertmanager/config"
@@ -71,13 +72,9 @@ func RunCheck(cfg *config.LitmusConfig, logger logrus.FieldLogger, format string
 		return 1, err
 	}
 
-	amCfg, err := ws.AMConfig()
+	amCfg, err := ws.Config()
 	if err != nil {
 		return 1, fmt.Errorf("failed to load alertmanager config: %w", err)
-	}
-
-	if amCfg.Route == nil {
-		return 1, fmt.Errorf("alertmanager config has no route defined")
 	}
 
 	router := pipeline.NewRouter(amCfg.Route)
@@ -278,16 +275,16 @@ func PrintCheckResult(r CheckResult, showDiff bool) {
 		if showDiff {
 			fmt.Println("\n   Behavioral Delta:")
 			// Generate a temporary diff for the failures
-			deltas := make([]types.RegressionDelta, 0, len(r.Regression.Failures))
+			deltas := make([]snapshot.RegressionDelta, 0, len(r.Regression.Failures))
 			for _, f := range r.Regression.Failures {
-				deltas = append(deltas, types.RegressionDelta{
-					Kind:     types.DeltaModified,
+				deltas = append(deltas, snapshot.RegressionDelta{
+					Kind:     snapshot.DeltaModified,
 					Labels:   f.Labels,
 					Expected: f.Expected,
 					Actual:   f.Actual,
 				})
 			}
-			PrintDiffReport(&types.RegressionDiff{Deltas: deltas})
+			PrintDiffReport(&snapshot.RegressionDiff{Deltas: deltas})
 		}
 	}
 	fmt.Println()

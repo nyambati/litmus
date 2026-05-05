@@ -9,7 +9,6 @@ import (
 	"github.com/nyambati/litmus/internal/engine/pipeline"
 	"github.com/nyambati/litmus/internal/engine/snapshot"
 	"github.com/nyambati/litmus/internal/stores"
-	"github.com/nyambati/litmus/internal/types"
 	"github.com/nyambati/litmus/internal/utils"
 	"github.com/nyambati/litmus/internal/workspace"
 	"github.com/sirupsen/logrus"
@@ -29,13 +28,9 @@ func RunDiff(cfg *config.LitmusConfig, logger logrus.FieldLogger) error {
 		return err
 	}
 
-	amCfg, err := ws.AMConfig()
+	amCfg, err := ws.Config()
 	if err != nil {
 		return fmt.Errorf("failed to load alertmanager config: %w", err)
-	}
-
-	if amCfg.Route == nil {
-		return fmt.Errorf("alertmanager config has no route defined")
 	}
 
 	ctx := context.Background()
@@ -51,7 +46,7 @@ func RunDiff(cfg *config.LitmusConfig, logger logrus.FieldLogger) error {
 		return fmt.Errorf("synthesis failed: %w", err)
 	}
 
-	currentTests := BuildRegressionTests(outcomes, cfg.GlobalLabels)
+	currentTests := snapshot.BuildRegressionTests(outcomes, cfg.GlobalLabels)
 
 	if ws.RegressionState == nil {
 		return fmt.Errorf("no baseline found — run 'litmus snapshot capture' to create one")
@@ -73,7 +68,7 @@ func RunDiff(cfg *config.LitmusConfig, logger logrus.FieldLogger) error {
 // PrintDiffReport outputs a color-coded structural delta.
 //
 //nolint:forbidigo
-func PrintDiffReport(diff *types.RegressionDiff) {
+func PrintDiffReport(diff *snapshot.RegressionDiff) {
 	if len(diff.Deltas) == 0 {
 		fmt.Println("No behavioral changes detected.")
 		return
@@ -86,17 +81,17 @@ func PrintDiffReport(diff *types.RegressionDiff) {
 
 	for _, delta := range diff.Deltas {
 		switch delta.Kind {
-		case types.DeltaAdded:
+		case snapshot.DeltaAdded:
 			fmt.Printf("%s[+] ADDED:   Route to %s%s\n", colorGreen, formatReceivers(delta.Actual), colorReset)
 			fmt.Printf("    Labels:  %s\n", formatLabels(delta.Labels))
 			fmt.Printf("    Outcome: %s\n", formatReceivers(delta.Actual))
 
-		case types.DeltaRemoved:
+		case snapshot.DeltaRemoved:
 			fmt.Printf("%s[-] REMOVED: Route to %s%s\n", colorRed, formatReceivers(delta.Expected), colorReset)
 			fmt.Printf("    Labels:  %s\n", formatLabels(delta.Labels))
 			fmt.Printf("    Old:     %s\n", formatReceivers(delta.Expected))
 
-		case types.DeltaModified:
+		case snapshot.DeltaModified:
 			fmt.Printf("%s[!] MODIFIED: Behavior for Labels%s\n", colorYellow, colorReset)
 			fmt.Printf("    Labels:  %s\n", formatLabels(delta.Labels))
 			fmt.Printf("    %s- Expected: %s%s\n", colorRed, formatReceivers(delta.Expected), colorReset)

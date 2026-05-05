@@ -45,10 +45,12 @@ dockers:
       - litmus
     goos: linux
     goarch: amd64
+    use: buildx
     image_templates:
       - "ghcr.io/nyambati/litmus:{{ .Tag }}-amd64"
     dockerfile: Dockerfile
     build_flag_templates:
+      - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.created={{.Date}}"
       - "--label=org.opencontainers.image.title={{.ProjectName}}"
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
@@ -58,10 +60,12 @@ dockers:
       - litmus
     goos: linux
     goarch: arm64
+    use: buildx
     image_templates:
       - "ghcr.io/nyambati/litmus:{{ .Tag }}-arm64"
     dockerfile: Dockerfile
     build_flag_templates:
+      - "--platform=linux/arm64"
       - "--label=org.opencontainers.image.created={{.Date}}"
       - "--label=org.opencontainers.image.title={{.ProjectName}}"
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"

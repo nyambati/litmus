@@ -2,8 +2,8 @@ package sanity
 
 import (
 	litconfig "github.com/nyambati/litmus/internal/config"
+	"github.com/nyambati/litmus/internal/engine/snapshot"
 	"github.com/nyambati/litmus/internal/fragment"
-	"github.com/nyambati/litmus/internal/types"
 	amconfig "github.com/prometheus/alertmanager/config"
 )
 
@@ -14,7 +14,7 @@ type CheckContext struct {
 	Rules           []*amconfig.InhibitRule
 	Policy          litconfig.PolicyConfig
 	Fragments       []*fragment.Fragment
-	RegressionState *types.RegressionState
+	RegressionState *snapshot.RegressionState
 }
 
 // Check is the interface all sanity checks must implement.

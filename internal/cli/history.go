@@ -6,12 +6,12 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 	"time"
 
 	"github.com/nyambati/litmus/internal/codec"
 	"github.com/nyambati/litmus/internal/config"
+	"github.com/nyambati/litmus/internal/engine/snapshot"
 	"github.com/nyambati/litmus/internal/types"
 	"github.com/nyambati/litmus/internal/workspace"
 	"github.com/spf13/cobra"
@@ -40,7 +40,7 @@ func ArchiveBaseline(cfg *config.LitmusConfig, tests []*types.TestCase) (string,
 		return "", fmt.Errorf("encoding history entry: %w", err)
 	}
 
-	if err := workspace.SaveRegressionState(cfg.RegressionsYamlFilePath(), &types.RegressionState{ID: id, Tests: tests}); err != nil {
+	if err := snapshot.SaveRegressionState(cfg.RegressionsYamlFilePath(), &snapshot.RegressionState{ID: id, Tests: tests}); err != nil {
 		return "", fmt.Errorf("writing regression state: %w", err)
 	}
 
@@ -52,47 +52,9 @@ func ArchiveBaseline(cfg *config.LitmusConfig, tests []*types.TestCase) (string,
 	return id, nil
 }
 
-// ListHistory returns history entry IDs sorted newest-first.
-func ListHistory(regressionDir string) ([]string, error) {
-	entries, err := os.ReadDir(regressionDir)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("reading history dir: %w", err)
-	}
-
-	var ids []string
-	for _, e := range entries {
-		if strings.HasSuffix(e.Name(), ".mpk") && !strings.HasPrefix(e.Name(), "regressions.litmus") {
-			id := strings.TrimSuffix(e.Name(), ".mpk")
-			ids = append(ids, id)
-		}
-	}
-	sort.Sort(sort.Reverse(sort.StringSlice(ids)))
-	return ids, nil
-}
-
-// RollbackToEntry restores a history entry as the active baseline.
-func RollbackToEntry(cfg *config.LitmusConfig, id string) error {
-	srcMpk := filepath.Join(cfg.RegressionsDir(), id+".mpk")
-
-	// Load the tests from the historical baseline
-	tests, err := workspace.LoadBaseline(srcMpk)
-	if err != nil {
-		return fmt.Errorf("loading history entry %q: %w", id, err)
-	}
-
-	if err := workspace.SaveRegressionState(cfg.RegressionsYamlFilePath(), &types.RegressionState{ID: id, Tests: tests}); err != nil {
-		return fmt.Errorf("writing regression state: %w", err)
-	}
-
-	return nil
-}
-
 // cleanupOldEntries removes old entries keeping only the latest `keep` versions.
 func cleanupOldEntries(cfg *config.LitmusConfig) error {
-	ids, err := ListHistory(cfg.RegressionsDir())
+	ids, err := snapshot.ListHistory(cfg.RegressionsDir())
 	if err != nil {
 		return err
 	}
@@ -116,7 +78,7 @@ func cleanupOldEntries(cfg *config.LitmusConfig) error {
 
 // RunHistoryList prints available baseline history entries.
 func RunHistoryList(litmusConfig *config.LitmusConfig, cmd *cobra.Command) error {
-	ids, err := ListHistory(litmusConfig.RegressionsDir())
+	ids, err := snapshot.ListHistory(litmusConfig.RegressionsDir())
 	if err != nil {
 		return err
 	}
@@ -152,7 +114,7 @@ func RunHistoryList(litmusConfig *config.LitmusConfig, cmd *cobra.Command) error
 
 // RunHistoryRollback restores the baseline identified by id.
 func RunHistoryRollback(litmusConfig *config.LitmusConfig, cmd *cobra.Command, id string) error {
-	ids, err := ListHistory(litmusConfig.RegressionsDir())
+	ids, err := snapshot.ListHistory(litmusConfig.RegressionsDir())
 	if err != nil {
 		return err
 	}
@@ -161,7 +123,7 @@ func RunHistoryRollback(litmusConfig *config.LitmusConfig, cmd *cobra.Command, i
 		return fmt.Errorf("version %q not found; run 'litmus history list' to see available versions", id)
 	}
 
-	if err := RollbackToEntry(litmusConfig, id); err != nil {
+	if err := snapshot.RollbackToEntry(litmusConfig, id); err != nil {
 		return err
 	}
 

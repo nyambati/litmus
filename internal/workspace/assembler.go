@@ -27,7 +27,7 @@ func (w *Workspace) Assemble() error {
 
 	// Reset accumulated state so Assemble is idempotent on the same instance.
 	w.Fragments = nil
-	w.Config = nil
+	w.config = nil
 
 	meta, err := w.read()
 	if err != nil {
@@ -55,7 +55,7 @@ func (w *Workspace) Assemble() error {
 		w.Fragments = append(w.Fragments, ch.Fragment)
 	}
 
-	return assemble(w.Config, children.Fragments, log)
+	return assemble(w.config, children.Fragments, log)
 }
 
 // assemble is the pure merge function: given a root config and a slice of

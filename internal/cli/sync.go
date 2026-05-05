@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/nyambati/litmus/internal/config"
 	"github.com/nyambati/litmus/internal/engine/sanity"
@@ -32,13 +31,9 @@ func RunSync(cfg *config.LitmusConfig, logger logrus.FieldLogger, address, tenan
 		return err
 	}
 
-	amConfig, err := ws.AMConfig()
+	amConfig, err := ws.Config()
 	if err != nil {
 		return fmt.Errorf("failed to load alertmanager config: %w", err)
-	}
-
-	if amConfig.Route == nil {
-		return fmt.Errorf("alertmanager config has no route defined")
 	}
 
 	if !skipValidate {
@@ -57,7 +52,7 @@ func RunSync(cfg *config.LitmusConfig, logger logrus.FieldLogger, address, tenan
 		return err
 	}
 
-	templates, err := loadTemplates(cfg, amConfig.Templates)
+	templates, err := ws.Templates()
 	if err != nil {
 		return err
 	}
@@ -90,26 +85,4 @@ func printYAML(amCfg string, output string) error {
 
 	fmt.Fprintln(os.Stdout, string(amCfg))
 	return nil
-}
-
-func loadTemplates(litmusConfig *config.LitmusConfig, templateNames []string) (map[string]string, error) {
-	templates := make(map[string]string)
-
-	for _, filename := range templateNames {
-		filePath := filepath.Join(litmusConfig.TemplatesDir(), filename)
-
-		if filepath.IsAbs(filename) {
-			filePath = filename
-		}
-
-		data, err := os.ReadFile(filePath)
-		if err != nil {
-			return nil, fmt.Errorf("reading template %q: %w", filename, err)
-		}
-
-		key := filepath.Base(filename)
-		templates[key] = string(data)
-	}
-
-	return templates, nil
 }
