@@ -6,7 +6,7 @@ Learn how to use Litmus to validate your Alertmanager configuration.
 
 ## Overview
 
-Litmus provides eight commands for managing alert configuration validation:
+Litmus provides seven commands for managing alert configuration validation:
 
 ```
 litmus init       Initialize workspace
@@ -16,7 +16,6 @@ litmus check      Validate configuration (for CI/CD)
 litmus diff       Show changes from baseline
 litmus inspect    Read binary regression file (for auditing)
 litmus sync       Push validated config to Grafana Mimir
-litmus serve      Launch the web UI
 ```
 
 ---
@@ -30,7 +29,7 @@ litmus init
 ```
 
 This creates:
-- **`litmus.yaml`** — Configuration file for Litmus
+- **`.litmus.yaml`** — Configuration file for Litmus
 - **`tests/`** — Directory for behavioral unit tests
 
 ### Step 2: Create Baseline
@@ -177,7 +176,7 @@ litmus init
 ```
 
 **Creates:**
-- `litmus.yaml` — Configuration file
+- `.litmus.yaml` — Configuration file
 - `tests/` — Test directory
 
 **Options:** None
@@ -258,7 +257,7 @@ $ litmus history rollback 20260422-211233
 ✓ Rolled back baseline to 20260422-211233
 ```
 
-History entries are stored as timestamped `.mpk` files in the `regressions/` directory. A new entry is created only when `litmus snapshot update` detects actual drift. Old entries are pruned based on `regression.keep` in `litmus.yaml`.
+History entries are stored as timestamped `.mpk` files in the `regressions/` directory. A new entry is created only when `litmus snapshot update` detects actual drift. Old entries are pruned based on `regression.keep` in `.litmus.yaml`.
 
 **Exit Codes:**
 - `0` — Success
@@ -406,31 +405,6 @@ git diff regressions/20260422-214411.mpk
 
 ---
 
-### `litmus serve`
-
-Launch the Litmus web UI for interactive route exploration and test management.
-
-```bash
-litmus serve                  # Start on :8080
-litmus serve --port 3000      # Custom port
-litmus serve --dev            # Development mode (hot-reload, verbose logging)
-```
-
-**Flags:**
-- `-p, --port` — Port to listen on (default: `8080`)
-- `--dev` — Enable development mode
-
-**Pages:**
-- **Explorer** — Enter alert labels and trace the routing path live
-- **Lab** — Run unit and regression tests interactively
-- **Regression** — Compare current routing against the snapshot baseline
-- **Route Inspector** — Visualize the full route tree
-- **Sanity** — Run static analysis checks
-
-Open `http://localhost:8080` after starting.
-
----
-
 ### `litmus sync`
 
 Validate and push alertmanager configuration to Grafana Mimir.
@@ -439,15 +413,14 @@ Validate and push alertmanager configuration to Grafana Mimir.
 litmus sync
 litmus sync --dry-run                              # Validate without pushing
 litmus sync --address https://mimir.example.com   # Override config
-litmus sync --skip-validate                       # Skip sanity checks
 ```
 
 **Flags:**
 - `--address` — Mimir API address (overrides config)
 - `--tenant-id` — Mimir tenant ID (overrides config)
 - `--api-key` — Mimir API key (overrides config)
-- `--dry-run` — Validate only, do not push
-- `--skip-validate` — Skip sanity checks before push
+- `--dry-run` — Render config to stdout or file, do not push
+- `-o, --output` — Output file path (use with --dry-run)
 
 **Configuration:**
 Mimir credentials in `.litmus.yaml`:
@@ -484,7 +457,7 @@ litmus sync
 
 ## Configuration
 
-See [`docs/cli/configuration.md`](configuration.md) for the full `litmus.yaml` schema.
+See [`docs/cli/configuration.md`](configuration.md) for the full `.litmus.yaml` schema.
 
 ### Minimal Example
 

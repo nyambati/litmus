@@ -58,8 +58,7 @@ litmus/
 │   ├── inspect.go              # litmus inspect
 │   ├── init.go                 # litmus init
 │   ├── sync.go                 # litmus sync (push to Mimir)
-│   ├── history.go              # litmus history
-│   └── server.go               # litmus serve (web UI)
+│   └── history.go              # litmus history
 ├── internal/
 │   ├── cli/                    # Business logic for each command
 │   ├── engine/
@@ -74,10 +73,9 @@ litmus/
 │   ├── codec/                  # msgpack + YAML serialization
 │   ├── config/                 # LitmusConfig parsing + SanityConfig modes
 │   ├── mimir/                  # Grafana Mimir API client
-│   ├── server/                 # Web UI HTTP server
 │   ├── labelmatcher/           # Label matcher helpers
 │   ├── fixtures/               # Test fixtures
-│   ├── templates/              # litmus.yaml init template
+│   ├── templates/              # .litmus.yaml init template
 │   └── utils/                  # Shared utilities
 ├── docs/                       # Specifications & tickets
 └── graphify-out/               # Knowledge graph (update after code changes)
@@ -92,12 +90,11 @@ litmus/
 - `litmus diff`: Show routing changes from baseline
 - `litmus inspect`: Human-read `.mpk` files
 - `litmus history`: View regression baseline history
-- `litmus sync [--dry-run] [--skip-validate] [-o file]`: Validate then push config to Grafana Mimir
-- `litmus serve [-p port] [--dev]`: Start web UI server (default port 8080)
+- `litmus sync [--dry-run] [-o file]`: Validate then push config to Grafana Mimir
 
 ## Sanity Checks
 
-Registered in `DefaultRunner` (`internal/engine/sanity/runner.go`). Each is configurable as `warn` or `fail` in `litmus.yaml`:
+Registered in `DefaultRunner` (`internal/engine/sanity/runner.go`). Each is configurable as `warn` or `fail` in `.litmus.yaml`:
 
 | Check | Config key |
 |---|---|
@@ -112,7 +109,7 @@ Registered in `DefaultRunner` (`internal/engine/sanity/runner.go`). Each is conf
 
 Default mode for unconfigured checks: `fail`.
 
-## Configuration (`litmus.yaml`)
+## Configuration (`.litmus.yaml`)
 
 ```yaml
 workspace:
@@ -163,7 +160,6 @@ mimir:
 This project has a graphify knowledge graph at `graphify-out/`.
 
 Rules:
-- Use engineering standards defined in `docs/engineering/`
 - Before answering architecture questions, read `graphify-out/GRAPH_REPORT.md` for god nodes & community structure
 - If `graphify-out/wiki/index.md` exists, navigate it instead of raw files
 - **After modifying code**, run `graphify update .` to keep graph current (AST-only, no API cost)
@@ -177,4 +173,3 @@ Rules:
 | `docs/sanity.md` | Sanity check catalogue |
 | `docs/policies.md` | Policy enforcement rules |
 | `docs/cli/` | CLI user guide & configuration reference |
-| `docs/engineering/standards.md` | Coding standards |

@@ -1,7 +1,9 @@
 package snapshot
 
 import (
+	"maps"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -133,15 +135,14 @@ func (lcg *LabelCombinationGenerator) cartesianProduct(matchers map[string][]str
 	for k := range matchers {
 		keys = append(keys, k)
 	}
+	sort.Strings(keys) // deterministic ordering for stable baselines
 
 	var result []map[string]string
 	var build func(int, map[string]string)
 	build = func(depth int, current map[string]string) {
 		if depth == len(keys) {
-			m := make(map[string]string)
-			for k, v := range current {
-				m[k] = v
-			}
+			m := make(map[string]string, len(current))
+			maps.Copy(m, current)
 			result = append(result, m)
 			return
 		}
@@ -157,6 +158,16 @@ func (lcg *LabelCombinationGenerator) cartesianProduct(matchers map[string][]str
 	return result
 }
 
+// comboKey builds a stable identity string for a combination, iterating keys
+// in their (pre-sorted) order so equal combinations always map to the same key.
+func comboKey(keys []string, combo map[string]string) string {
+	parts := make([]string, 0, len(keys))
+	for _, k := range keys {
+		parts = append(parts, k+"="+combo[k])
+	}
+	return strings.Join(parts, "\x00")
+}
+
 // minimalCoveringSet selects up to maxCombinations combos that maximise coverage
 // without generating the full Cartesian product to avoid OOM.
 func (lcg *LabelCombinationGenerator) minimalCoveringSet(matchers map[string][]string) []map[string]string {
@@ -168,6 +179,7 @@ func (lcg *LabelCombinationGenerator) minimalCoveringSet(matchers map[string][]s
 	for k := range matchers {
 		keys = append(keys, k)
 	}
+	sort.Strings(keys) // deterministic ordering for stable baselines
 
 	covered := make(map[string]map[string]bool)
 	uncoveredCount := 0
@@ -177,6 +189,7 @@ func (lcg *LabelCombinationGenerator) minimalCoveringSet(matchers map[string][]s
 	}
 
 	var result []map[string]string
+	seen := make(map[string]bool)
 
 	// 1. Greedily generate combinations to cover all values at least once
 	for uncoveredCount > 0 && len(result) < lcg.maxCombinations {
@@ -201,6 +214,7 @@ func (lcg *LabelCombinationGenerator) minimalCoveringSet(matchers map[string][]s
 		}
 
 		result = append(result, combo)
+		seen[comboKey(keys, combo)] = true
 		// Mark as covered and update counter
 		for k, v := range combo {
 			if !covered[k][v] {
@@ -211,26 +225,27 @@ func (lcg *LabelCombinationGenerator) minimalCoveringSet(matchers map[string][]s
 	}
 
 	// 2. If we still have room, add a few more "interesting" combinations
-	// (e.g., using different values for the first few keys)
-	if len(result) < lcg.maxCombinations {
-		// This is a simple fallback to fill up to maxCombinations if needed.
-		// In practice, the first loop often covers most scenarios or hits the limit.
-		for i := 1; len(result) < lcg.maxCombinations; i++ {
-			combo := make(map[string]string)
-			changed := false
-			for j, k := range keys {
-				vals := matchers[k]
-				idx := (i + j) % len(vals)
-				combo[k] = vals[idx]
-				if idx > 0 {
-					changed = true
-				}
-			}
-			if !changed && i > 0 {
-				break // We've looped through all simple variations
-			}
-			result = append(result, combo)
+	// (e.g., using different values for the first few keys). The idx cycle
+	// (i+j)%len(vals) repeats once i exceeds the widest value list, so bound
+	// the loop there to avoid spinning on duplicates.
+	maxVals := 0
+	for _, vals := range matchers {
+		if len(vals) > maxVals {
+			maxVals = len(vals)
 		}
+	}
+	for i := 1; len(result) < lcg.maxCombinations && i < maxVals; i++ {
+		combo := make(map[string]string)
+		for j, k := range keys {
+			vals := matchers[k]
+			combo[k] = vals[(i+j)%len(vals)]
+		}
+		key := comboKey(keys, combo)
+		if seen[key] {
+			continue // skip combinations already produced in phase 1
+		}
+		seen[key] = true
+		result = append(result, combo)
 	}
 
 	return result

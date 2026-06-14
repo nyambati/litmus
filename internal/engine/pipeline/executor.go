@@ -110,20 +110,24 @@ func (e *TestExecutor) executeUnit(ctx context.Context, test *types.TestCase, ro
 
 	if outcome.Status != test.Expect.Outcome {
 		return &types.TestResult{
-			Name:  test.Name,
-			Type:  test.Type,
-			Pass:  false,
-			Error: fmt.Sprintf("Expected outcome: %q\n \t   - Actual outcome: %q", test.Expect.Outcome, outcome.Status),
+			Name:   test.Name,
+			Type:   test.Type,
+			Pass:   false,
+			Labels: test.Alert.Labels,
+			Error:  fmt.Sprintf("outcome mismatch: expected %q, got %q", test.Expect.Outcome, outcome.Status),
 		}
 	}
 
 	if test.Expect.Outcome == "active" && len(test.Expect.Receivers) > 0 {
 		if !matching.SubsetMatch(outcome.Receivers, test.Expect.Receivers) {
 			return &types.TestResult{
-				Name:  test.Name,
-				Type:  test.Type,
-				Pass:  false,
-				Error: fmt.Sprintf("Expected receivers: %v\n \t   - Actual receivers: %v", test.Expect.Receivers, outcome.Receivers),
+				Name:     test.Name,
+				Type:     test.Type,
+				Pass:     false,
+				Labels:   test.Alert.Labels,
+				Expected: test.Expect.Receivers,
+				Actual:   outcome.Receivers,
+				Error:    "receiver mismatch",
 			}
 		}
 	}

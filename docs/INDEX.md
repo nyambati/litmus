@@ -9,8 +9,7 @@ Welcome to Litmus documentation. Choose your starting point:
 ### Getting Started
 - **[README](README.md)** — Quick start guide and feature overview
 - **[User Guide](cli/user_guide.md)** — How to use each command (init, snapshot, check, diff, inspect, sync)
-- **[Interactive UI Guide](ui_guide.md)** — How to use the web interface
-- **[Configuration](cli/configuration.md)** — Complete `litmus.yaml` schema and options
+- **[Configuration](cli/configuration.md)** — Complete `.litmus.yaml` schema and options
 - **[Policies](policies.md)** — Enforce workspace-wide rules (require_tests, enforce_matchers)
 - **[Sanity Checks](sanity.md)** — Static analysis checks run against Alertmanager config
 
@@ -20,16 +19,6 @@ Welcome to Litmus documentation. Choose your starting point:
 
 ### Planning & Future Work
 - **[Backlog](backlog.md)** — Planned features and research areas
-
----
-
-## For Contributors
-
-### Project Structure
-- **[Project Organization](project_organization.md)** — Directory structure and module layout
-
-### Standards & Practices
-- **[Engineering Standards](engineering/standards.md)** — Coding standards and guidelines
 
 ---
 
@@ -44,7 +33,6 @@ Welcome to Litmus documentation. Choose your starting point:
 | "Why does Litmus exist?" | [Whitepaper](whitepaper.md) |
 | "How is it designed?" | [Architecture](architecture.md) |
 | "What's next?" | [Backlog](backlog.md) |
-| "How do I contribute?" | [Engineering Standards](engineering/standards.md) |
 
 ---
 
@@ -69,19 +57,15 @@ A: Check [Backlog](backlog.md).
 
 ## Document Types
 
-### User-Facing
 - **README.md** — Quick overview
 - **cli/user_guide.md** — How to use commands
 - **cli/configuration.md** — Configuration reference
+- **fragment.md** — Modular config / fragment layout
 - **whitepaper.md** — Vision and motivation
 - **architecture.md** — Design and philosophy
 - **backlog.md** — Future features
 - **policies.md** — Workspace-wide policy rules
 - **sanity.md** — Static analysis check reference
-
-### Contributor-Facing
-- **project_organization.md** — Project structure
-- **engineering/standards.md** — Coding standards
 
 ---
 

@@ -9,8 +9,6 @@ import (
 )
 
 // RunInit creates the litmus workspace skeleton in the current directory.
-//
-//nolint:forbidigo
 func RunInit() error {
 	if _, err := os.Stat(".litmus.yaml"); err == nil {
 		return fmt.Errorf(".litmus.yaml already exists in this directory")
@@ -35,13 +33,13 @@ func RunInit() error {
 		return fmt.Errorf("creating config/tests/README.md: %w", err)
 	}
 
-	fmt.Println("✓ .litmus.yaml created")
-	fmt.Println("✓ config/ package structure created (templates, regressions, tests, fragments)")
-	fmt.Println("✓ config/base.yaml example config created")
-	fmt.Println("\nWorkspace initialized! Next steps:")
-	fmt.Println("1. Edit config/base.yaml with your alertmanager configuration")
-	fmt.Println("2. Add team fragments to config/fragments/")
-	fmt.Println("3. Run 'litmus snapshot capture' to generate global regression baseline")
+	fmt.Fprintln(os.Stdout, "✓ .litmus.yaml created")
+	fmt.Fprintln(os.Stdout, "✓ config/ package structure created (templates, regressions, tests, fragments)")
+	fmt.Fprintln(os.Stdout, "✓ config/base.yaml example config created")
+	fmt.Fprintln(os.Stdout, "\nWorkspace initialized! Next steps:")
+	fmt.Fprintln(os.Stdout, "1. Edit config/base.yaml with your alertmanager configuration")
+	fmt.Fprintln(os.Stdout, "2. Add team fragments to config/fragments/")
+	fmt.Fprintln(os.Stdout, "3. Run 'litmus snapshot capture' to generate global regression baseline")
 
 	return nil
 }

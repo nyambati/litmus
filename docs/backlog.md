@@ -33,7 +33,7 @@ This document tracks high-value features and research areas for `litmus` that ar
 
 ## 10. Alertmanager Versions Matrix
 *   **The Problem:** Alertmanager behavior changes across versions (e.g., new matcher syntax in 0.24).
-*   **The Goal:** Allow specifying target Alertmanager version in `litmus.yaml` and warn about version-specific features.
+*   **The Goal:** Allow specifying target Alertmanager version in `.litmus.yaml` and warn about version-specific features.
 
 ## 11. Alert Grouping Assertions
 *   **The Problem:** `group_by` behavior is untested — routes may silently mis-group alerts, causing notification storms or missed batching.

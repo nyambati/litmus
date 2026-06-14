@@ -350,7 +350,10 @@ func TestTestExecutor_Unit_ReceiverMismatch(t *testing.T) {
 	router := NewRouter(&amconfig.Route{Receiver: "api-team"})
 	result := executor.Execute(context.Background(), test, router)
 	require.False(t, result.Pass)
-	require.Contains(t, result.Error, "receivers")
+	require.Equal(t, "receiver mismatch", result.Error)
+	require.Equal(t, []string{"wrong-team"}, result.Expected)
+	require.Equal(t, []string{"api-team"}, result.Actual)
+	require.Equal(t, map[string]string{"service": "api"}, result.Labels)
 }
 
 func TestTestExecutor_Unit_OutcomeOnly(t *testing.T) {

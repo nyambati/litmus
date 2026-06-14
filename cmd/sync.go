@@ -2,37 +2,28 @@ package cmd
 
 import (
 	"github.com/nyambati/litmus/internal/cli"
-	"github.com/nyambati/litmus/internal/config"
 	"github.com/spf13/cobra"
 )
 
 // newSyncCmd creates the sync command.
 func newSyncCmd() *cobra.Command {
+	opts := &cli.SyncOptions{}
+
 	cmd := &cobra.Command{
 		Use:          "sync",
 		Short:        "Sync validated config to Grafana Mimir",
 		Long:         "Validates the alertmanager configuration and pushes it to Grafana Mimir's /api/v1/alerts endpoint.",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg := config.ConfigFromContext(cmd.Context())
-			logger := config.LoggerFromContext(cmd.Context())
-			address, _ := cmd.Flags().GetString("address")
-			tenantID, _ := cmd.Flags().GetString("tenant-id")
-			apiKey, _ := cmd.Flags().GetString("api-key")
-			skipValidate, _ := cmd.Flags().GetBool("skip-validate")
-			dryRun, _ := cmd.Flags().GetBool("dry-run")
-			output, _ := cmd.Flags().GetString("output")
-
-			return cli.RunSync(cfg, logger, address, tenantID, apiKey, skipValidate, dryRun, output)
+			return cli.RunSync(cmd.Context(), opts)
 		},
 	}
 
-	cmd.Flags().String("address", "", "Mimir API address (overrides LITMUS_MIMIR_ADDRESS)")
-	cmd.Flags().String("tenant-id", "", "Mimir tenant ID (overrides LITMUS_MIMIR_TENANT_ID)")
-	cmd.Flags().String("api-key", "", "Mimir API key (overrides LITMUS_MIMIR_API_KEY)")
-	cmd.Flags().Bool("skip-validate", false, "Skip sanity checks before push")
-	cmd.Flags().Bool("dry-run", false, "Render config to stdout or file without syncing to Mimir")
-	cmd.Flags().StringP("output", "o", "", "Output file path (use with --dry-run)")
+	cmd.Flags().StringVar(&opts.Address, "address", "", "Mimir API address (overrides LITMUS_MIMIR_ADDRESS)")
+	cmd.Flags().StringVar(&opts.TenantID, "tenant-id", "", "Mimir tenant ID (overrides LITMUS_MIMIR_TENANT_ID)")
+	cmd.Flags().StringVar(&opts.APIKey, "api-key", "", "Mimir API key (overrides LITMUS_MIMIR_API_KEY)")
+	cmd.Flags().BoolVar(&opts.DryRun, "dry-run", false, "Render config to stdout or file without syncing to Mimir")
+	cmd.Flags().StringVarP(&opts.Output, "output", "o", "", "Output file path (use with --dry-run)")
 
 	return cmd
 }

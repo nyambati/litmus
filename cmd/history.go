@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"github.com/nyambati/litmus/internal/cli"
-	"github.com/nyambati/litmus/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -28,8 +27,7 @@ func newHistoryListCmd() *cobra.Command {
 		Long:         "Display all baseline versions with the currently active version marked.",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg := config.ConfigFromContext(cmd.Context())
-			return cli.RunHistoryList(cfg, cmd)
+			return cli.RunHistoryList(cmd.Context())
 		},
 	}
 }
@@ -43,8 +41,7 @@ func newHistoryRollbackCmd() *cobra.Command {
 		Args:         cobra.ExactArgs(1),
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg := config.ConfigFromContext(cmd.Context())
-			return cli.RunHistoryRollback(cfg, cmd, args[0])
+			return cli.RunHistoryRollback(cmd.Context(), args[0])
 		},
 	}
 }

@@ -11,7 +11,6 @@ Litmus is a testing and validation framework for Prometheus Alertmanager configu
 
 ## Features
 
-✅ **Interactive Web UI** — Explore routes, run tests, and view diffs in your browser  
 ✅ **Regression Testing** — Detect unintended routing changes  
 ✅ **Behavioral Tests** — Verify alert logic under real-world conditions  
 ✅ **Static Analysis** — Catch shadowed routes and circular inhibitions  
@@ -35,24 +34,6 @@ litmus check
 # See what changed
 litmus diff
 ```
-
----
-
-## Interactive UI
-
-Litmus includes a web-based UI for interactive testing and exploration.
-
-```bash
-# Start the web server
-litmus serve
-```
-
-This launches a local web server that provides:
-- **Route Explorer** — Interactively trace how an alert is routed.
-- **Test Lab** — Run behavioral and regression tests from your browser.
-- **Diff Viewer** — See regression test failures in a rich UI.
-
-For a full guide, see the **[Interactive UI Guide](docs/ui_guide.md)**.
 
 ---
 
@@ -93,7 +74,7 @@ docker run ghcr.io/nyambati/litmus:latest litmus check
 ```bash
 # 1. Initialize
 $ litmus init
-Created litmus.yaml, tests/, .gitattributes
+Created .litmus.yaml, tests/, .gitattributes
 
 # 2. Create baseline
 $ litmus snapshot capture
@@ -172,7 +153,7 @@ See [Backlog](docs/backlog.md) for planned features.
 
 ## Contributing
 
-Contributions welcome! See [Engineering Standards](docs/engineering/standards.md).
+Contributions welcome! Open an issue or pull request on GitHub.
 
 ---
 

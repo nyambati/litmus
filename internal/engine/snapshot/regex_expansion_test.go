@@ -1,6 +1,7 @@
 package snapshot
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -205,6 +206,69 @@ func TestLabelCombinations_BalancedCovering(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestLabelCombinations_Deterministic ensures GenerateCovering produces an
+// identical ordered result across runs. Map iteration order is randomized by
+// the Go runtime, so without sorted keys the synthesized baseline would drift
+// between runs and trigger spurious snapshot regressions in CI.
+func TestLabelCombinations_Deterministic(t *testing.T) {
+	cases := []struct {
+		name            string
+		matchers        map[string][]string
+		maxCombinations int
+	}{
+		{
+			name: "full cartesian product",
+			matchers: map[string][]string{
+				"service":  {"api", "db"},
+				"env":      {"prod", "staging"},
+				"severity": {"critical", "warning"},
+			},
+			maxCombinations: 100,
+		},
+		{
+			name: "minimal covering set",
+			matchers: map[string][]string{
+				"l1": {"v1", "v2", "v3", "v4", "v5"},
+				"l2": {"v1", "v2", "v3", "v4", "v5"},
+				"l3": {"v1", "v2", "v3", "v4", "v5"},
+			},
+			maxCombinations: 8,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			gen := NewLabelCombinationGenerator(tc.maxCombinations)
+			want := gen.GenerateCovering(tc.matchers)
+
+			// Re-run several times; map iteration order varies per run, so a
+			// non-deterministic implementation would eventually diverge.
+			for i := range 50 {
+				got := NewLabelCombinationGenerator(tc.maxCombinations).GenerateCovering(tc.matchers)
+				require.Equal(t, want, got, "run %d diverged from first result", i)
+			}
+
+			// No duplicate combinations within a single result.
+			seen := make(map[string]bool)
+			for _, combo := range want {
+				key := comboKey(sortedKeys(combo), combo)
+				require.False(t, seen[key], "duplicate combination: %v", combo)
+				seen[key] = true
+			}
+		})
+	}
+}
+
+// sortedKeys returns the map keys in sorted order for stable comboKey input.
+func sortedKeys(m map[string]string) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 // verifyCoverage checks if all options appear in generated combinations.
