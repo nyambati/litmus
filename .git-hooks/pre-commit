@@ -18,23 +18,5 @@ if ! make all; then
     exit 1
 fi
 
-# Only rebuild and check ui/dist when UI source files are staged
-if git diff --cached --name-only | grep -qE '^ui/(src|public|index\.html|package\.json|vite\.config)'; then
-    echo "UI source changes detected — checking ui/dist is up to date..."
-    if ! npm --prefix ui run build; then
-        echo "✗ UI build failed"
-        exit 1
-    fi
-    if ! git diff --quiet ui/dist/; then
-        echo "✗ ui/dist/ is out of date after build. Stage the changes:"
-        echo ""
-        git diff --name-only ui/dist/ | sed 's/^/  /'
-        echo ""
-        echo "  Run: git add ui/dist/ && git commit --amend --no-edit"
-        exit 1
-    fi
-    echo "✓ ui/dist is up to date"
-fi
-
 echo "✓ All pre-commit checks passed"
 exit 0

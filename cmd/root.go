@@ -63,5 +63,4 @@ func init() {
 	rootCmd.AddCommand(newCheckCmd())
 	rootCmd.AddCommand(newInspectCmd())
 	rootCmd.AddCommand(newSyncCmd())
-	rootCmd.AddCommand(newServeCmd())
 }
