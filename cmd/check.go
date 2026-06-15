@@ -9,7 +9,7 @@ import (
 
 // newCheckCmd creates the check command.
 func newCheckCmd() *cobra.Command {
-	opts := &cli.CheckOptions{}
+	opts := cli.CheckOptions{}
 
 	cmd := &cobra.Command{
 		Use:          "check",

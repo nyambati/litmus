@@ -71,7 +71,7 @@ type CheckOptions struct {
 
 // RunCheck loads config, runs all validation stages, prints results, and returns
 // the exit code the CLI layer should pass to os.Exit (0 = all passed).
-func RunCheck(ctx context.Context, opts *CheckOptions) (CheckExitCode, error) {
+func RunCheck(ctx context.Context, opts CheckOptions) (CheckExitCode, error) {
 	cfg := config.ConfigFromContext(ctx)
 	logger := config.LoggerFromContext(ctx)
 	start := time.Now()

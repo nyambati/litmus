@@ -19,7 +19,7 @@ type SyncOptions struct {
 	Output   string
 }
 
-func RunSync(ctx context.Context, options *SyncOptions) error {
+func RunSync(ctx context.Context, options SyncOptions) error {
 	cfg := config.ConfigFromContext(ctx)
 	logger := config.LoggerFromContext(ctx)
 	mimirCfg := cfg.Mimir // local copy; does not mutate caller

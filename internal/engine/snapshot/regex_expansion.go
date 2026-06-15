@@ -117,6 +117,18 @@ func NewLabelCombinationGenerator(maxCombinations int) *LabelCombinationGenerato
 // If product <= max, generates full Cartesian product.
 // Otherwise, generates minimum set to exercise each option at least once.
 func (lcg *LabelCombinationGenerator) GenerateCovering(matchers map[string][]string) []map[string]string {
+	// Drop keys with no concrete values: they cannot contribute to a
+	// combination and would cause index/division-by-zero panics downstream.
+	if len(matchers) > 0 {
+		clean := make(map[string][]string, len(matchers))
+		for k, vals := range matchers {
+			if len(vals) > 0 {
+				clean[k] = vals
+			}
+		}
+		matchers = clean
+	}
+
 	totalCombos := 1
 	for _, vals := range matchers {
 		totalCombos *= len(vals)

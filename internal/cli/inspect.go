@@ -16,7 +16,7 @@ type InspectOptions struct {
 }
 
 // RunInspect loads a msgpack baseline and prints it as YAML or JSON.
-func RunInspect(opts *InspectOptions) error {
+func RunInspect(opts InspectOptions) error {
 	tests, err := snapshot.LoadBaseline(opts.Path)
 	if err != nil {
 		return fmt.Errorf("loading baseline: %w", err)

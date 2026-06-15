@@ -23,7 +23,7 @@ type SnapshotOptions struct {
 // If Update is false and a baseline exists, drift is checked.
 // In Strict mode, drift causes an error and prints a diff.
 // Otherwise, drift only prints a warning and does not block the snapshot creation.
-func RunSnapshot(ctx context.Context, opts *SnapshotOptions) error {
+func RunSnapshot(ctx context.Context, opts SnapshotOptions) error {
 	cfg := config.ConfigFromContext(ctx)
 	logger := config.LoggerFromContext(ctx)
 	ws, err := workspace.Load(cfg, logger)

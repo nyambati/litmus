@@ -21,7 +21,7 @@ func newSnapshotCmd() *cobra.Command {
 
 // newSnapshotCaptureCmd creates the snapshot capture subcommand.
 func newSnapshotCaptureCmd() *cobra.Command {
-	opts := &cli.SnapshotOptions{Update: false}
+	opts := cli.SnapshotOptions{Update: false}
 	cmd := &cobra.Command{
 		Use:          "capture",
 		Short:        "Capture current routing behavior as baseline",
@@ -38,7 +38,7 @@ func newSnapshotCaptureCmd() *cobra.Command {
 
 // newSnapshotUpdateCmd creates the snapshot update subcommand.
 func newSnapshotUpdateCmd() *cobra.Command {
-	opts := &cli.SnapshotOptions{Update: true}
+	opts := cli.SnapshotOptions{Update: true}
 	cmd := &cobra.Command{
 		Use:          "update",
 		Short:        "Update baseline with current routing behavior",

@@ -41,7 +41,7 @@ func TestRunSnapshot_ListHistoryErrorPropagated(t *testing.T) {
 	require.NoError(t, os.WriteFile(regressionsPath, []byte("not a dir"), 0o600))
 
 	ctx := context.WithValue(context.Background(), config.ConfigKey{}, cfg)
-	err := RunSnapshot(ctx, &SnapshotOptions{})
+	err := RunSnapshot(ctx, SnapshotOptions{})
 
 	require.Error(t, err, "RunSnapshot must propagate ListHistory errors")
 	require.True(t,

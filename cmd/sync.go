@@ -7,7 +7,7 @@ import (
 
 // newSyncCmd creates the sync command.
 func newSyncCmd() *cobra.Command {
-	opts := &cli.SyncOptions{}
+	opts := cli.SyncOptions{}
 
 	cmd := &cobra.Command{
 		Use:          "sync",

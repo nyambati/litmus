@@ -261,6 +261,34 @@ func TestLabelCombinations_Deterministic(t *testing.T) {
 	}
 }
 
+// TestLabelCombinations_EmptyValueKeysDoNotPanic ensures keys with no concrete
+// values are dropped rather than triggering an index/division-by-zero panic in
+// either the cartesian or minimal-covering path.
+func TestLabelCombinations_EmptyValueKeysDoNotPanic(t *testing.T) {
+	matchers := map[string][]string{
+		"service": {"api", "db"},
+		"empty":   {},
+	}
+
+	// Small product -> cartesian path.
+	require.NotPanics(t, func() {
+		combos := NewLabelCombinationGenerator(100).GenerateCovering(matchers)
+		for _, c := range combos {
+			_, ok := c["empty"]
+			require.False(t, ok, "empty-value key must not appear in combinations")
+		}
+	})
+
+	// Force the minimal-covering path with a tight limit.
+	require.NotPanics(t, func() {
+		NewLabelCombinationGenerator(1).GenerateCovering(map[string][]string{
+			"a":     {"1", "2", "3"},
+			"b":     {"1", "2", "3"},
+			"empty": {},
+		})
+	})
+}
+
 // sortedKeys returns the map keys in sorted order for stable comboKey input.
 func sortedKeys(m map[string]string) []string {
 	keys := make([]string, 0, len(m))

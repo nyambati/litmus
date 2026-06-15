@@ -7,7 +7,7 @@ import (
 
 // newInspectCmd creates the inspect command.
 func newInspectCmd() *cobra.Command {
-	opts := &cli.InspectOptions{}
+	opts := cli.InspectOptions{}
 
 	cmd := &cobra.Command{
 		Use:          "inspect <file.mpk>",
