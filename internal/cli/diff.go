@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
 	"sort"
 
 	"github.com/nyambati/litmus/internal/config"
@@ -11,18 +12,12 @@ import (
 	"github.com/nyambati/litmus/internal/stores"
 	"github.com/nyambati/litmus/internal/utils"
 	"github.com/nyambati/litmus/internal/workspace"
-	"github.com/sirupsen/logrus"
-)
-
-const (
-	colorReset  = "\033[0m"
-	colorRed    = "\033[31m"
-	colorGreen  = "\033[32m"
-	colorYellow = "\033[33m"
 )
 
 // RunDiff compares current config against the baseline and prints a structural diff.
-func RunDiff(cfg *config.LitmusConfig, logger logrus.FieldLogger) error {
+func RunDiff(ctx context.Context) error {
+	cfg := config.ConfigFromContext(ctx)
+	logger := config.LoggerFromContext(ctx)
 	ws, err := workspace.Load(cfg, logger)
 	if err != nil {
 		return err
@@ -33,7 +28,6 @@ func RunDiff(cfg *config.LitmusConfig, logger logrus.FieldLogger) error {
 		return fmt.Errorf("failed to load alertmanager config: %w", err)
 	}
 
-	ctx := context.Background()
 	router := pipeline.NewRouter(amCfg.Route)
 	runner := pipeline.NewRunner(stores.NewSilenceStore(nil), stores.NewAlertStore(), router, nil)
 
@@ -65,12 +59,13 @@ func RunDiff(cfg *config.LitmusConfig, logger logrus.FieldLogger) error {
 	return nil
 }
 
-// PrintDiffReport outputs a color-coded structural delta.
-//
-//nolint:forbidigo
+// PrintDiffReport outputs a structural delta. Color is applied automatically
+// when stdout is a terminal (see styler).
 func PrintDiffReport(diff *snapshot.RegressionDiff) {
+	st := newStyler(os.Stdout)
+
 	if len(diff.Deltas) == 0 {
-		fmt.Println("No behavioral changes detected.")
+		fmt.Fprintln(os.Stdout, "No behavioral changes detected.")
 		return
 	}
 
@@ -82,22 +77,22 @@ func PrintDiffReport(diff *snapshot.RegressionDiff) {
 	for _, delta := range diff.Deltas {
 		switch delta.Kind {
 		case snapshot.DeltaAdded:
-			fmt.Printf("%s[+] ADDED:   Route to %s%s\n", colorGreen, formatReceivers(delta.Actual), colorReset)
-			fmt.Printf("    Labels:  %s\n", formatLabels(delta.Labels))
-			fmt.Printf("    Outcome: %s\n", formatReceivers(delta.Actual))
+			fmt.Fprintln(os.Stdout, st.green("[+] ADDED:   Route to "+formatReceivers(delta.Actual)))
+			fmt.Fprintf(os.Stdout, "    Labels:  %s\n", formatLabels(delta.Labels))
+			fmt.Fprintf(os.Stdout, "    Outcome: %s\n", formatReceivers(delta.Actual))
 
 		case snapshot.DeltaRemoved:
-			fmt.Printf("%s[-] REMOVED: Route to %s%s\n", colorRed, formatReceivers(delta.Expected), colorReset)
-			fmt.Printf("    Labels:  %s\n", formatLabels(delta.Labels))
-			fmt.Printf("    Old:     %s\n", formatReceivers(delta.Expected))
+			fmt.Fprintln(os.Stdout, st.red("[-] REMOVED: Route to "+formatReceivers(delta.Expected)))
+			fmt.Fprintf(os.Stdout, "    Labels:  %s\n", formatLabels(delta.Labels))
+			fmt.Fprintf(os.Stdout, "    Old:     %s\n", formatReceivers(delta.Expected))
 
 		case snapshot.DeltaModified:
-			fmt.Printf("%s[!] MODIFIED: Behavior for Labels%s\n", colorYellow, colorReset)
-			fmt.Printf("    Labels:  %s\n", formatLabels(delta.Labels))
-			fmt.Printf("    %s- Expected: %s%s\n", colorRed, formatReceivers(delta.Expected), colorReset)
-			fmt.Printf("    %s+ Actual:   %s%s\n", colorGreen, formatReceivers(delta.Actual), colorReset)
+			fmt.Fprintln(os.Stdout, st.yellow("[!] MODIFIED: Behavior for Labels"))
+			fmt.Fprintf(os.Stdout, "    Labels:  %s\n", formatLabels(delta.Labels))
+			fmt.Fprintf(os.Stdout, "    %s\n", st.red("- Expected: "+formatReceivers(delta.Expected)))
+			fmt.Fprintf(os.Stdout, "    %s\n", st.green("+ Actual:   "+formatReceivers(delta.Actual)))
 		}
-		fmt.Println()
+		fmt.Fprintln(os.Stdout)
 	}
 }
 

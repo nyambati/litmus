@@ -7,6 +7,8 @@ import (
 
 // newInspectCmd creates the inspect command.
 func newInspectCmd() *cobra.Command {
+	opts := cli.InspectOptions{}
+
 	cmd := &cobra.Command{
 		Use:          "inspect <file.mpk>",
 		Short:        "Inspect binary regression baseline",
@@ -14,11 +16,11 @@ func newInspectCmd() *cobra.Command {
 		SilenceUsage: true,
 		Args:         cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			format, _ := cmd.Flags().GetString("format")
-			return cli.RunInspect(args[0], format)
+			opts.Path = args[0]
+			return cli.RunInspect(opts)
 		},
 	}
 
-	cmd.Flags().StringP("format", "f", "yaml", "Output format: yaml or json")
+	cmd.Flags().StringVarP(&opts.Format, "format", "f", "yaml", "Output format: yaml or json")
 	return cmd
 }

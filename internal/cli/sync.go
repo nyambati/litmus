@@ -9,21 +9,28 @@ import (
 	"github.com/nyambati/litmus/internal/engine/sanity"
 	"github.com/nyambati/litmus/internal/mimir"
 	"github.com/nyambati/litmus/internal/workspace"
-	"github.com/sirupsen/logrus"
 )
 
-func RunSync(cfg *config.LitmusConfig, logger logrus.FieldLogger, address, tenantID, apiKey string, skipValidate, dryRun bool, output string) error {
-	ctx := context.Background()
+type SyncOptions struct {
+	Address  string
+	TenantID string
+	APIKey   string
+	DryRun   bool
+	Output   string
+}
 
+func RunSync(ctx context.Context, options SyncOptions) error {
+	cfg := config.ConfigFromContext(ctx)
+	logger := config.LoggerFromContext(ctx)
 	mimirCfg := cfg.Mimir // local copy; does not mutate caller
-	if address != "" {
-		mimirCfg.Address = address
+	if options.Address != "" {
+		mimirCfg.Address = options.Address
 	}
-	if tenantID != "" {
-		mimirCfg.TenantID = tenantID
+	if options.TenantID != "" {
+		mimirCfg.TenantID = options.TenantID
 	}
-	if apiKey != "" {
-		mimirCfg.APIKey = apiKey
+	if options.APIKey != "" {
+		mimirCfg.APIKey = options.APIKey
 	}
 
 	ws, err := workspace.Load(cfg, logger)
@@ -36,16 +43,14 @@ func RunSync(cfg *config.LitmusConfig, logger logrus.FieldLogger, address, tenan
 		return fmt.Errorf("failed to load alertmanager config: %w", err)
 	}
 
-	if !skipValidate {
-		sanityResult := sanity.Run(buildCheckContext(amConfig, ws, cfg.Policy), cfg.Sanity)
-		if !sanityResult.Passed {
-			fmt.Fprintf(os.Stderr, "Sanity checks failed. Use --skip-validate to bypass.\n")
-			return fmt.Errorf("sanity check failures")
-		}
+	sanityResult := sanity.Run(buildCheckContext(amConfig, ws, cfg.Policy), cfg.Sanity)
+	if !sanityResult.Passed {
+		fmt.Fprintf(os.Stderr, "Sanity checks failed; fix the reported issues before syncing.\n")
+		return fmt.Errorf("sanity check failures")
 	}
 
-	if dryRun {
-		return printYAML(ws.ConfigString(), output)
+	if options.DryRun {
+		return printYAML(ws.ConfigString(), options.Output)
 	}
 
 	if err := mimirCfg.Validate(); err != nil {
@@ -68,7 +73,7 @@ func RunSync(cfg *config.LitmusConfig, logger logrus.FieldLogger, address, tenan
 		return fmt.Errorf("pushing to mimir: %w", err)
 	}
 
-	fmt.Printf("✓ Alertmanager config synced to %s\n", mimirCfg.Address) //nolint:forbidigo
+	fmt.Fprintf(os.Stdout, "✓ Alertmanager config synced to %s\n", mimirCfg.Address)
 	return nil
 }
 

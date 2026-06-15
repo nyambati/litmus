@@ -11,14 +11,21 @@ import (
 	"github.com/nyambati/litmus/internal/stores"
 	"github.com/nyambati/litmus/internal/types"
 	"github.com/nyambati/litmus/internal/workspace"
-	"github.com/sirupsen/logrus"
 )
 
+// SnapshotOptions bundles the flags for a snapshot run.
+type SnapshotOptions struct {
+	Update bool
+	Strict bool
+}
+
 // RunSnapshot captures current routing behavior as a regression baseline.
-// If update is false and a baseline exists, drift is checked.
-// In strict mode, drift causes an error and prints a diff.
+// If Update is false and a baseline exists, drift is checked.
+// In Strict mode, drift causes an error and prints a diff.
 // Otherwise, drift only prints a warning and does not block the snapshot creation.
-func RunSnapshot(cfg *config.LitmusConfig, logger logrus.FieldLogger, update, strict bool) error {
+func RunSnapshot(ctx context.Context, opts SnapshotOptions) error {
+	cfg := config.ConfigFromContext(ctx)
+	logger := config.LoggerFromContext(ctx)
 	ws, err := workspace.Load(cfg, logger)
 	if err != nil {
 		return err
@@ -28,8 +35,6 @@ func RunSnapshot(cfg *config.LitmusConfig, logger logrus.FieldLogger, update, st
 	if err != nil {
 		return fmt.Errorf("failed to load alertmanager config: %w", err)
 	}
-
-	ctx := context.Background()
 
 	router := pipeline.NewRouter(amCfg.Route)
 	runner := pipeline.NewRunner(stores.NewSilenceStore(nil), stores.NewAlertStore(), router, nil)
@@ -65,7 +70,7 @@ func RunSnapshot(cfg *config.LitmusConfig, logger logrus.FieldLogger, update, st
 		d := snapshot.ComputeDiff(existing, regTests)
 		if len(d.Deltas) > 0 {
 			hasDrift = true
-			if strict {
+			if opts.Strict {
 				PrintDiffReport(d)
 				return fmt.Errorf("drift detected in routing behavior")
 			}
@@ -80,27 +85,27 @@ func RunSnapshot(cfg *config.LitmusConfig, logger logrus.FieldLogger, update, st
 		if _, err := ArchiveBaseline(cfg, regTests); err != nil {
 			return fmt.Errorf("creating initial baseline: %w", err)
 		}
-		fmt.Println("✓ Baseline created") //nolint:forbidigo
+		fmt.Fprintln(os.Stdout, "✓ Baseline created")
 		return nil
 	}
 
 	if hasDrift {
-		if !update {
+		if !opts.Update {
 			fmt.Fprintf(os.Stderr, "WARN: drift detected in routing behavior; run 'litmus snapshot update' to accept changes, or 'litmus diff' to inspect\n")
 			return nil
 		}
 		if _, err := ArchiveBaseline(cfg, regTests); err != nil {
 			return fmt.Errorf("archiving baseline to history: %w", err)
 		}
-		fmt.Println("✓ Baseline updated") //nolint:forbidigo
+		fmt.Fprintln(os.Stdout, "✓ Baseline updated")
 		return nil
 	}
 
-	if update {
-		fmt.Println("✓ No changes detected; baseline is up to date") //nolint:forbidigo
+	if opts.Update {
+		fmt.Fprintln(os.Stdout, "✓ No changes detected; baseline is up to date")
 		return nil
 	}
 
-	fmt.Println("✓ Baseline is current") //nolint:forbidigo
+	fmt.Fprintln(os.Stdout, "✓ Baseline is current")
 	return nil
 }

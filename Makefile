@@ -8,8 +8,7 @@ help:
 	@echo "  test            Run tests"
 	@echo "  fmt             Format code with go fmt"
 	@echo "  vet             Run go vet"
-	@echo "  build-ui        Build the React UI (outputs to ui/dist/)"
-	@echo "  build           Build UI then litmus binary (embeds UI)"
+	@echo "  build           Build litmus binary"
 	@echo "  clean           Clean build artifacts"
 	@echo "  help            Show this help message"
 
@@ -37,11 +36,7 @@ vet:
 	@echo "Running go vet..."
 	@go vet ./...
 
-build-ui:
-	@echo "Building UI..."
-	@cd ui && npm run build
-
-build: build-ui
+build:
 	@echo "Building litmus..."
 	@go build -o bin/litmus .
 

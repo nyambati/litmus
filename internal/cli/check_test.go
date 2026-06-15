@@ -223,6 +223,35 @@ func TestPrintCheckResult_FailedRegressionShowsFAILPrefix(t *testing.T) {
 		"failed regression summary must not use [PASS] prefix")
 }
 
+func TestPrintCheckResult_BehavioralReceiverFailureUsesAlignedLayout(t *testing.T) {
+	result := CheckResult{
+		Behavioral: BehavioralResult{
+			Passed:     false,
+			TotalTests: 1,
+			Tests:      1,
+			Failures: []TestFailure{
+				{
+					Name:     "critical routes to call",
+					Type:     "unit",
+					Labels:   map[string]string{"severity": "critical"},
+					Expected: []string{"call"},
+					Actual:   []string{"default"},
+					Error:    "receiver mismatch",
+				},
+			},
+		},
+	}
+
+	out := captureStdout(t, func() { PrintCheckResult(result, false) })
+
+	require.Contains(t, out, "- Labels:   {severity: critical}")
+	require.Contains(t, out, "- Expected: [call]")
+	require.Contains(t, out, "- Actual:   [default]")
+	require.Contains(t, out, "<-- Missing 'call'")
+	// No stray tab characters in the rendered block (the old bug).
+	require.NotContains(t, out, "\t")
+}
+
 func TestPrintCheckResult_FailedBehavioralShowsFAILPrefix(t *testing.T) {
 	result := CheckResult{
 		Behavioral: BehavioralResult{

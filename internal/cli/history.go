@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -14,7 +15,6 @@ import (
 	"github.com/nyambati/litmus/internal/engine/snapshot"
 	"github.com/nyambati/litmus/internal/types"
 	"github.com/nyambati/litmus/internal/workspace"
-	"github.com/spf13/cobra"
 )
 
 const historyTimeFormat = "20060102-150405.000000"
@@ -77,18 +77,19 @@ func cleanupOldEntries(cfg *config.LitmusConfig) error {
 }
 
 // RunHistoryList prints available baseline history entries.
-func RunHistoryList(litmusConfig *config.LitmusConfig, cmd *cobra.Command) error {
+func RunHistoryList(ctx context.Context) error {
+	litmusConfig := config.ConfigFromContext(ctx)
 	ids, err := snapshot.ListHistory(litmusConfig.RegressionsDir())
 	if err != nil {
 		return err
 	}
 
 	if len(ids) == 0 {
-		cmd.Println("No baseline history found. Run 'litmus snapshot capture' to create one.")
+		fmt.Fprintln(os.Stdout, "No baseline history found. Run 'litmus snapshot capture' to create one.")
 		return nil
 	}
 
-	ws, err := workspace.Load(litmusConfig, nil)
+	ws, err := workspace.Load(litmusConfig, config.LoggerFromContext(ctx))
 	if err != nil {
 		return err
 	}
@@ -98,7 +99,7 @@ func RunHistoryList(litmusConfig *config.LitmusConfig, cmd *cobra.Command) error
 		current = ws.RegressionState.ID
 	}
 
-	cmd.Println("Available baselines:")
+	fmt.Fprintln(os.Stdout, "Available baselines:")
 	for _, id := range ids {
 		var builder strings.Builder
 		builder.WriteString("  ")
@@ -106,14 +107,15 @@ func RunHistoryList(litmusConfig *config.LitmusConfig, cmd *cobra.Command) error
 		if id == current {
 			builder.WriteString(" (current)")
 		}
-		cmd.Println(builder.String())
+		fmt.Fprintln(os.Stdout, builder.String())
 	}
-	cmd.Printf("\nUse 'litmus history rollback <id>' to restore a baseline.\n")
+	fmt.Fprintf(os.Stdout, "\nUse 'litmus history rollback <id>' to restore a baseline.\n")
 	return nil
 }
 
 // RunHistoryRollback restores the baseline identified by id.
-func RunHistoryRollback(litmusConfig *config.LitmusConfig, cmd *cobra.Command, id string) error {
+func RunHistoryRollback(ctx context.Context, id string) error {
+	litmusConfig := config.ConfigFromContext(ctx)
 	ids, err := snapshot.ListHistory(litmusConfig.RegressionsDir())
 	if err != nil {
 		return err
@@ -127,6 +129,6 @@ func RunHistoryRollback(litmusConfig *config.LitmusConfig, cmd *cobra.Command, i
 		return err
 	}
 
-	cmd.Printf("✓ Rolled back baseline to %s\n", id)
+	fmt.Fprintf(os.Stdout, "✓ Rolled back baseline to %s\n", id)
 	return nil
 }

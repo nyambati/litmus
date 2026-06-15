@@ -151,11 +151,3 @@ config/templates/:
   ├── email.tpl    ✓ uploaded
   └── unused.tmpl  ✗ ignored
 ```
-
-## Security & Access Control
-
-### Web UI (Serve)
-The `litmus serve` command is designed for local development and secure team environments:
-- **Binding:** By default, the server binds to `localhost` (or `127.0.0.1`), making it inaccessible from outside the local machine.
-- **CORS Policy:** The API enforces a restricted Cross-Origin Resource Sharing (CORS) policy. It only permits requests from `http://localhost:*` and `http://127.0.0.1:*`. This prevents malicious websites from interacting with the Litmus API if a user has the server running.
-- **Authentication:** As a local-first CLI tool, `litmus serve` does not currently implement authentication. It should only be exposed on public interfaces using a secure reverse proxy with appropriate auth headers.

@@ -20,6 +20,12 @@ var rootCmd = &cobra.Command{
 	// Version:      version,
 	SilenceUsage: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Honor --no-color by setting NO_COLOR, which the output stylers respect
+		// alongside automatic TTY detection.
+		if noColor, _ := cmd.Flags().GetBool("no-color"); noColor {
+			os.Setenv("NO_COLOR", "1")
+		}
+
 		cfg, err := config.New()
 		if err != nil {
 			return err
@@ -56,6 +62,7 @@ func Execute() {
 func init() {
 	rootCmd.SetVersionTemplate("litmus version {{.Version}}\n")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "Enable verbose (debug) logging")
+	rootCmd.PersistentFlags().Bool("no-color", false, "Disable colored output")
 	rootCmd.AddCommand(newInitCmd())
 	rootCmd.AddCommand(newSnapshotCmd())
 	rootCmd.AddCommand(newHistoryCmd())
@@ -63,5 +70,4 @@ func init() {
 	rootCmd.AddCommand(newCheckCmd())
 	rootCmd.AddCommand(newInspectCmd())
 	rootCmd.AddCommand(newSyncCmd())
-	rootCmd.AddCommand(newServeCmd())
 }

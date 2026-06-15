@@ -1,6 +1,7 @@
 package snapshot
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -205,6 +206,97 @@ func TestLabelCombinations_BalancedCovering(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestLabelCombinations_Deterministic ensures GenerateCovering produces an
+// identical ordered result across runs. Map iteration order is randomized by
+// the Go runtime, so without sorted keys the synthesized baseline would drift
+// between runs and trigger spurious snapshot regressions in CI.
+func TestLabelCombinations_Deterministic(t *testing.T) {
+	cases := []struct {
+		name            string
+		matchers        map[string][]string
+		maxCombinations int
+	}{
+		{
+			name: "full cartesian product",
+			matchers: map[string][]string{
+				"service":  {"api", "db"},
+				"env":      {"prod", "staging"},
+				"severity": {"critical", "warning"},
+			},
+			maxCombinations: 100,
+		},
+		{
+			name: "minimal covering set",
+			matchers: map[string][]string{
+				"l1": {"v1", "v2", "v3", "v4", "v5"},
+				"l2": {"v1", "v2", "v3", "v4", "v5"},
+				"l3": {"v1", "v2", "v3", "v4", "v5"},
+			},
+			maxCombinations: 8,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			gen := NewLabelCombinationGenerator(tc.maxCombinations)
+			want := gen.GenerateCovering(tc.matchers)
+
+			// Re-run several times; map iteration order varies per run, so a
+			// non-deterministic implementation would eventually diverge.
+			for i := range 50 {
+				got := NewLabelCombinationGenerator(tc.maxCombinations).GenerateCovering(tc.matchers)
+				require.Equal(t, want, got, "run %d diverged from first result", i)
+			}
+
+			// No duplicate combinations within a single result.
+			seen := make(map[string]bool)
+			for _, combo := range want {
+				key := comboKey(sortedKeys(combo), combo)
+				require.False(t, seen[key], "duplicate combination: %v", combo)
+				seen[key] = true
+			}
+		})
+	}
+}
+
+// TestLabelCombinations_EmptyValueKeysDoNotPanic ensures keys with no concrete
+// values are dropped rather than triggering an index/division-by-zero panic in
+// either the cartesian or minimal-covering path.
+func TestLabelCombinations_EmptyValueKeysDoNotPanic(t *testing.T) {
+	matchers := map[string][]string{
+		"service": {"api", "db"},
+		"empty":   {},
+	}
+
+	// Small product -> cartesian path.
+	require.NotPanics(t, func() {
+		combos := NewLabelCombinationGenerator(100).GenerateCovering(matchers)
+		for _, c := range combos {
+			_, ok := c["empty"]
+			require.False(t, ok, "empty-value key must not appear in combinations")
+		}
+	})
+
+	// Force the minimal-covering path with a tight limit.
+	require.NotPanics(t, func() {
+		NewLabelCombinationGenerator(1).GenerateCovering(map[string][]string{
+			"a":     {"1", "2", "3"},
+			"b":     {"1", "2", "3"},
+			"empty": {},
+		})
+	})
+}
+
+// sortedKeys returns the map keys in sorted order for stable comboKey input.
+func sortedKeys(m map[string]string) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 // verifyCoverage checks if all options appear in generated combinations.

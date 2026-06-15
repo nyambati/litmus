@@ -16,7 +16,6 @@ import (
 	"github.com/nyambati/litmus/internal/types"
 	"github.com/nyambati/litmus/internal/workspace"
 	amconfig "github.com/prometheus/alertmanager/config"
-	"github.com/sirupsen/logrus"
 )
 
 const divider = "--------------------------------------------------"
@@ -63,9 +62,18 @@ type BehavioralResult struct {
 	Failures   []TestFailure `json:"failures,omitempty"`
 }
 
+// CheckOptions bundles the flags for a check run.
+type CheckOptions struct {
+	Format string
+	Diff   bool
+	Tags   []string
+}
+
 // RunCheck loads config, runs all validation stages, prints results, and returns
 // the exit code the CLI layer should pass to os.Exit (0 = all passed).
-func RunCheck(cfg *config.LitmusConfig, logger logrus.FieldLogger, format string, showDiff bool, tags []string) (CheckExitCode, error) {
+func RunCheck(ctx context.Context, opts CheckOptions) (CheckExitCode, error) {
+	cfg := config.ConfigFromContext(ctx)
+	logger := config.LoggerFromContext(ctx)
 	start := time.Now()
 	ws, err := workspace.Load(cfg, logger)
 	if err != nil {
@@ -79,17 +87,16 @@ func RunCheck(cfg *config.LitmusConfig, logger logrus.FieldLogger, format string
 
 	router := pipeline.NewRouter(amCfg.Route)
 
-	ctx := context.Background()
 	sanityResult := sanity.Run(buildCheckContext(amCfg, ws, cfg.Policy), cfg.Sanity)
-	regressionResult := RunRegressionTests(ctx, ws, router, tags)
-	behavioralResult := RunBehavioralTests(ctx, ws.Tests(), router, amCfg.InhibitRules, tags)
+	regressionResult := RunRegressionTests(ctx, ws, router, opts.Tags)
+	behavioralResult := RunBehavioralTests(ctx, ws.Tests(), router, amCfg.InhibitRules, opts.Tags)
 
 	result := buildCheckResult(cfg.FilePath(), sanityResult, regressionResult, behavioralResult, time.Since(start))
 
 	code := calculateExitCode(result)
 	result.ExitCode = code
 
-	if err := outputResults(result, format, showDiff); err != nil {
+	if err := outputResults(result, opts.Format, opts.Diff); err != nil {
 		return 1, err
 	}
 
@@ -195,9 +202,12 @@ func RunBehavioralTests(ctx context.Context, tests []*types.TestCase, router *pi
 		} else {
 			result.Passed = false
 			result.Failures = append(result.Failures, TestFailure{
-				Name:  res.Name,
-				Type:  res.Type,
-				Error: res.Error,
+				Name:     res.Name,
+				Type:     res.Type,
+				Error:    res.Error,
+				Labels:   res.Labels,
+				Expected: res.Expected,
+				Actual:   res.Actual,
 			})
 		}
 	}
@@ -235,45 +245,39 @@ func filterByTags(tests []*types.TestCase, tags []string) []*types.TestCase {
 	return out
 }
 
-// PrintCheckResult writes the formatted validation report to stdout.
-//
-//nolint:forbidigo
+// PrintCheckResult writes the formatted validation report to stdout. Color is
+// applied automatically when stdout is a terminal (see styler).
 func PrintCheckResult(r CheckResult, showDiff bool) {
-	fmt.Printf("Litmus Check: %s\n", r.ConfigPath)
-	fmt.Println(divider)
-	fmt.Println()
+	st := newStyler(os.Stdout)
+
+	fmt.Fprintln(os.Stdout, st.bold("Litmus Check: "+r.ConfigPath))
+	fmt.Fprintln(os.Stdout, divider)
+	fmt.Fprintln(os.Stdout)
 
 	// 1. Sanity
-	fmt.Println("1. Sanity (Static Analysis)")
+	fmt.Fprintln(os.Stdout, st.bold("1. Sanity (Static Analysis)"))
 	for _, c := range r.Sanity.Checks {
-		printSanityCategory(sanityCheckLabel(c.Name), c.Issues, c.Mode)
+		printSanityCategory(st, sanityCheckLabel(c.Name), c.Issues, c.Mode)
 	}
-	fmt.Println()
+	fmt.Fprintln(os.Stdout)
 
 	// 2. Regressions
-	fmt.Println("2. Regressions (Automated)")
+	fmt.Fprintln(os.Stdout, st.bold("2. Regressions (Automated)"))
 	//nolint:gocritic
 	if r.Regression.TotalTests == 0 {
-		fmt.Println("   [SKIP]  No baseline found — run 'litmus snapshot capture' first")
+		fmt.Fprintf(os.Stdout, "   %s  No baseline found — run 'litmus snapshot capture' first\n", st.status("SKIP"))
 	} else if r.Regression.Tests == 0 {
-		fmt.Printf("   [SKIP]  No tests matched filter (0/%d baseline cases)\n", r.Regression.TotalTests)
+		fmt.Fprintf(os.Stdout, "   %s  No tests matched filter (0/%d baseline cases)\n", st.status("SKIP"), r.Regression.TotalTests)
 	} else if r.Regression.Passed {
-		fmt.Printf("   [PASS]  %d/%d cases passed\n", r.Regression.Tests, r.Regression.Tests)
+		fmt.Fprintf(os.Stdout, "   %s  %d/%d cases passed\n", st.status("PASS"), r.Regression.Tests, r.Regression.Tests)
 	} else {
-		fmt.Printf("   [FAIL]  %d/%d cases passed\n", r.Regression.PassCount, r.Regression.Tests)
+		fmt.Fprintf(os.Stdout, "   %s  %d/%d cases passed\n", st.status("FAIL"), r.Regression.PassCount, r.Regression.Tests)
 		for _, f := range r.Regression.Failures {
-			fmt.Printf("   [FAIL]  %s\n", f.Name)
-			fmt.Printf("           - Labels:   %s\n", formatLabels(f.Labels))
-			fmt.Printf("           - Expected: %s\n", formatReceivers(f.Expected))
-			fmt.Printf("           - Actual:   %s", formatReceivers(f.Actual))
-			if missing := missingReceivers(f.Expected, f.Actual); len(missing) > 0 {
-				fmt.Printf("  <-- Missing %s", formatMissing(missing))
-			}
-			fmt.Println()
+			printFailure(st, f)
 		}
 
 		if showDiff {
-			fmt.Println("\n   Behavioral Delta:")
+			fmt.Fprintln(os.Stdout, "\n   Behavioral Delta:")
 			// Generate a temporary diff for the failures
 			deltas := make([]snapshot.RegressionDelta, 0, len(r.Regression.Failures))
 			for _, f := range r.Regression.Failures {
@@ -287,44 +291,65 @@ func PrintCheckResult(r CheckResult, showDiff bool) {
 			PrintDiffReport(&snapshot.RegressionDiff{Deltas: deltas})
 		}
 	}
-	fmt.Println()
+	fmt.Fprintln(os.Stdout)
 
 	// 3. Behavioral
-	fmt.Println("3. Behavioral (BUT)")
+	fmt.Fprintln(os.Stdout, st.bold("3. Behavioral (Unit Tests)"))
 	//nolint:gocritic
 	if r.Behavioral.TotalTests == 0 {
-		fmt.Println("   [SKIP]  No tests found")
+		fmt.Fprintf(os.Stdout, "   %s  No tests found\n", st.status("SKIP"))
 	} else if r.Behavioral.Tests == 0 {
-		fmt.Printf("   [SKIP]  No tests matched filter (0/%d tests)\n", r.Behavioral.TotalTests)
+		fmt.Fprintf(os.Stdout, "   %s  No tests matched filter (0/%d tests)\n", st.status("SKIP"), r.Behavioral.TotalTests)
 	} else if r.Behavioral.Passed {
-		fmt.Printf("   [PASS]  %d/%d unit tests passed\n", r.Behavioral.Tests, r.Behavioral.Tests)
+		fmt.Fprintf(os.Stdout, "   %s  %d/%d unit tests passed\n", st.status("PASS"), r.Behavioral.Tests, r.Behavioral.Tests)
 	} else {
-		fmt.Printf("   [FAIL]  %d/%d unit tests passed\n", r.Behavioral.PassCount, r.Behavioral.Tests)
+		fmt.Fprintf(os.Stdout, "   %s  %d/%d unit tests passed\n", st.status("FAIL"), r.Behavioral.PassCount, r.Behavioral.Tests)
 		for _, f := range r.Behavioral.Failures {
-			fmt.Printf("   [FAIL]  %s\n", f.Name)
-			fmt.Printf("           - %s\n", f.Error)
+			printFailure(st, f)
 		}
 	}
-	fmt.Println()
+	fmt.Fprintln(os.Stdout)
 
 	// Footer
-	fmt.Println(divider)
-	fmt.Printf("SUMMARY: %s\n", formatSummary(r))
-	fmt.Printf("Time: %s | Exit Code: %d\n", formatDuration(r.Duration), r.ExitCode)
+	fmt.Fprintln(os.Stdout, divider)
+	fmt.Fprintf(os.Stdout, "SUMMARY: %s\n", formatSummary(st, r))
+	fmt.Fprintf(os.Stdout, "Time: %s | Exit Code: %d\n", formatDuration(r.Duration), r.ExitCode)
 }
 
-func printSanityCategory(okMsg string, issues []string, mode string) {
-	if len(issues) == 0 {
-		fmt.Printf("   [OK]    %s\n", okMsg) //nolint:forbidigo
+// printFailure renders a single test failure in a uniform layout shared by both
+// regression and behavioral results. Receiver-level failures show an aligned
+// Labels/Expected/Actual breakdown with a Missing hint; other failures fall
+// back to the raw error reason.
+func printFailure(st *styler, f TestFailure) {
+	fmt.Fprintf(os.Stdout, "   %s  %s\n", st.status("FAIL"), f.Name)
+	if len(f.Labels) > 0 {
+		fmt.Fprintf(os.Stdout, "           - Labels:   %s\n", formatLabels(f.Labels))
+	}
+	if len(f.Expected) > 0 || len(f.Actual) > 0 {
+		fmt.Fprintf(os.Stdout, "           - Expected: %s\n", formatReceivers(f.Expected))
+		fmt.Fprintf(os.Stdout, "           - Actual:   %s", formatReceivers(f.Actual))
+		if missing := missingReceivers(f.Expected, f.Actual); len(missing) > 0 {
+			fmt.Fprintf(os.Stdout, "  %s", st.red("<-- Missing "+formatMissing(missing)))
+		}
+		fmt.Fprintln(os.Stdout)
 		return
 	}
-	isFail := strings.ToLower(mode) == "fail"
-	label := "[WARN]"
-	if isFail {
-		label = "[FAIL]"
+	if f.Error != "" {
+		fmt.Fprintf(os.Stdout, "           - %s\n", f.Error)
+	}
+}
+
+func printSanityCategory(st *styler, okMsg string, issues []string, mode string) {
+	if len(issues) == 0 {
+		fmt.Fprintf(os.Stdout, "   %s    %s\n", st.status("OK"), okMsg)
+		return
+	}
+	kind := "WARN"
+	if strings.ToLower(mode) == "fail" {
+		kind = "FAIL"
 	}
 	for _, issue := range issues {
-		fmt.Printf("   %s  %s\n", label, issue) //nolint:forbidigo
+		fmt.Fprintf(os.Stdout, "   %s  %s\n", st.status(kind), issue)
 	}
 }
 
@@ -373,17 +398,24 @@ func formatMissing(missing []string) string {
 	return strings.Join(quoted, ", ")
 }
 
-func formatSummary(r CheckResult) string {
+func formatSummary(st *styler, r CheckResult) string {
 	if r.Passed {
-		return "PASS"
+		return st.green("PASS")
 	}
 	var parts []string
 	if n := len(r.Regression.Failures); n > 0 {
 		parts = append(parts, fmt.Sprintf("%d Regression%s", n, plural(n)))
 	}
-	var sanityWarnings int
+	var sanityFailures, sanityWarnings int
 	for _, c := range r.Sanity.Checks {
-		sanityWarnings += len(c.Issues)
+		if strings.ToLower(c.Mode) == "fail" {
+			sanityFailures += len(c.Issues)
+		} else {
+			sanityWarnings += len(c.Issues)
+		}
+	}
+	if sanityFailures > 0 {
+		parts = append(parts, fmt.Sprintf("%d Sanity Failure%s", sanityFailures, plural(sanityFailures)))
 	}
 	if sanityWarnings > 0 {
 		parts = append(parts, fmt.Sprintf("%d Sanity Warning%s", sanityWarnings, plural(sanityWarnings)))
@@ -391,7 +423,7 @@ func formatSummary(r CheckResult) string {
 	if n := len(r.Behavioral.Failures); n > 0 {
 		parts = append(parts, fmt.Sprintf("%d Behavioral Failure%s", n, plural(n)))
 	}
-	return "FAIL (" + strings.Join(parts, ", ") + ")"
+	return st.red("FAIL") + " (" + strings.Join(parts, ", ") + ")"
 }
 
 // sanityCheckLabel returns the human-readable ok message for a check name.
@@ -412,8 +444,18 @@ func sanityCheckLabel(name config.SanityCheck) string {
 	return fmt.Sprintf("No %s issues", name)
 }
 
+// formatDuration renders a run duration at a sensible resolution: microseconds
+// below 1ms, milliseconds below 1s, seconds otherwise. Avoids the unhelpful
+// "0.0s" for sub-second runs.
 func formatDuration(d time.Duration) string {
-	return fmt.Sprintf("%.1fs", d.Seconds())
+	switch {
+	case d < time.Millisecond:
+		return fmt.Sprintf("%dµs", d.Microseconds())
+	case d < time.Second:
+		return fmt.Sprintf("%dms", d.Milliseconds())
+	default:
+		return fmt.Sprintf("%.1fs", d.Seconds())
+	}
 }
 
 func plural(n int) string {
